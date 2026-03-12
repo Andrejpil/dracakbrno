@@ -14,7 +14,232 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      battle_monsters: {
+        Row: {
+          attack: number
+          battle_id: string
+          cha: number
+          con: number
+          created_at: string
+          current_hp: number
+          current_mp: number
+          defense: number
+          dex: number
+          hp: number
+          id: string
+          int: number
+          killed_by: string | null
+          monster_id: string | null
+          mp: number
+          name: string
+          special: string
+          str: number
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          attack?: number
+          battle_id?: string
+          cha?: number
+          con?: number
+          created_at?: string
+          current_hp?: number
+          current_mp?: number
+          defense?: number
+          dex?: number
+          hp?: number
+          id?: string
+          int?: number
+          killed_by?: string | null
+          monster_id?: string | null
+          mp?: number
+          name: string
+          special?: string
+          str?: number
+          user_id: string
+          xp_reward?: number
+        }
+        Update: {
+          attack?: number
+          battle_id?: string
+          cha?: number
+          con?: number
+          created_at?: string
+          current_hp?: number
+          current_mp?: number
+          defense?: number
+          dex?: number
+          hp?: number
+          id?: string
+          int?: number
+          killed_by?: string | null
+          monster_id?: string | null
+          mp?: number
+          name?: string
+          special?: string
+          str?: number
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_monsters_monster_id_fkey"
+            columns: ["monster_id"]
+            isOneToOne: false
+            referencedRelation: "monsters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      heroes: {
+        Row: {
+          created_at: string
+          experience: number
+          id: string
+          kills: number
+          name: string
+          profession: string
+          race: string
+          specialization: string
+          total_damage: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          experience?: number
+          id?: string
+          kills?: number
+          name: string
+          profession?: string
+          race: string
+          specialization?: string
+          total_damage?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          experience?: number
+          id?: string
+          kills?: number
+          name?: string
+          profession?: string
+          race?: string
+          specialization?: string
+          total_damage?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monster_kills: {
+        Row: {
+          count: number
+          id: string
+          monster_name: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          id?: string
+          monster_name: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          id?: string
+          monster_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      monsters: {
+        Row: {
+          attack: number
+          cha: number
+          con: number
+          created_at: string
+          defense: number
+          dex: number
+          hp: number
+          id: string
+          int: number
+          mp: number
+          name: string
+          special: string
+          str: number
+          user_id: string
+          xp_reward: number
+        }
+        Insert: {
+          attack?: number
+          cha?: number
+          con?: number
+          created_at?: string
+          defense?: number
+          dex?: number
+          hp?: number
+          id?: string
+          int?: number
+          mp?: number
+          name: string
+          special?: string
+          str?: number
+          user_id: string
+          xp_reward?: number
+        }
+        Update: {
+          attack?: number
+          cha?: number
+          con?: number
+          created_at?: string
+          defense?: number
+          dex?: number
+          hp?: number
+          id?: string
+          int?: number
+          mp?: number
+          name?: string
+          special?: string
+          str?: number
+          user_id?: string
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      xp_archive: {
+        Row: {
+          amount: number
+          created_at: string
+          hero_id: string
+          id: string
+          note: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          hero_id: string
+          id?: string
+          note?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          hero_id?: string
+          id?: string
+          note?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "xp_archive_hero_id_fkey"
+            columns: ["hero_id"]
+            isOneToOne: false
+            referencedRelation: "heroes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
