@@ -24,6 +24,15 @@ export interface Monster {
   defense: number;
   xp_reward: number;
   special: string;
+  is_unique: boolean;
+}
+
+export function calculateHP(con: number, level: number, isUnique: boolean): number {
+  const bonus = getAttributeBonus(con);
+  if (isUnique) {
+    return (bonus + 10) * level;
+  }
+  return (bonus + 5) * level + 5;
 }
 
 export interface BattleMonster extends Monster {
