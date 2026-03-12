@@ -29,6 +29,7 @@ export type Database = {
           id: string
           int: number
           killed_by: string | null
+          level: number
           monster_id: string | null
           mp: number
           name: string
@@ -51,6 +52,7 @@ export type Database = {
           id?: string
           int?: number
           killed_by?: string | null
+          level?: number
           monster_id?: string | null
           mp?: number
           name: string
@@ -73,6 +75,7 @@ export type Database = {
           id?: string
           int?: number
           killed_by?: string | null
+          level?: number
           monster_id?: string | null
           mp?: number
           name?: string
@@ -162,6 +165,7 @@ export type Database = {
           hp: number
           id: string
           int: number
+          is_unique: boolean
           mp: number
           name: string
           special: string
@@ -179,6 +183,7 @@ export type Database = {
           hp?: number
           id?: string
           int?: number
+          is_unique?: boolean
           mp?: number
           name: string
           special?: string
@@ -196,6 +201,7 @@ export type Database = {
           hp?: number
           id?: string
           int?: number
+          is_unique?: boolean
           mp?: number
           name?: string
           special?: string
