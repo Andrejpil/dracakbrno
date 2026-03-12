@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
+import { calculateHP } from '@/lib/gameData';
 import HPBar from '@/components/HPBar';
 import BonusBadge from '@/components/BonusBadge';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +13,21 @@ export default function BattlePage() {
   const { heroes, monsters, battleMonsters, addToBattle, dealDamage, removeFromBattle, updateBattleMP } = useGame();
   const [addOpen, setAddOpen] = useState(false);
   const [selectedMonster, setSelectedMonster] = useState('');
+  const [level, setLevel] = useState(1);
+  const [quantity, setQuantity] = useState(1);
   const [damageInputs, setDamageInputs] = useState<Record<string, { heroId: string; amount: number }>>({});
 
-  const handleAdd = () => {
-    if (selectedMonster) { addToBattle(selectedMonster); setAddOpen(false); }
+  const selectedM = monsters.find(m => m.id === selectedMonster);
+  const previewHP = selectedM ? calculateHP(selectedM.con, level, selectedM.is_unique) : 0;
+
+  const handleAdd = async () => {
+    if (!selectedMonster) return;
+    for (let i = 0; i < quantity; i++) {
+      await addToBattle(selectedMonster, level);
+    }
+    setAddOpen(false);
+    setLevel(1);
+    setQuantity(1);
   };
 
   const getDmgState = (battleId: string) => damageInputs[battleId] || { heroId: heroes[0]?.id || '', amount: 0 };
@@ -27,7 +39,7 @@ export default function BattlePage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Boj</h2>
-        <Button onClick={() => setAddOpen(true)} size="sm" disabled={monsters.length === 0}>
+        <Button onClick={() => { setSelectedMonster(''); setLevel(1); setQuantity(1); setAddOpen(true); }} size="sm" disabled={monsters.length === 0}>
           <Plus size={16} className="mr-1" /> Přidat bestii
         </Button>
       </div>
@@ -38,7 +50,11 @@ export default function BattlePage() {
           return (
             <div key={m.battleId} className="bg-card rounded-lg p-4 border border-border">
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-display text-lg text-foreground">{m.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg text-foreground">{m.name}</h3>
+                  {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
+                  <span className="text-xs text-muted-foreground">Úr. {m.level}</span>
+                </div>
                 <button onClick={() => removeFromBattle(m.battleId)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
               </div>
               <div className="space-y-2">
@@ -81,11 +97,36 @@ export default function BattlePage() {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="bg-card border-border">
           <DialogHeader><DialogTitle className="font-display">Přidat bestii do boje</DialogTitle></DialogHeader>
-          <Select value={selectedMonster} onValueChange={setSelectedMonster}>
-            <SelectTrigger><SelectValue placeholder="Vyber bestii" /></SelectTrigger>
-            <SelectContent>{monsters.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
-          </Select>
-          <Button onClick={handleAdd} disabled={!selectedMonster}>Přidat do boje</Button>
+          <div className="space-y-3">
+            <Select value={selectedMonster} onValueChange={setSelectedMonster}>
+              <SelectTrigger><SelectValue placeholder="Vyber bestii" /></SelectTrigger>
+              <SelectContent>{monsters.map(m => (
+                <SelectItem key={m.id} value={m.id}>
+                  {m.name} {m.is_unique ? '⭐' : ''}
+                </SelectItem>
+              ))}</SelectContent>
+            </Select>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground font-bold mb-1 block">Úroveň</label>
+                <Input type="number" min={1} value={level} onChange={e => setLevel(Math.max(1, parseInt(e.target.value) || 1))} />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground font-bold mb-1 block">Počet</label>
+                <Input type="number" min={1} max={20} value={quantity} onChange={e => setQuantity(Math.max(1, Math.min(20, parseInt(e.target.value) || 1)))} />
+              </div>
+            </div>
+            {selectedM && (
+              <div className="p-2 rounded-md border border-border bg-muted/30 text-sm">
+                <span className="text-muted-foreground">HP na úrovni {level}: </span>
+                <span className="text-foreground font-bold">{previewHP}</span>
+                <span className="text-muted-foreground ml-2">({selectedM.is_unique ? 'unikátní' : 'obyčejná'})</span>
+              </div>
+            )}
+            <Button onClick={handleAdd} disabled={!selectedMonster} className="w-full">
+              Přidat {quantity > 1 ? `${quantity}× ` : ''}do boje
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
