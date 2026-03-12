@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
-  createHero, createMonster,
+  createHero, createMonster, calculateHP,
 } from '@/lib/gameData';
 
 export function useGameState() {
