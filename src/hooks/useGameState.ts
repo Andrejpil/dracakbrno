@@ -76,7 +76,7 @@ export function useGameState() {
       profession: data.profession, specialization: data.specialization,
       experience: data.experience,
     }).select().single();
-    if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage }]);
+    if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race as Race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage }]);
   }, [user]);
 
   const editHero = useCallback(async (id: string, data: Partial<Hero>) => {
