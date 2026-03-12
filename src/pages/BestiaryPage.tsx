@@ -110,7 +110,10 @@ export default function BestiaryPage() {
               <Input type="number" min={0} className="flex-1" value={form.mp} onChange={e => setField('mp', e.target.value)} />
               <span className="w-12 text-sm font-bold text-muted-foreground shrink-0 text-right">MP</span>
             </div>
-            <Input type="number" min={0} placeholder="XP za zabití" value={form.xp_reward} onChange={e => setField('xp_reward', e.target.value)} />
+            <div className="flex items-center gap-2">
+              <span className="w-12 text-sm font-bold text-muted-foreground shrink-0">XP</span>
+              <Input type="number" min={0} placeholder="XP za zabití" value={form.xp_reward} onChange={e => setField('xp_reward', e.target.value)} />
+            </div>
             <Input placeholder="Speciální schopnosti" value={form.special} onChange={e => setField('special', e.target.value)} />
             <Button onClick={handleSave} className="w-full">{editId ? 'Uložit změny' : 'Přidat bestii'}</Button>
           </div>
