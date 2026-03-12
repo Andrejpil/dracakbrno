@@ -121,18 +121,19 @@ export function useGameState() {
   }, []);
 
   // Battle
-  const addToBattle = useCallback(async (monsterId: string) => {
+  const addToBattle = useCallback(async (monsterId: string, level: number = 1) => {
     if (!user) return;
     const m = monsters.find(x => x.id === monsterId);
     if (!m) return;
+    const hp = calculateHP(m.con, level, m.is_unique);
     const battleId = crypto.randomUUID();
     const { data: row } = await supabase.from('battle_monsters').insert({
       user_id: user.id, monster_id: monsterId, battle_id: battleId,
       name: m.name, str: m.str, con: m.con, dex: m.dex, int: m.int, cha: m.cha,
-      hp: m.hp, mp: m.mp, attack: m.attack, defense: m.defense,
+      hp, mp: m.mp, attack: m.attack, defense: m.defense,
       xp_reward: m.xp_reward, special: m.special,
-      current_hp: m.hp, current_mp: m.mp,
-    }).select().single();
+      current_hp: hp, current_mp: m.mp, level,
+    } as any).select().single();
     if (row) {
       const bm: BattleMonster = {
         id: row.id, battleId: row.battle_id, name: row.name,
@@ -140,6 +141,7 @@ export function useGameState() {
         hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense,
         xp_reward: row.xp_reward, special: row.special,
         currentHP: row.current_hp, currentMP: row.current_mp,
+        is_unique: m.is_unique, level: (row as any).level ?? level,
       };
       setBattleMonsters(prev => [...prev, bm]);
     }

@@ -110,7 +110,7 @@ export default function BestiaryPage() {
               return (
                 <div key={field} className="flex items-center gap-2">
                   <span className="w-12 text-sm font-bold text-muted-foreground shrink-0">{label}</span>
-                  <Input type="number" min={1} max={23} className="flex-1" value={form[field as keyof typeof form]} onChange={e => setField(field, e.target.value)} />
+                  <Input type="number" min={1} max={23} className="flex-1" value={form[field as keyof typeof form] as number} onChange={e => setField(field, e.target.value)} />
                   <span className={`w-12 text-center text-sm font-bold shrink-0 ${bonusColor}`}>
                     {formatBonus(bonus)}
                   </span>
