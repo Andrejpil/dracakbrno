@@ -74,18 +74,43 @@ export default function BestiaryPage() {
           <DialogHeader><DialogTitle className="font-display">{editId ? 'Upravit bestii' : 'Nová bestie'}</DialogTitle></DialogHeader>
           <div className="space-y-3 max-h-[70vh] overflow-auto">
             <Input placeholder="Jméno" value={form.name} onChange={e => setField('name', e.target.value)} />
-            <div className="grid grid-cols-2 gap-2">
-              <Input type="number" placeholder="Síla" value={form.str} onChange={e => setField('str', e.target.value)} />
-              <Input type="number" placeholder="Odolnost" value={form.con} onChange={e => setField('con', e.target.value)} />
-              <Input type="number" placeholder="Obratnost" value={form.dex} onChange={e => setField('dex', e.target.value)} />
-              <Input type="number" placeholder="Inteligence" value={form.int} onChange={e => setField('int', e.target.value)} />
-              <Input type="number" placeholder="Charisma" value={form.cha} onChange={e => setField('cha', e.target.value)} />
-              <Input type="number" placeholder="Životy (HP)" value={form.hp} onChange={e => setField('hp', e.target.value)} />
-              <Input type="number" placeholder="Mana (MP)" value={form.mp} onChange={e => setField('mp', e.target.value)} />
-              <Input type="number" placeholder="Útok" value={form.attack} onChange={e => setField('attack', e.target.value)} />
-              <Input type="number" placeholder="Obrana" value={form.defense} onChange={e => setField('defense', e.target.value)} />
-              <Input type="number" placeholder="XP za zabití" value={form.xp_reward} onChange={e => setField('xp_reward', e.target.value)} />
+            {/* Attribute rows with bonus display */}
+            {([
+              ['SÍL', 'str', true],
+              ['ODO', 'con', true],
+              ['OBR', 'dex', true],
+              ['INT', 'int', true],
+              ['CHA', 'cha', true],
+            ] as const).map(([label, field, showBonus]) => {
+              const val = form[field as keyof typeof form] as number;
+              const bonus = getAttributeBonus(val);
+              const bonusColor = bonus > 0 ? 'text-bonus-positive' : bonus < 0 ? 'text-bonus-negative' : 'text-muted-foreground';
+              return (
+                <div key={field} className="flex items-center gap-2">
+                  <span className="w-12 text-sm font-bold text-muted-foreground shrink-0">{label}</span>
+                  <Input type="number" min={0} max={23} className="flex-1" value={form[field as keyof typeof form]} onChange={e => setField(field, e.target.value)} />
+                  {showBonus && (
+                    <span className={`w-12 text-center text-sm font-bold shrink-0 ${bonusColor}`}>
+                      {formatBonus(bonus)}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+            {/* ÚT and OČ with HP/MP labels */}
+            <div className="flex items-center gap-2">
+              <span className="w-12 text-sm font-bold text-muted-foreground shrink-0">ÚT</span>
+              <Input type="number" min={0} className="flex-1" value={form.attack} onChange={e => setField('attack', e.target.value)} />
+              <Input type="number" min={0} className="flex-1" value={form.hp} onChange={e => setField('hp', e.target.value)} />
+              <span className="w-12 text-sm font-bold text-muted-foreground shrink-0 text-right">HP</span>
             </div>
+            <div className="flex items-center gap-2">
+              <span className="w-12 text-sm font-bold text-muted-foreground shrink-0">OČ</span>
+              <Input type="number" min={0} className="flex-1" value={form.defense} onChange={e => setField('defense', e.target.value)} />
+              <Input type="number" min={0} className="flex-1" value={form.mp} onChange={e => setField('mp', e.target.value)} />
+              <span className="w-12 text-sm font-bold text-muted-foreground shrink-0 text-right">MP</span>
+            </div>
+            <Input type="number" min={0} placeholder="XP za zabití" value={form.xp_reward} onChange={e => setField('xp_reward', e.target.value)} />
             <Input placeholder="Speciální schopnosti" value={form.special} onChange={e => setField('special', e.target.value)} />
             <Button onClick={handleSave} className="w-full">{editId ? 'Uložit změny' : 'Přidat bestii'}</Button>
           </div>
