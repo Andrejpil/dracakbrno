@@ -158,7 +158,8 @@ export function useGameState() {
     const h = [...heroes];
     const hi = h.findIndex(x => x.id === heroId);
     if (hi === -1) return;
-    h[hi] = { ...h[hi], totalDamage: h[hi].totalDamage + dmg };
+    const actualDmg = Math.min(dmg, oldHP);
+    h[hi] = { ...h[hi], totalDamage: h[hi].totalDamage + actualDmg };
 
     if (oldHP > 0 && m.currentHP === 0) {
       m.killedBy = heroId;
