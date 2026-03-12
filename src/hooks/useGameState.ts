@@ -162,7 +162,7 @@ export function useGameState() {
 
     if (oldHP > 0 && m.currentHP === 0) {
       m.killedBy = heroId;
-      h[hi] = { ...h[hi], kills: h[hi].kills + 1, totalDamage: h[hi].totalDamage + dmg };
+      h[hi] = { ...h[hi], kills: h[hi].kills + 1 };
       const newKills = { ...monsterKills };
       newKills[m.name] = (newKills[m.name] || 0) + 1;
       setMonsterKills(newKills);
