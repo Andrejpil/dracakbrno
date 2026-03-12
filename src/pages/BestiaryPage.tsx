@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { Monster } from '@/lib/gameData';
+import { Monster, getAttributeBonus, formatBonus } from '@/lib/gameData';
 import BonusBadge from '@/components/BonusBadge';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
