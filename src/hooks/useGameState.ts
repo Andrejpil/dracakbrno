@@ -36,7 +36,7 @@ export function useGameState() {
     ]);
 
     setHeroes((hRes.data || []).map((h: any) => ({
-      id: h.id, name: h.name, race: h.race, profession: h.profession,
+      id: h.id, name: h.name, race: h.race as Race, profession: h.profession,
       specialization: h.specialization, experience: h.experience,
       kills: h.kills, totalDamage: h.total_damage,
     })));

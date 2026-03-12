@@ -34,6 +34,7 @@ export interface BattleMonster extends Monster {
 }
 
 export interface XPRecord {
+  id?: string;
   amount: number;
   note: string;
 }
