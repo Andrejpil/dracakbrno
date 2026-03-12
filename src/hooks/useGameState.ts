@@ -45,6 +45,7 @@ export function useGameState() {
       id: m.id, name: m.name, str: m.str, con: m.con, dex: m.dex,
       int: m.int, cha: m.cha, hp: m.hp, mp: m.mp, attack: m.attack,
       defense: m.defense, xp_reward: m.xp_reward, special: m.special,
+      is_unique: m.is_unique ?? false,
     })));
 
     setBattleMonsters((bmRes.data || []).map((b: any) => ({
