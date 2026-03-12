@@ -176,8 +176,8 @@ export function useGameState() {
       }
     }
 
-    const levelMultiplier = 1 + (m.level - 1) * 0.1;
-    const xpGain = Math.floor((Math.min(dmg, oldHP) / m.hp) * m.xp_reward * levelMultiplier);
+    const scaledXP = calculateXP(m.xp_reward, m.level);
+    const xpGain = Math.floor((actualDmg / m.hp) * scaledXP);
     h[hi] = { ...h[hi], experience: h[hi].experience + xpGain };
 
     bmArr[idx] = m;
