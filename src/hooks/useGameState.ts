@@ -107,7 +107,7 @@ export function useGameState() {
     const { data: row } = await supabase.from('monsters').insert({
       user_id: user.id, ...data,
     }).select().single();
-    if (row) setMonsters(prev => [...prev, { id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha, hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special }]);
+    if (row) setMonsters(prev => [...prev, { id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha, hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special, is_unique: (row as any).is_unique ?? false }]);
   }, [user]);
 
   const editMonster = useCallback(async (id: string, data: Partial<Monster>) => {

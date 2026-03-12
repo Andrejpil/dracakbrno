@@ -40,6 +40,7 @@ export interface BattleMonster extends Monster {
   currentHP: number;
   currentMP: number;
   killedBy?: string; // hero id
+  level: number;
 }
 
 export interface XPRecord {
