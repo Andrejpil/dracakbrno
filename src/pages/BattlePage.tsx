@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { calculateHP } from '@/lib/gameData';
+import { calculateHP, calculateXP } from '@/lib/gameData';
 import HPBar from '@/components/HPBar';
 import BonusBadge from '@/components/BonusBadge';
 import { Plus, Trash2, Star } from 'lucide-react';
@@ -13,20 +13,28 @@ export default function BattlePage() {
   const { heroes, monsters, battleMonsters, addToBattle, dealDamage, removeFromBattle, updateBattleMP } = useGame();
   const [addOpen, setAddOpen] = useState(false);
   const [selectedMonster, setSelectedMonster] = useState('');
-  const [level, setLevel] = useState(1);
+  const [levelMin, setLevelMin] = useState(1);
+  const [levelMax, setLevelMax] = useState(1);
   const [quantity, setQuantity] = useState(1);
   const [damageInputs, setDamageInputs] = useState<Record<string, { heroId: string; amount: number }>>({});
 
   const selectedM = monsters.find(m => m.id === selectedMonster);
-  const previewHP = selectedM ? calculateHP(selectedM.con, level, selectedM.is_unique) : 0;
+  const previewHPMin = selectedM ? calculateHP(selectedM.con, levelMin, selectedM.is_unique) : 0;
+  const previewHPMax = selectedM ? calculateHP(selectedM.con, levelMax, selectedM.is_unique) : 0;
+  const previewXPMin = selectedM ? calculateXP(selectedM.xp_reward, levelMin) : 0;
+  const previewXPMax = selectedM ? calculateXP(selectedM.xp_reward, levelMax) : 0;
 
   const handleAdd = async () => {
     if (!selectedMonster) return;
+    const min = Math.min(levelMin, levelMax);
+    const max = Math.max(levelMin, levelMax);
     for (let i = 0; i < quantity; i++) {
+      const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
       await addToBattle(selectedMonster, level);
     }
     setAddOpen(false);
-    setLevel(1);
+    setLevelMin(1);
+    setLevelMax(1);
     setQuantity(1);
   };
 
@@ -39,7 +47,7 @@ export default function BattlePage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Boj</h2>
-        <Button onClick={() => { setSelectedMonster(''); setLevel(1); setQuantity(1); setAddOpen(true); }} size="sm" disabled={monsters.length === 0}>
+        <Button onClick={() => { setSelectedMonster(''); setLevelMin(1); setLevelMax(1); setQuantity(1); setAddOpen(true); }} size="sm" disabled={monsters.length === 0}>
           <Plus size={16} className="mr-1" /> Přidat bestii
         </Button>
       </div>
@@ -47,6 +55,7 @@ export default function BattlePage() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {battleMonsters.map(m => {
           const state = getDmgState(m.battleId);
+          const scaledXP = calculateXP(m.xp_reward, m.level);
           return (
             <div key={m.battleId} className="bg-card rounded-lg p-4 border border-border">
               <div className="flex justify-between items-start mb-2">
@@ -71,7 +80,7 @@ export default function BattlePage() {
                   <BonusBadge label="CHA" value={m.cha} />
                 </div>
                 <p className="text-sm text-muted-foreground">Útok: <span className="text-foreground">{m.attack}</span> | Obrana: <span className="text-foreground">{m.defense}</span></p>
-                <p className="text-sm text-muted-foreground">XP: <span className="text-primary">{m.xp_reward}</span></p>
+                <p className="text-sm text-muted-foreground">XP: <span className="text-primary">{scaledXP}</span> <span className="text-xs">(základ {m.xp_reward} × {(1 + (m.level - 1) * 0.1).toFixed(1)})</span></p>
                 {m.special && <p className="text-xs text-muted-foreground">{m.special}</p>}
 
                 <div className="pt-2 border-t border-border space-y-2">
@@ -108,8 +117,12 @@ export default function BattlePage() {
             </Select>
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground font-bold mb-1 block">Úroveň</label>
-                <Input type="number" min={1} value={level} onChange={e => setLevel(Math.max(1, parseInt(e.target.value) || 1))} />
+                <label className="text-xs text-muted-foreground font-bold mb-1 block">Úroveň od</label>
+                <Input type="number" min={1} value={levelMin} onChange={e => setLevelMin(Math.max(1, parseInt(e.target.value) || 1))} />
+              </div>
+              <div className="flex-1">
+                <label className="text-xs text-muted-foreground font-bold mb-1 block">Úroveň do</label>
+                <Input type="number" min={1} value={levelMax} onChange={e => setLevelMax(Math.max(1, parseInt(e.target.value) || 1))} />
               </div>
               <div className="flex-1">
                 <label className="text-xs text-muted-foreground font-bold mb-1 block">Počet</label>
@@ -117,10 +130,19 @@ export default function BattlePage() {
               </div>
             </div>
             {selectedM && (
-              <div className="p-2 rounded-md border border-border bg-muted/30 text-sm">
-                <span className="text-muted-foreground">HP na úrovni {level}: </span>
-                <span className="text-foreground font-bold">{previewHP}</span>
-                <span className="text-muted-foreground ml-2">({selectedM.is_unique ? 'unikátní' : 'obyčejná'})</span>
+              <div className="p-2 rounded-md border border-border bg-muted/30 text-sm space-y-1">
+                <p className="text-muted-foreground">
+                  HP: <span className="text-foreground font-bold">{previewHPMin}</span>
+                  {levelMin !== levelMax && <> – <span className="text-foreground font-bold">{previewHPMax}</span></>}
+                  <span className="ml-2 text-xs">({selectedM.is_unique ? 'unikátní' : 'obyčejná'})</span>
+                </p>
+                <p className="text-muted-foreground">
+                  XP: <span className="text-primary font-bold">{previewXPMin}</span>
+                  {levelMin !== levelMax && <> – <span className="text-primary font-bold">{previewXPMax}</span></>}
+                </p>
+                {levelMin !== levelMax && (
+                  <p className="text-xs text-muted-foreground">Úroveň se zvolí náhodně z rozmezí {Math.min(levelMin, levelMax)}–{Math.max(levelMin, levelMax)}</p>
+                )}
               </div>
             )}
             <Button onClick={handleAdd} disabled={!selectedMonster} className="w-full">

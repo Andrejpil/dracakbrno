@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
-  createHero, createMonster, calculateHP,
+  createHero, createMonster, calculateHP, calculateXP,
 } from '@/lib/gameData';
 
 export function useGameState() {
@@ -158,7 +158,8 @@ export function useGameState() {
     const h = [...heroes];
     const hi = h.findIndex(x => x.id === heroId);
     if (hi === -1) return;
-    h[hi] = { ...h[hi], totalDamage: h[hi].totalDamage + dmg };
+    const actualDmg = Math.min(dmg, oldHP);
+    h[hi] = { ...h[hi], totalDamage: h[hi].totalDamage + actualDmg };
 
     if (oldHP > 0 && m.currentHP === 0) {
       m.killedBy = heroId;
@@ -175,8 +176,8 @@ export function useGameState() {
       }
     }
 
-    const levelMultiplier = 1 + (m.level - 1) * 0.1;
-    const xpGain = Math.floor((Math.min(dmg, oldHP) / m.hp) * m.xp_reward * levelMultiplier);
+    const scaledXP = calculateXP(m.xp_reward, m.level);
+    const xpGain = Math.floor((actualDmg / m.hp) * scaledXP);
     h[hi] = { ...h[hi], experience: h[hi].experience + xpGain };
 
     bmArr[idx] = m;

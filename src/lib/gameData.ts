@@ -35,6 +35,11 @@ export function calculateHP(con: number, level: number, isUnique: boolean): numb
   return (bonus + 5) * level + 5;
 }
 
+export function calculateXP(baseXP: number, level: number): number {
+  const multiplier = 1 + (level - 1) * 0.1;
+  return Math.floor(baseXP * multiplier);
+}
+
 export interface BattleMonster extends Monster {
   battleId: string;
   currentHP: number;
