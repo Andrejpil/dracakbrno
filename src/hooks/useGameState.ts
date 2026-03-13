@@ -132,7 +132,7 @@ export function useGameState() {
       name: m.name, str: m.str, con: m.con, dex: m.dex, int: m.int, cha: m.cha,
       hp, mp: m.mp, attack: m.attack, defense: m.defense,
       xp_reward: m.xp_reward, special: m.special,
-      current_hp: hp, current_mp: m.mp, level,
+      current_hp: hp, current_mp: m.mp, level, image_url: m.image_url,
     } as any).select().single();
     if (row) {
       const bm: BattleMonster = {
