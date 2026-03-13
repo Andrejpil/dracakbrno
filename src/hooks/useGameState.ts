@@ -141,7 +141,7 @@ export function useGameState() {
         hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense,
         xp_reward: row.xp_reward, special: row.special,
         currentHP: row.current_hp, currentMP: row.current_mp,
-        is_unique: m.is_unique, level: (row as any).level ?? level,
+        is_unique: m.is_unique, level: (row as any).level ?? level, image_url: m.image_url,
       };
       setBattleMonsters(prev => [...prev, bm]);
     }
