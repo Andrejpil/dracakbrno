@@ -58,6 +58,7 @@ export default function StatsPage() {
                   const val = parseInt(e.target.value) || 0;
                   updateKills({ ...monsterKills, [name]: val });
                 }} />
+              </div>
             </div>
             <button onClick={() => {
               const k = { ...monsterKills };
@@ -65,7 +66,8 @@ export default function StatsPage() {
               updateKills(k);
             }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
