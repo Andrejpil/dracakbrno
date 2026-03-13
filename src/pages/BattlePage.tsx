@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default function BattlePage() {
   const { heroes, monsters, battleMonsters, addToBattle, dealDamage, removeFromBattle, updateBattleMP } = useGame();
@@ -60,6 +61,10 @@ export default function BattlePage() {
             <div key={m.battleId} className="bg-card rounded-lg p-4 border border-border">
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8 rounded-md">
+                    {m.image_url ? <AvatarImage src={m.image_url} alt={m.name} className="object-cover" /> : null}
+                    <AvatarFallback className="rounded-md text-[10px]">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
                   <h3 className="font-display text-lg text-foreground">{m.name}</h3>
                   {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
                   <span className="text-xs text-muted-foreground">Úr. {m.level}</span>

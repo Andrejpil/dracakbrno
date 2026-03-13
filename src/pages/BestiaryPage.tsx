@@ -1,31 +1,50 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { Monster, getAttributeBonus, formatBonus, calculateHP } from '@/lib/gameData';
 import BonusBadge from '@/components/BonusBadge';
-import { Plus, Pencil, Trash2, Shield, Star } from 'lucide-react';
+import { Plus, Pencil, Trash2, Star, ImagePlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
-const defaultMonster = { name: '', str: 0, con: 0, dex: 0, int: 0, cha: 0, mp: 0, attack: 0, defense: 0, xp_reward: 0, special: '', is_unique: false };
+const defaultMonster = { name: '', str: 0, con: 0, dex: 0, int: 0, cha: 0, mp: 0, attack: 0, defense: 0, xp_reward: 0, special: '', is_unique: false, image_url: '' };
 
 export default function BestiaryPage() {
   const { monsters, addMonster, editMonster, deleteMonster } = useGame();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(defaultMonster);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const openNew = () => { setEditId(null); setForm(defaultMonster); setOpen(true); };
   const openEdit = (m: Monster) => {
     setEditId(m.id);
-    setForm({ name: m.name, str: m.str, con: m.con, dex: m.dex, int: m.int, cha: m.cha, mp: m.mp, attack: m.attack, defense: m.defense, xp_reward: m.xp_reward, special: m.special, is_unique: m.is_unique });
+    setForm({ name: m.name, str: m.str, con: m.con, dex: m.dex, int: m.int, cha: m.cha, mp: m.mp, attack: m.attack, defense: m.defense, xp_reward: m.xp_reward, special: m.special, is_unique: m.is_unique, image_url: m.image_url });
     setOpen(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploading(true);
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('monster-images').upload(path, file);
+    if (!error) {
+      const { data } = supabase.storage.from('monster-images').getPublicUrl(path);
+      setForm(f => ({ ...f, image_url: data.publicUrl }));
+    }
+    setUploading(false);
   };
 
   const handleSave = () => {
     if (!form.name) return;
-    // HP is calculated at battle time, store 0 as placeholder
     const data = { ...form, hp: 0 };
     if (editId) editMonster(editId, data);
     else addMonster(data);
@@ -37,7 +56,6 @@ export default function BestiaryPage() {
     else setForm(f => ({ ...f, [field]: parseInt(value) || 0 }));
   };
 
-  // Preview HP for levels 1, 5, 10
   const previewHP = (level: number) => calculateHP(form.con, level, form.is_unique);
 
   return (
@@ -50,9 +68,15 @@ export default function BestiaryPage() {
         {monsters.map(m => (
           <div key={m.id} className="bg-card rounded-lg p-4 border border-border">
             <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center gap-2">
-                <h3 className="font-display text-lg text-foreground">{m.name}</h3>
-                {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
+              <div className="flex items-center gap-3">
+                <Avatar className="h-[38px] w-[38px] rounded-md">
+                  {m.image_url ? <AvatarImage src={m.image_url} alt={m.name} className="object-cover" /> : null}
+                  <AvatarFallback className="rounded-md text-xs">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg text-foreground">{m.name}</h3>
+                  {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
+                </div>
               </div>
               <div className="flex gap-1">
                 <button onClick={() => openEdit(m)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
@@ -86,6 +110,28 @@ export default function BestiaryPage() {
           <DialogHeader><DialogTitle className="font-display">{editId ? 'Upravit bestii' : 'Nová bestie'}</DialogTitle></DialogHeader>
           <div className="space-y-3 max-h-[70vh] overflow-auto">
             <Input placeholder="Jméno" value={form.name} onChange={e => setField('name', e.target.value)} />
+
+            {/* Image upload */}
+            <div className="flex items-center gap-3">
+              <Avatar className="h-[150px] w-[150px] rounded-md border border-border">
+                {form.image_url ? <AvatarImage src={form.image_url} alt="Preview" className="object-cover" /> : null}
+                <AvatarFallback className="rounded-md text-muted-foreground">
+                  <ImagePlus size={32} />
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={uploading} onClick={() => fileRef.current?.click()}>
+                  {uploading ? 'Nahrávám...' : 'Nahrát obrázek'}
+                </Button>
+                {form.image_url && (
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setForm(f => ({ ...f, image_url: '' }))}>
+                    Odebrat
+                  </Button>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                <p className="text-xs text-muted-foreground">150×150 px, čtverec</p>
+              </div>
+            </div>
             
             {/* Unique toggle */}
             <div className="flex items-center justify-between p-2 rounded-md border border-border">

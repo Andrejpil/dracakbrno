@@ -25,6 +25,7 @@ export interface Monster {
   xp_reward: number;
   special: string;
   is_unique: boolean;
+  image_url: string;
 }
 
 export function calculateHP(con: number, level: number, isUnique: boolean): number {

@@ -27,6 +27,7 @@ export type Database = {
           dex: number
           hp: number
           id: string
+          image_url: string
           int: number
           killed_by: string | null
           level: number
@@ -50,6 +51,7 @@ export type Database = {
           dex?: number
           hp?: number
           id?: string
+          image_url?: string
           int?: number
           killed_by?: string | null
           level?: number
@@ -73,6 +75,7 @@ export type Database = {
           dex?: number
           hp?: number
           id?: string
+          image_url?: string
           int?: number
           killed_by?: string | null
           level?: number
@@ -164,6 +167,7 @@ export type Database = {
           dex: number
           hp: number
           id: string
+          image_url: string
           int: number
           is_unique: boolean
           mp: number
@@ -182,6 +186,7 @@ export type Database = {
           dex?: number
           hp?: number
           id?: string
+          image_url?: string
           int?: number
           is_unique?: boolean
           mp?: number
@@ -200,6 +205,7 @@ export type Database = {
           dex?: number
           hp?: number
           id?: string
+          image_url?: string
           int?: number
           is_unique?: boolean
           mp?: number

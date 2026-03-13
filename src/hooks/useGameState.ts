@@ -45,7 +45,7 @@ export function useGameState() {
       id: m.id, name: m.name, str: m.str, con: m.con, dex: m.dex,
       int: m.int, cha: m.cha, hp: m.hp, mp: m.mp, attack: m.attack,
       defense: m.defense, xp_reward: m.xp_reward, special: m.special,
-      is_unique: m.is_unique ?? false,
+      is_unique: m.is_unique ?? false, image_url: m.image_url ?? '',
     })));
 
     setBattleMonsters((bmRes.data || []).map((b: any) => ({
@@ -54,7 +54,7 @@ export function useGameState() {
       hp: b.hp, mp: b.mp, attack: b.attack, defense: b.defense,
       xp_reward: b.xp_reward, special: b.special,
       currentHP: b.current_hp, currentMP: b.current_mp, killedBy: b.killed_by,
-      is_unique: b.is_unique ?? false, level: b.level ?? 1,
+      is_unique: b.is_unique ?? false, level: b.level ?? 1, image_url: (b as any).image_url ?? '',
     })));
 
     const kills: Record<string, number> = {};
@@ -107,7 +107,7 @@ export function useGameState() {
     const { data: row } = await supabase.from('monsters').insert({
       user_id: user.id, ...data,
     }).select().single();
-    if (row) setMonsters(prev => [...prev, { id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha, hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special, is_unique: (row as any).is_unique ?? false }]);
+    if (row) setMonsters(prev => [...prev, { id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha, hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special, is_unique: (row as any).is_unique ?? false, image_url: (row as any).image_url ?? '' }]);
   }, [user]);
 
   const editMonster = useCallback(async (id: string, data: Partial<Monster>) => {
@@ -132,7 +132,7 @@ export function useGameState() {
       name: m.name, str: m.str, con: m.con, dex: m.dex, int: m.int, cha: m.cha,
       hp, mp: m.mp, attack: m.attack, defense: m.defense,
       xp_reward: m.xp_reward, special: m.special,
-      current_hp: hp, current_mp: m.mp, level,
+      current_hp: hp, current_mp: m.mp, level, image_url: m.image_url,
     } as any).select().single();
     if (row) {
       const bm: BattleMonster = {
@@ -141,7 +141,7 @@ export function useGameState() {
         hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense,
         xp_reward: row.xp_reward, special: row.special,
         currentHP: row.current_hp, currentMP: row.current_mp,
-        is_unique: m.is_unique, level: (row as any).level ?? level,
+        is_unique: m.is_unique, level: (row as any).level ?? level, image_url: m.image_url,
       };
       setBattleMonsters(prev => [...prev, bm]);
     }
