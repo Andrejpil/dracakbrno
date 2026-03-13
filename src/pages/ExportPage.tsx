@@ -33,9 +33,9 @@ export default function ExportPage() {
         if (c[0] === 'hero') {
           newHeroes.push({ id: crypto.randomUUID(), name: c[1], race: c[2] as any, profession: c[3], specialization: c[4], experience: parseInt(c[5]) || 0, kills: parseInt(c[19]) || 0, totalDamage: parseInt(c[20]) || 0 });
         } else if (c[0] === 'monster') {
-          newMonsters.push({ id: crypto.randomUUID(), name: c[1], str: parseInt(c[7]) || 0, con: parseInt(c[8]) || 0, dex: parseInt(c[9]) || 0, int: parseInt(c[10]) || 0, cha: parseInt(c[11]) || 0, hp: parseInt(c[12]) || 0, mp: parseInt(c[13]) || 0, attack: parseInt(c[14]) || 0, defense: parseInt(c[15]) || 0, xp_reward: parseInt(c[16]) || 0, special: c[17] || '', is_unique: false });
+          newMonsters.push({ id: crypto.randomUUID(), name: c[1], str: parseInt(c[7]) || 0, con: parseInt(c[8]) || 0, dex: parseInt(c[9]) || 0, int: parseInt(c[10]) || 0, cha: parseInt(c[11]) || 0, hp: parseInt(c[12]) || 0, mp: parseInt(c[13]) || 0, attack: parseInt(c[14]) || 0, defense: parseInt(c[15]) || 0, xp_reward: parseInt(c[16]) || 0, special: c[17] || '', is_unique: false, image_url: '' });
         } else if (c[0] === 'battleMonster') {
-          newBattle.push({ id: crypto.randomUUID(), battleId: crypto.randomUUID(), name: c[1], str: parseInt(c[7]) || 0, con: parseInt(c[8]) || 0, dex: parseInt(c[9]) || 0, int: parseInt(c[10]) || 0, cha: parseInt(c[11]) || 0, hp: parseInt(c[12]) || 0, mp: parseInt(c[13]) || 0, attack: parseInt(c[14]) || 0, defense: parseInt(c[15]) || 0, xp_reward: parseInt(c[16]) || 0, special: c[17] || '', currentHP: parseInt(c[18]) || 0, currentMP: parseInt(c[19]) || 0, is_unique: false, level: 1 });
+          newBattle.push({ id: crypto.randomUUID(), battleId: crypto.randomUUID(), name: c[1], str: parseInt(c[7]) || 0, con: parseInt(c[8]) || 0, dex: parseInt(c[9]) || 0, int: parseInt(c[10]) || 0, cha: parseInt(c[11]) || 0, hp: parseInt(c[12]) || 0, mp: parseInt(c[13]) || 0, attack: parseInt(c[14]) || 0, defense: parseInt(c[15]) || 0, xp_reward: parseInt(c[16]) || 0, special: c[17] || '', currentHP: parseInt(c[18]) || 0, currentMP: parseInt(c[19]) || 0, is_unique: false, level: 1, image_url: '' });
         }
       });
 
