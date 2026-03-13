@@ -54,7 +54,7 @@ export function useGameState() {
       hp: b.hp, mp: b.mp, attack: b.attack, defense: b.defense,
       xp_reward: b.xp_reward, special: b.special,
       currentHP: b.current_hp, currentMP: b.current_mp, killedBy: b.killed_by,
-      is_unique: b.is_unique ?? false, level: b.level ?? 1,
+      is_unique: b.is_unique ?? false, level: b.level ?? 1, image_url: (b as any).image_url ?? '',
     })));
 
     const kills: Record<string, number> = {};
