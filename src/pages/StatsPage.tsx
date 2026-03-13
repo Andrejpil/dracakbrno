@@ -4,7 +4,7 @@ import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 export default function StatsPage() {
-  const { heroes, monsterKills, updateKills, updateHeroes } = useGame();
+  const { heroes, monsters, monsterKills, updateKills, updateHeroes } = useGame();
 
   const totalKills = Object.values(monsterKills).reduce((a, b) => a + b, 0);
 
