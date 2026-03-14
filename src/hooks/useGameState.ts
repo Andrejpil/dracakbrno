@@ -205,6 +205,7 @@ export function useGameState() {
     bmArr[idx] = m;
     setBattleMonsters(bmArr);
     setHeroes(h);
+    checkLevelUps(h);
 
     // Update DB
     await Promise.all([
