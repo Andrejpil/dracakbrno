@@ -13,6 +13,7 @@ import XPPage from "@/pages/XPPage";
 import StatsPage from "@/pages/StatsPage";
 import ExportPage from "@/pages/ExportPage";
 import AdminPage from "@/pages/AdminPage";
+import MapPage from "@/pages/MapPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
 
