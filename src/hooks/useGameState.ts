@@ -77,6 +77,21 @@ export function useGameState() {
     setLoading(false);
   }
 
+  // Check for level-ups and show toast
+  function checkLevelUps(updatedHeroes: Hero[]) {
+    updatedHeroes.forEach(h => {
+      const oldLevel = heroLevelsRef.current[h.id] || 1;
+      const newLevel = getHeroLevel(h.experience);
+      if (newLevel > oldLevel) {
+        toast({
+          title: `🎉 ${h.name} dosáhl úrovně ${newLevel}!`,
+          description: `Hrdina ${h.name} právě postoupil na úroveň ${newLevel}!`,
+        });
+      }
+      heroLevelsRef.current[h.id] = newLevel;
+    });
+  }
+
   // Hero CRUD
   const addHero = useCallback(async (data: Omit<Hero, 'id' | 'kills' | 'totalDamage'>) => {
     if (!user) return;
