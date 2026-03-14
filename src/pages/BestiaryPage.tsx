@@ -69,9 +69,9 @@ export default function BestiaryPage() {
           <div key={m.id} className="bg-card rounded-lg p-4 border border-border">
             <div className="flex justify-between items-start mb-2">
               <div className="flex items-center gap-3">
-                <Avatar className="h-[38px] w-[38px] rounded-md">
+                <Avatar className="h-[150px] w-[150px] rounded-md">
                   {m.image_url ? <AvatarImage src={m.image_url} alt={m.name} className="object-cover" /> : null}
-                  <AvatarFallback className="rounded-md text-xs">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="rounded-md text-sm">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div className="flex items-center gap-2">
                   <h3 className="font-display text-lg text-foreground">{m.name}</h3>
