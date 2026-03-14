@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const links = [
   { to: '/', label: 'Hrdinové', icon: Sword },
@@ -14,13 +15,15 @@ const links = [
 export default function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { isAdmin } = useUserRole();
+  const allLinks = isAdmin ? [...links, { to: '/admin', label: 'Uživatelé', icon: Users }] : links;
   return (
     <aside className="w-48 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">
       <h1 className="font-display text-lg text-primary mb-8 px-2 leading-tight">
         Dračí Doupě
       </h1>
       <nav className="flex flex-col gap-1 flex-1">
-        {links.map(({ to, label, icon: Icon }) => {
+        {allLinks.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
           return (
             <NavLink

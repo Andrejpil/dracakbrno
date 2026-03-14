@@ -46,9 +46,9 @@ export default function StatsPage() {
           return (
           <div key={name} className="bg-card rounded-lg p-4 border border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="h-8 w-8 rounded-md">
+              <Avatar className="h-[150px] w-[150px] rounded-md">
                 {monsterData?.image_url ? <AvatarImage src={monsterData.image_url} alt={name} className="object-cover" /> : null}
-                <AvatarFallback className="rounded-md text-[10px]">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarFallback className="rounded-md text-sm">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
               <div>
               <span className="font-semibold text-foreground">{name}</span>

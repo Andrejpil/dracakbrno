@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { RACES, RACIAL_ABILITIES, Race, Hero } from '@/lib/gameData';
+import { RACES, RACIAL_ABILITIES, Race, Hero, getHeroLevel, getXPForNextLevel, XP_THRESHOLDS } from '@/lib/gameData';
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,10 @@ export default function HeroesPage() {
               <p className="text-sm text-muted-foreground">Rasa: <span className="text-foreground">{h.race}</span></p>
               <p className="text-sm text-muted-foreground">Povolání: <span className="text-foreground">{h.profession}</span></p>
               {h.specialization && <p className="text-sm text-muted-foreground">Specializace: <span className="text-foreground">{h.specialization}</span></p>}
-              <p className="text-sm text-muted-foreground">XP: <span className="text-primary font-semibold">{h.experience}</span></p>
+              <p className="text-sm text-muted-foreground">Úroveň: <span className="text-primary font-bold text-base">{getHeroLevel(h.experience)}</span></p>
+              <p className="text-sm text-muted-foreground">XP: <span className="text-primary font-semibold">{h.experience}</span>
+                {(() => { const next = getXPForNextLevel(h.experience); return next ? <span className="text-xs text-muted-foreground"> / {next.next} (další úr.)</span> : null; })()}
+              </p>
               {ability && (
                 <button
                   onClick={() => setAbilityOpen(h.race)}

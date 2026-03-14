@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
-  createHero, createMonster, calculateHP, calculateXP,
+  createHero, createMonster, calculateHP, calculateXP, getHeroLevel,
 } from '@/lib/gameData';
 
 export function useGameState() {
@@ -14,6 +15,7 @@ export function useGameState() {
   const [monsterKills, setMonsterKills] = useState<Record<string, number>>({});
   const [xpArchive, setXPArchive] = useState<Record<string, XPRecord[]>>({});
   const [loading, setLoading] = useState(true);
+  const heroLevelsRef = useRef<Record<string, number>>({});
 
   // Load all data from Supabase on user change
   useEffect(() => {
@@ -35,11 +37,16 @@ export function useGameState() {
       supabase.from('xp_archive').select('*').order('created_at'),
     ]);
 
-    setHeroes((hRes.data || []).map((h: any) => ({
+    const loadedHeroes = (hRes.data || []).map((h: any) => ({
       id: h.id, name: h.name, race: h.race as Race, profession: h.profession,
       specialization: h.specialization, experience: h.experience,
       kills: h.kills, totalDamage: h.total_damage,
-    })));
+    }));
+    // Store initial levels (no notification on load)
+    const levels: Record<string, number> = {};
+    loadedHeroes.forEach((h: Hero) => { levels[h.id] = getHeroLevel(h.experience); });
+    heroLevelsRef.current = levels;
+    setHeroes(loadedHeroes);
 
     setMonsters((mRes.data || []).map((m: any) => ({
       id: m.id, name: m.name, str: m.str, con: m.con, dex: m.dex,
@@ -68,6 +75,21 @@ export function useGameState() {
     });
     setXPArchive(archive);
     setLoading(false);
+  }
+
+  // Check for level-ups and show toast
+  function checkLevelUps(updatedHeroes: Hero[]) {
+    updatedHeroes.forEach(h => {
+      const oldLevel = heroLevelsRef.current[h.id] || 1;
+      const newLevel = getHeroLevel(h.experience);
+      if (newLevel > oldLevel) {
+        toast({
+          title: `🎉 ${h.name} dosáhl úrovně ${newLevel}!`,
+          description: `Hrdina ${h.name} právě postoupil na úroveň ${newLevel}!`,
+        });
+      }
+      heroLevelsRef.current[h.id] = newLevel;
+    });
   }
 
   // Hero CRUD
@@ -183,6 +205,7 @@ export function useGameState() {
     bmArr[idx] = m;
     setBattleMonsters(bmArr);
     setHeroes(h);
+    checkLevelUps(h);
 
     // Update DB
     await Promise.all([
@@ -214,7 +237,9 @@ export function useGameState() {
       user_id: user.id, hero_id: heroId, amount, note,
     }).select().single();
 
-    setHeroes(prev => prev.map(h => h.id === heroId ? { ...h, experience: h.experience + amount } : h));
+    const updatedHeroes = heroes.map(h => h.id === heroId ? { ...h, experience: h.experience + amount } : h);
+    setHeroes(updatedHeroes);
+    checkLevelUps(updatedHeroes);
     await supabase.from('heroes').update({ experience: heroes.find(h => h.id === heroId)!.experience + amount }).eq('id', heroId);
 
     if (row) {

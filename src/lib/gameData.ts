@@ -10,6 +10,47 @@ export interface Hero {
   totalDamage: number;
 }
 
+// XP thresholds per level
+export const XP_THRESHOLDS: number[] = [
+  0,       // Level 1
+  550,     // Level 2
+  1100,    // Level 3
+  2200,    // Level 4
+  4400,    // Level 5
+  8500,    // Level 6
+  16000,   // Level 7
+  27000,   // Level 8
+  42500,   // Level 9
+  62000,   // Level 10
+  87000,   // Level 11
+  117500,  // Level 12
+  148000,  // Level 13
+  149000,  // Level 14
+  210000,  // Level 15
+  242000,  // Level 16
+  274000,  // Level 17
+  305000,  // Level 18
+  336000,  // Level 19
+  366000,  // Level 20
+  395000,  // Level 21
+  425000,  // Level 22
+  455000,  // Level 23
+  485000,  // Level 24
+];
+
+export function getHeroLevel(xp: number): number {
+  for (let i = XP_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (xp >= XP_THRESHOLDS[i]) return i + 1;
+  }
+  return 1;
+}
+
+export function getXPForNextLevel(xp: number): { current: number; next: number; level: number } | null {
+  const level = getHeroLevel(xp);
+  if (level >= XP_THRESHOLDS.length) return null;
+  return { current: XP_THRESHOLDS[level - 1], next: XP_THRESHOLDS[level], level };
+}
+
 export interface Monster {
   id: string;
   name: string;

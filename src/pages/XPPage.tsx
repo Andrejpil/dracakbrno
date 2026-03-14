@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
+import { getHeroLevel, getXPForNextLevel } from '@/lib/gameData';
 import { Trash2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,10 @@ export default function XPPage() {
           return (
             <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
               <h3 className="font-display text-lg text-foreground mb-1">{h.name}</h3>
-              <p className="text-sm text-muted-foreground mb-3">Celkové XP: <span className="text-primary font-semibold">{h.experience}</span></p>
+              <p className="text-sm text-muted-foreground mb-1">Úroveň: <span className="text-primary font-bold">{getHeroLevel(h.experience)}</span></p>
+              <p className="text-sm text-muted-foreground mb-3">Celkové XP: <span className="text-primary font-semibold">{h.experience}</span>
+                {(() => { const next = getXPForNextLevel(h.experience); return next ? <span className="text-xs"> / {next.next}</span> : null; })()}
+              </p>
               <div className="flex gap-2 mb-3">
                 <Input type="number" placeholder="XP" className="h-8 text-xs w-20" value={inp.amount}
                   onChange={e => setInput(h.id, { amount: e.target.value })} />
