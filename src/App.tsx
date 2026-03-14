@@ -13,6 +13,7 @@ import XPPage from "@/pages/XPPage";
 import StatsPage from "@/pages/StatsPage";
 import ExportPage from "@/pages/ExportPage";
 import AdminPage from "@/pages/AdminPage";
+import MapPage from "@/pages/MapPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -45,6 +46,7 @@ function AppContent() {
             <Route path="/zkusenosti" element={<XPPage />} />
             <Route path="/statistika" element={<StatsPage />} />
             <Route path="/export" element={<ExportPage />} />
+            <Route path="/mapa" element={<MapPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
