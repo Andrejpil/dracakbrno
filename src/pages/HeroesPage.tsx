@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
-import { RACES, RACIAL_ABILITIES, Race, Hero } from '@/lib/gameData';
+import { RACES, RACIAL_ABILITIES, Race, Hero, getHeroLevel, getXPForNextLevel, XP_THRESHOLDS } from '@/lib/gameData';
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
