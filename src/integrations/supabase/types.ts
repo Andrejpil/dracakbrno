@@ -136,6 +136,101 @@ export type Database = {
         }
         Relationships: []
       }
+      map_points: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          route_id: string
+          sort_order: number
+          user_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string
+          route_id: string
+          sort_order?: number
+          user_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          route_id?: string
+          sort_order?: number
+          user_id?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_points_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "map_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      map_routes: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      map_settings: {
+        Row: {
+          created_at: string
+          id: string
+          pixels_per_km: number
+          speed_broom: number
+          speed_horse: number
+          speed_walk: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          pixels_per_km?: number
+          speed_broom?: number
+          speed_horse?: number
+          speed_walk?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          pixels_per_km?: number
+          speed_broom?: number
+          speed_horse?: number
+          speed_walk?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       monster_kills: {
         Row: {
           count: number
