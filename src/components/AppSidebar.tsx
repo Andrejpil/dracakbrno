@@ -23,7 +23,7 @@ export default function AppSidebar() {
         Dračí Doupě
       </h1>
       <nav className="flex flex-col gap-1 flex-1">
-        {links.map(({ to, label, icon: Icon }) => {
+        {allLinks.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
           return (
             <NavLink

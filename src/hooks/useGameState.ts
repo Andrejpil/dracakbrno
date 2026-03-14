@@ -237,7 +237,9 @@ export function useGameState() {
       user_id: user.id, hero_id: heroId, amount, note,
     }).select().single();
 
-    setHeroes(prev => prev.map(h => h.id === heroId ? { ...h, experience: h.experience + amount } : h));
+    const updatedHeroes = heroes.map(h => h.id === heroId ? { ...h, experience: h.experience + amount } : h);
+    setHeroes(updatedHeroes);
+    checkLevelUps(updatedHeroes);
     await supabase.from('heroes').update({ experience: heroes.find(h => h.id === heroId)!.experience + amount }).eq('id', heroId);
 
     if (row) {
