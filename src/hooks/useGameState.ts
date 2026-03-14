@@ -15,6 +15,7 @@ export function useGameState() {
   const [monsterKills, setMonsterKills] = useState<Record<string, number>>({});
   const [xpArchive, setXPArchive] = useState<Record<string, XPRecord[]>>({});
   const [loading, setLoading] = useState(true);
+  const heroLevelsRef = useRef<Record<string, number>>({});
 
   // Load all data from Supabase on user change
   useEffect(() => {
