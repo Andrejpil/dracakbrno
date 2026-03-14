@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 
