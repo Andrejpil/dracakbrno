@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
+import { getHeroLevel, getXPForNextLevel } from '@/lib/gameData';
 import { Trash2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
