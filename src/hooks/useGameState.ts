@@ -1,9 +1,10 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
-  createHero, createMonster, calculateHP, calculateXP,
+  createHero, createMonster, calculateHP, calculateXP, getHeroLevel,
 } from '@/lib/gameData';
 
 export function useGameState() {
