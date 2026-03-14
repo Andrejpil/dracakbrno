@@ -10,6 +10,7 @@ const links = [
   { to: '/zkusenosti', label: 'Zkušenosti', icon: Star },
   { to: '/statistika', label: 'Statistika', icon: BarChart3 },
   { to: '/export', label: 'Export / Import', icon: Download },
+  { to: '/mapa', label: 'Mapa', icon: Map },
 ];
 
 export default function AppSidebar() {

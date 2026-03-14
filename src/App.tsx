@@ -46,6 +46,7 @@ function AppContent() {
             <Route path="/zkusenosti" element={<XPPage />} />
             <Route path="/statistika" element={<StatsPage />} />
             <Route path="/export" element={<ExportPage />} />
+            <Route path="/mapa" element={<MapPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
