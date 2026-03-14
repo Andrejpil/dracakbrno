@@ -37,11 +37,16 @@ export function useGameState() {
       supabase.from('xp_archive').select('*').order('created_at'),
     ]);
 
-    setHeroes((hRes.data || []).map((h: any) => ({
+    const loadedHeroes = (hRes.data || []).map((h: any) => ({
       id: h.id, name: h.name, race: h.race as Race, profession: h.profession,
       specialization: h.specialization, experience: h.experience,
       kills: h.kills, totalDamage: h.total_damage,
-    })));
+    }));
+    // Store initial levels (no notification on load)
+    const levels: Record<string, number> = {};
+    loadedHeroes.forEach((h: Hero) => { levels[h.id] = getHeroLevel(h.experience); });
+    heroLevelsRef.current = levels;
+    setHeroes(loadedHeroes);
 
     setMonsters((mRes.data || []).map((m: any) => ({
       id: m.id, name: m.name, str: m.str, con: m.con, dex: m.dex,
