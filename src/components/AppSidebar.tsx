@@ -15,6 +15,8 @@ const links = [
 export default function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { isAdmin } = useUserRole();
+  const allLinks = isAdmin ? [...links, { to: '/admin', label: 'Uživatelé', icon: Users }] : links;
   return (
     <aside className="w-48 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">
       <h1 className="font-display text-lg text-primary mb-8 px-2 leading-tight">
