@@ -78,20 +78,25 @@ export function useGameState() {
     setLoading(false);
   }
 
-  // Check for level-ups and show toast
+  // Check for level-ups and queue dialog
   function checkLevelUps(updatedHeroes: Hero[]) {
+    const newLevelUps: { heroName: string; level: number }[] = [];
     updatedHeroes.forEach(h => {
       const oldLevel = heroLevelsRef.current[h.id] || 1;
       const newLevel = getHeroLevel(h.experience);
       if (newLevel > oldLevel) {
-        toast({
-          title: `🎉 ${h.name} dosáhl úrovně ${newLevel}!`,
-          description: `Hrdina ${h.name} právě postoupil na úroveň ${newLevel}!`,
-        });
+        newLevelUps.push({ heroName: h.name, level: newLevel });
       }
       heroLevelsRef.current[h.id] = newLevel;
     });
+    if (newLevelUps.length > 0) {
+      setLevelUpQueue(prev => [...prev, ...newLevelUps]);
+    }
   }
+
+  const dismissLevelUp = useCallback(() => {
+    setLevelUpQueue(prev => prev.slice(1));
+  }, []);
 
   // Hero CRUD
   const addHero = useCallback(async (data: Omit<Hero, 'id' | 'kills' | 'totalDamage'>) => {
