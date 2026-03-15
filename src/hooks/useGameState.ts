@@ -358,6 +358,7 @@ export function useGameState() {
 
   return {
     heroes, monsters, battleMonsters, monsterKills, xpArchive, loading,
+    levelUpQueue, dismissLevelUp,
     addHero, editHero, deleteHero,
     addMonster, editMonster, deleteMonster,
     addToBattle, dealDamage, removeFromBattle, updateBattleMP,
