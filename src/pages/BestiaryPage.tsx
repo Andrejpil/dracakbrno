@@ -16,6 +16,8 @@ const defaultMonster = { name: '', str: 0, con: 0, dex: 0, int: 0, cha: 0, mp: 0
 
 export default function BestiaryPage() {
   const { monsters, addMonster, editMonster, deleteMonster } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('bestiary');
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
