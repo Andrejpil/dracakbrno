@@ -56,11 +56,11 @@ export default function StatsPage() {
               <div>
               <span className="font-semibold text-foreground">{name}</span>
               <span className="text-muted-foreground text-sm ml-2">– Zabito:</span>
-              <Input type="number" className="inline-block w-16 h-7 text-xs ml-2" value={count}
+              {editable ? <Input type="number" className="inline-block w-16 h-7 text-xs ml-2" value={count}
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateKills({ ...monsterKills, [name]: val });
-                }} />
+                }} /> : <span className="text-foreground ml-2">{count}</span>}
               </div>
             </div>
             <button onClick={() => {
