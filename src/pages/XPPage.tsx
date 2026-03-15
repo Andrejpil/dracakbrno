@@ -8,6 +8,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export default function XPPage() {
   const { heroes, xpArchive, addXP, deleteXP, updateXP } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('xp');
   const [inputs, setInputs] = useState<Record<string, { amount: string; note: string }>>({});
 
   const getInput = (id: string) => inputs[id] || { amount: '', note: '' };
