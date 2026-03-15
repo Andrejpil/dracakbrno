@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MapPoint {
   id: string;
