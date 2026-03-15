@@ -308,12 +308,14 @@ export default function MapPage() {
                   <div key={p.id} className="flex items-center gap-1 text-xs">
                     <MapPin size={12} style={{ color: activeRoute.color }} />
                     <span className="flex-1 truncate">{p.label || `Bod ${i + 1}`}{segDist}</span>
-                    <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label })}>
-                      <Edit2 size={12} />
-                    </button>
-                    <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
-                      <Trash2 size={12} />
-                    </button>
+                    {editable && <>
+                      <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label })}>
+                        <Edit2 size={12} />
+                      </button>
+                      <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
+                        <Trash2 size={12} />
+                      </button>
+                    </>}
                   </div>
                 );
               })}
