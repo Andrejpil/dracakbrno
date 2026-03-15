@@ -26,13 +26,13 @@ export default function StatsPage() {
             <h4 className="font-display text-foreground mb-2">{h.name}</h4>
             <div className="flex items-center gap-3 text-sm">
               <span className="text-muted-foreground">Killů:</span>
-              <Input type="number" className="w-20 h-7 text-xs" value={h.kills}
+              {editable ? <Input type="number" className="w-20 h-7 text-xs" value={h.kills}
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateHeroes(heroes.map(x => x.id === h.id ? { ...x, kills: val } : x));
-                }} />
+                }} /> : <span className="text-foreground">{h.kills}</span>}
               <span className="text-muted-foreground">Poškození:</span>
-              <Input type="number" className="w-20 h-7 text-xs" value={h.totalDamage}
+              {editable ? <Input type="number" className="w-20 h-7 text-xs" value={h.totalDamage}
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateHeroes(heroes.map(x => x.id === h.id ? { ...x, totalDamage: val } : x));
