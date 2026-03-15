@@ -4,6 +4,7 @@ import { getHeroLevel, getXPForNextLevel } from '@/lib/gameData';
 import { Trash2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function XPPage() {
   const { heroes, xpArchive, addXP, deleteXP, updateXP } = useGame();
