@@ -13,6 +13,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export default function BattlePage() {
   const { heroes, monsters, battleMonsters, addToBattle, dealDamage, removeFromBattle, updateBattleMP } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('battle');
   const [addOpen, setAddOpen] = useState(false);
   const [selectedMonster, setSelectedMonster] = useState('');
   const [levelMin, setLevelMin] = useState(1);
