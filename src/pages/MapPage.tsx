@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Plus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface MapPoint {
   id: string;
@@ -43,6 +44,8 @@ const ROUTE_COLORS = ['#ff0000', '#00cc44', '#3388ff', '#ff8800', '#cc00ff', '#f
 
 export default function MapPage() {
   const { user } = useAuth();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('map');
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
@@ -140,7 +143,7 @@ export default function MapPage() {
 
   // Add point on map click
   function handleMapClick(e: React.MouseEvent) {
-    if (!activeRouteId || !imgRef.current || isPanning) return;
+    if (!editable || !activeRouteId || !imgRef.current || isPanning) return;
     const rect = imgRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
@@ -238,15 +241,15 @@ export default function MapPage() {
       <Card className="w-72 shrink-0 p-4 flex flex-col gap-3 overflow-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-primary">Mapa</h2>
-          <Button size="icon" variant="ghost" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }}>
+          {editable && <Button size="icon" variant="ghost" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }}>
             <Settings size={18} />
-          </Button>
+          </Button>}
         </div>
 
         {/* Routes list */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-foreground">Trasy</span>
-          <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová</Button>
+          {editable && <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová</Button>}
         </div>
 
         <div className="flex flex-col gap-1">
@@ -263,12 +266,14 @@ export default function MapPage() {
               <button onClick={(e) => { e.stopPropagation(); setRoutes(prev => prev.map(x => x.id === r.id ? { ...x, visible: !x.visible } : x)); }}>
                 {r.visible ? <Eye size={14} /> : <EyeOff size={14} />}
               </button>
-              <button onClick={(e) => { e.stopPropagation(); setRenameName(r.name); setRenameOpen(r.id); }}>
-                <Edit2 size={14} />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); deleteRoute(r.id); }} className="text-destructive">
-                <Trash2 size={14} />
-              </button>
+              {editable && <>
+                <button onClick={(e) => { e.stopPropagation(); setRenameName(r.name); setRenameOpen(r.id); }}>
+                  <Edit2 size={14} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); deleteRoute(r.id); }} className="text-destructive">
+                  <Trash2 size={14} />
+                </button>
+              </>}
             </div>
           ))}
         </div>
@@ -303,12 +308,14 @@ export default function MapPage() {
                   <div key={p.id} className="flex items-center gap-1 text-xs">
                     <MapPin size={12} style={{ color: activeRoute.color }} />
                     <span className="flex-1 truncate">{p.label || `Bod ${i + 1}`}{segDist}</span>
-                    <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label })}>
-                      <Edit2 size={12} />
-                    </button>
-                    <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
-                      <Trash2 size={12} />
-                    </button>
+                    {editable && <>
+                      <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label })}>
+                        <Edit2 size={12} />
+                      </button>
+                      <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
+                        <Trash2 size={12} />
+                      </button>
+                    </>}
                   </div>
                 );
               })}

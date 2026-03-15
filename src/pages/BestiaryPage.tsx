@@ -10,11 +10,14 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const defaultMonster = { name: '', str: 0, con: 0, dex: 0, int: 0, cha: 0, mp: 0, attack: 0, defense: 0, xp_reward: 0, special: '', is_unique: false, image_url: '' };
 
 export default function BestiaryPage() {
   const { monsters, addMonster, editMonster, deleteMonster } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('bestiary');
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -62,7 +65,7 @@ export default function BestiaryPage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Bestiář</h2>
-        <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nová bestie</Button>
+        {editable && <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nová bestie</Button>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {monsters.map(m => (
@@ -78,10 +81,10 @@ export default function BestiaryPage() {
                   {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
                 </div>
               </div>
-              <div className="flex gap-1">
+              {editable && <div className="flex gap-1">
                 <button onClick={() => openEdit(m)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
                 <button onClick={() => deleteMonster(m.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
-              </div>
+              </div>}
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap gap-x-4 gap-y-1">

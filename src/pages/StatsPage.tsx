@@ -2,9 +2,12 @@ import { useGame } from '@/contexts/GameContext';
 import { Input } from '@/components/ui/input';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function StatsPage() {
   const { heroes, monsters, monsterKills, updateKills, updateHeroes } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('stats');
 
   const totalKills = Object.values(monsterKills).reduce((a, b) => a + b, 0);
 
@@ -23,17 +26,17 @@ export default function StatsPage() {
             <h4 className="font-display text-foreground mb-2">{h.name}</h4>
             <div className="flex items-center gap-3 text-sm">
               <span className="text-muted-foreground">Killů:</span>
-              <Input type="number" className="w-20 h-7 text-xs" value={h.kills}
+              {editable ? <Input type="number" className="w-20 h-7 text-xs" value={h.kills}
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateHeroes(heroes.map(x => x.id === h.id ? { ...x, kills: val } : x));
-                }} />
+                }} /> : <span className="text-foreground">{h.kills}</span>}
               <span className="text-muted-foreground">Poškození:</span>
-              <Input type="number" className="w-20 h-7 text-xs" value={h.totalDamage}
+              {editable ? <Input type="number" className="w-20 h-7 text-xs" value={h.totalDamage}
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateHeroes(heroes.map(x => x.id === h.id ? { ...x, totalDamage: val } : x));
-                }} />
+                }} /> : <span className="text-foreground">{h.totalDamage}</span>}
             </div>
           </div>
         ))}
@@ -53,18 +56,18 @@ export default function StatsPage() {
               <div>
               <span className="font-semibold text-foreground">{name}</span>
               <span className="text-muted-foreground text-sm ml-2">– Zabito:</span>
-              <Input type="number" className="inline-block w-16 h-7 text-xs ml-2" value={count}
+              {editable ? <Input type="number" className="inline-block w-16 h-7 text-xs ml-2" value={count}
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateKills({ ...monsterKills, [name]: val });
-                }} />
+                }} /> : <span className="text-foreground ml-2">{count}</span>}
               </div>
             </div>
-            <button onClick={() => {
+            {editable && <button onClick={() => {
               const k = { ...monsterKills };
               delete k[name];
               updateKills(k);
-            }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+            }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>}
           </div>
           );
         })}

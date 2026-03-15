@@ -9,9 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function BattlePage() {
   const { heroes, monsters, battleMonsters, addToBattle, dealDamage, removeFromBattle, updateBattleMP } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('battle');
   const [addOpen, setAddOpen] = useState(false);
   const [selectedMonster, setSelectedMonster] = useState('');
   const [levelMin, setLevelMin] = useState(1);
@@ -48,9 +51,9 @@ export default function BattlePage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Boj</h2>
-        <Button onClick={() => { setSelectedMonster(''); setLevelMin(1); setLevelMax(1); setQuantity(1); setAddOpen(true); }} size="sm" disabled={monsters.length === 0}>
+        {editable && <Button onClick={() => { setSelectedMonster(''); setLevelMin(1); setLevelMax(1); setQuantity(1); setAddOpen(true); }} size="sm" disabled={monsters.length === 0}>
           <Plus size={16} className="mr-1" /> Přidat bestii
-        </Button>
+        </Button>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -69,7 +72,7 @@ export default function BattlePage() {
                   {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
                   <span className="text-xs text-muted-foreground">Úr. {m.level}</span>
                 </div>
-                <button onClick={() => removeFromBattle(m.battleId)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
+                {editable && <button onClick={() => removeFromBattle(m.battleId)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>}
               </div>
               <div className="space-y-2">
                 <div><span className="text-sm text-muted-foreground">HP: </span><HPBar current={m.currentHP} max={m.hp} /></div>
@@ -88,7 +91,7 @@ export default function BattlePage() {
                 <p className="text-sm text-muted-foreground">XP: <span className="text-primary">{scaledXP}</span> <span className="text-xs">(základ {m.xp_reward} × {(1 + (m.level - 1) * 0.1).toFixed(1)})</span></p>
                 {m.special && <p className="text-xs text-muted-foreground">{m.special}</p>}
 
-                <div className="pt-2 border-t border-border space-y-2">
+                {editable && <div className="pt-2 border-t border-border space-y-2">
                   <Select value={state.heroId} onValueChange={v => setDmgState(m.battleId, { heroId: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Vyber hrdinu" /></SelectTrigger>
                     <SelectContent>{heroes.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}</SelectContent>
@@ -101,7 +104,7 @@ export default function BattlePage() {
                       disabled={!state.heroId || state.amount <= 0 || m.currentHP <= 0}
                     >Útok</Button>
                   </div>
-                </div>
+                </div>}
               </div>
             </div>
           );

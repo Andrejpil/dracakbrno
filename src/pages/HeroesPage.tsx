@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { RACES, RACIAL_ABILITIES, Race, Hero, getHeroLevel, getXPForNextLevel, XP_THRESHOLDS } from '@/lib/gameData';
 import { Plus, Pencil, Trash2, Shield } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function HeroesPage() {
   const { heroes, addHero, editHero, deleteHero } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('heroes');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', race: 'Barbar' as Race, profession: '', specialization: '', experience: 0 });
@@ -28,7 +31,7 @@ export default function HeroesPage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Hrdinové</h2>
-        <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nový hrdina</Button>
+        {editable && <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nový hrdina</Button>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {heroes.map(h => {
@@ -37,10 +40,10 @@ export default function HeroesPage() {
             <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-display text-lg text-foreground">{h.name}</h3>
-                <div className="flex gap-1">
+                {editable && <div className="flex gap-1">
                   <button onClick={() => openEdit(h)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
                   <button onClick={() => deleteHero(h.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
-                </div>
+                </div>}
               </div>
               <p className="text-sm text-muted-foreground">Rasa: <span className="text-foreground">{h.race}</span></p>
               <p className="text-sm text-muted-foreground">Povolání: <span className="text-foreground">{h.profession}</span></p>
