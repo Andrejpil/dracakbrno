@@ -81,10 +81,10 @@ export default function BestiaryPage() {
                   {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
                 </div>
               </div>
-              <div className="flex gap-1">
+              {editable && <div className="flex gap-1">
                 <button onClick={() => openEdit(m)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
                 <button onClick={() => deleteMonster(m.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
-              </div>
+              </div>}
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap gap-x-4 gap-y-1">

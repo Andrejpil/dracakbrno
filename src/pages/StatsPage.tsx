@@ -63,11 +63,11 @@ export default function StatsPage() {
                 }} /> : <span className="text-foreground ml-2">{count}</span>}
               </div>
             </div>
-            <button onClick={() => {
+            {editable && <button onClick={() => {
               const k = { ...monsterKills };
               delete k[name];
               updateKills(k);
-            }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>
+            }} className="text-muted-foreground hover:text-destructive"><Trash2 size={14} /></button>}
           </div>
           );
         })}

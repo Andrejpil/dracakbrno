@@ -30,7 +30,7 @@ export default function XPPage() {
               <p className="text-sm text-muted-foreground mb-3">Celkové XP: <span className="text-primary font-semibold">{h.experience}</span>
                 {(() => { const next = getXPForNextLevel(h.experience); return next ? <span className="text-xs"> / {next.next}</span> : null; })()}
               </p>
-              <div className="flex gap-2 mb-3">
+              {editable && <div className="flex gap-2 mb-3">
                 <Input type="number" placeholder="XP" className="h-8 text-xs w-20" value={inp.amount}
                   onChange={e => setInput(h.id, { amount: e.target.value })} />
                 <Input placeholder="Poznámka" className="h-8 text-xs" value={inp.note}
@@ -39,7 +39,7 @@ export default function XPPage() {
                   addXP(h.id, parseInt(inp.amount) || 0, inp.note);
                   setInput(h.id, { amount: '', note: '' });
                 }}>+</Button>
-              </div>
+              </div>}
               {records.length > 0 && (
                 <div className="bg-muted rounded-md p-2 max-h-40 overflow-auto space-y-1">
                   <p className="text-xs font-semibold text-muted-foreground mb-1">Archiv:</p>

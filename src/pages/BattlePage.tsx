@@ -91,7 +91,7 @@ export default function BattlePage() {
                 <p className="text-sm text-muted-foreground">XP: <span className="text-primary">{scaledXP}</span> <span className="text-xs">(základ {m.xp_reward} × {(1 + (m.level - 1) * 0.1).toFixed(1)})</span></p>
                 {m.special && <p className="text-xs text-muted-foreground">{m.special}</p>}
 
-                <div className="pt-2 border-t border-border space-y-2">
+                {editable && <div className="pt-2 border-t border-border space-y-2">
                   <Select value={state.heroId} onValueChange={v => setDmgState(m.battleId, { heroId: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Vyber hrdinu" /></SelectTrigger>
                     <SelectContent>{heroes.map(h => <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>)}</SelectContent>
@@ -104,7 +104,7 @@ export default function BattlePage() {
                       disabled={!state.heroId || state.amount <= 0 || m.currentHP <= 0}
                     >Útok</Button>
                   </div>
-                </div>
+                </div>}
               </div>
             </div>
           );

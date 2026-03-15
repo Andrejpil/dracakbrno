@@ -40,10 +40,10 @@ export default function HeroesPage() {
             <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-display text-lg text-foreground">{h.name}</h3>
-                <div className="flex gap-1">
+                {editable && <div className="flex gap-1">
                   <button onClick={() => openEdit(h)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
                   <button onClick={() => deleteHero(h.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
-                </div>
+                </div>}
               </div>
               <p className="text-sm text-muted-foreground">Rasa: <span className="text-foreground">{h.race}</span></p>
               <p className="text-sm text-muted-foreground">Povolání: <span className="text-foreground">{h.profession}</span></p>
