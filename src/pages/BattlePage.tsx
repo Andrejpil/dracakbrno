@@ -72,7 +72,7 @@ export default function BattlePage() {
                   {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
                   <span className="text-xs text-muted-foreground">Úr. {m.level}</span>
                 </div>
-                <button onClick={() => removeFromBattle(m.battleId)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
+                {editable && <button onClick={() => removeFromBattle(m.battleId)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>}
               </div>
               <div className="space-y-2">
                 <div><span className="text-sm text-muted-foreground">HP: </span><HPBar current={m.currentHP} max={m.hp} /></div>
