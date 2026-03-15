@@ -44,6 +44,8 @@ const ROUTE_COLORS = ['#ff0000', '#00cc44', '#3388ff', '#ff8800', '#cc00ff', '#f
 
 export default function MapPage() {
   const { user } = useAuth();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('map');
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
 
