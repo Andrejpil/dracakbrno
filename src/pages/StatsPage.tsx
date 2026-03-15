@@ -6,6 +6,8 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export default function StatsPage() {
   const { heroes, monsters, monsterKills, updateKills, updateHeroes } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('stats');
 
   const totalKills = Object.values(monsterKills).reduce((a, b) => a + b, 0);
 
