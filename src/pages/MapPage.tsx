@@ -266,12 +266,14 @@ export default function MapPage() {
               <button onClick={(e) => { e.stopPropagation(); setRoutes(prev => prev.map(x => x.id === r.id ? { ...x, visible: !x.visible } : x)); }}>
                 {r.visible ? <Eye size={14} /> : <EyeOff size={14} />}
               </button>
-              <button onClick={(e) => { e.stopPropagation(); setRenameName(r.name); setRenameOpen(r.id); }}>
-                <Edit2 size={14} />
-              </button>
-              <button onClick={(e) => { e.stopPropagation(); deleteRoute(r.id); }} className="text-destructive">
-                <Trash2 size={14} />
-              </button>
+              {editable && <>
+                <button onClick={(e) => { e.stopPropagation(); setRenameName(r.name); setRenameOpen(r.id); }}>
+                  <Edit2 size={14} />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); deleteRoute(r.id); }} className="text-destructive">
+                  <Trash2 size={14} />
+                </button>
+              </>}
             </div>
           ))}
         </div>
