@@ -31,7 +31,7 @@ export default function HeroesPage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Hrdinové</h2>
-        <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nový hrdina</Button>
+        {editable && <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nový hrdina</Button>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {heroes.map(h => {
