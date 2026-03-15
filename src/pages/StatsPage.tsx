@@ -2,6 +2,7 @@ import { useGame } from '@/contexts/GameContext';
 import { Input } from '@/components/ui/input';
 import { Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function StatsPage() {
   const { heroes, monsters, monsterKills, updateKills, updateHeroes } = useGame();
