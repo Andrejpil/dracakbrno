@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const defaultMonster = { name: '', str: 0, con: 0, dex: 0, int: 0, cha: 0, mp: 0, attack: 0, defense: 0, xp_reward: 0, special: '', is_unique: false, image_url: '' };
 
