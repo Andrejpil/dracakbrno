@@ -330,6 +330,30 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          id: string
+          page: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          id?: string
+          page: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          id?: string
+          page?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -388,6 +412,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_default_role: {
+        Args: { p_user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
