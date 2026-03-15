@@ -241,9 +241,9 @@ export default function MapPage() {
       <Card className="w-72 shrink-0 p-4 flex flex-col gap-3 overflow-auto">
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg text-primary">Mapa</h2>
-          <Button size="icon" variant="ghost" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }}>
+          {editable && <Button size="icon" variant="ghost" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }}>
             <Settings size={18} />
-          </Button>
+          </Button>}
         </div>
 
         {/* Routes list */}
