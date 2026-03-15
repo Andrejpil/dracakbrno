@@ -143,7 +143,7 @@ export default function MapPage() {
 
   // Add point on map click
   function handleMapClick(e: React.MouseEvent) {
-    if (!activeRouteId || !imgRef.current || isPanning) return;
+    if (!editable || !activeRouteId || !imgRef.current || isPanning) return;
     const rect = imgRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
