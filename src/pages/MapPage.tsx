@@ -249,7 +249,7 @@ export default function MapPage() {
         {/* Routes list */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-foreground">Trasy</span>
-          <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová</Button>
+          {editable && <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová</Button>}
         </div>
 
         <div className="flex flex-col gap-1">
