@@ -65,7 +65,7 @@ export default function BestiaryPage() {
     <div className="animate-fade-in">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">Bestiář</h2>
-        <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nová bestie</Button>
+        {editable && <Button onClick={openNew} size="sm"><Plus size={16} className="mr-1" /> Nová bestie</Button>}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {monsters.map(m => (
