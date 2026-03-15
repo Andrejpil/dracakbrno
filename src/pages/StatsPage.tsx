@@ -36,7 +36,7 @@ export default function StatsPage() {
                 onChange={e => {
                   const val = parseInt(e.target.value) || 0;
                   updateHeroes(heroes.map(x => x.id === h.id ? { ...x, totalDamage: val } : x));
-                }} />
+                }} /> : <span className="text-foreground">{h.totalDamage}</span>}
             </div>
           </div>
         ))}
