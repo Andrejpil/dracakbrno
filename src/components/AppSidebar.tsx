@@ -3,28 +3,33 @@ import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map 
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 
-const links = [
-  { to: '/', label: 'Hrdinové', icon: Sword },
-  { to: '/bestiar', label: 'Bestiář', icon: BookOpen },
-  { to: '/boj', label: 'Boj', icon: Swords },
-  { to: '/zkusenosti', label: 'Zkušenosti', icon: Star },
-  { to: '/statistika', label: 'Statistika', icon: BarChart3 },
-  { to: '/export', label: 'Export / Import', icon: Download },
-  { to: '/mapa', label: 'Mapa', icon: Map },
+const allLinks = [
+  { to: '/', label: 'Hrdinové', icon: Sword, page: 'heroes' },
+  { to: '/bestiar', label: 'Bestiář', icon: BookOpen, page: 'bestiary' },
+  { to: '/boj', label: 'Boj', icon: Swords, page: 'battle' },
+  { to: '/zkusenosti', label: 'Zkušenosti', icon: Star, page: 'xp' },
+  { to: '/statistika', label: 'Statistika', icon: BarChart3, page: 'stats' },
+  { to: '/export', label: 'Export / Import', icon: Download, page: 'export' },
+  { to: '/mapa', label: 'Mapa', icon: Map, page: 'map' },
 ];
 
 export default function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
-  const { isAdmin } = useUserRole();
-  const allLinks = isAdmin ? [...links, { to: '/admin', label: 'Uživatelé', icon: Users }] : links;
+  const { isAdmin, canView } = useUserRole();
+
+  const visibleLinks = allLinks.filter(l => canView(l.page));
+  const finalLinks = isAdmin
+    ? [...visibleLinks, { to: '/admin', label: 'Uživatelé', icon: Users, page: 'admin' }]
+    : visibleLinks;
+
   return (
     <aside className="w-48 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">
       <h1 className="font-display text-lg text-primary mb-8 px-2 leading-tight">
         Dračí Doupě
       </h1>
       <nav className="flex flex-col gap-1 flex-1">
-        {allLinks.map(({ to, label, icon: Icon }) => {
+        {finalLinks.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
           return (
             <NavLink
