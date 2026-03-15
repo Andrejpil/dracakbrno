@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function HeroesPage() {
   const { heroes, addHero, editHero, deleteHero } = useGame();
+  const { canEdit: canEditPage } = useUserRole();
+  const editable = canEditPage('heroes');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', race: 'Barbar' as Race, profession: '', specialization: '', experience: 0 });
