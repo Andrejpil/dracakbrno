@@ -14,6 +14,9 @@ import StatsPage from "@/pages/StatsPage";
 import ExportPage from "@/pages/ExportPage";
 import AdminPage from "@/pages/AdminPage";
 import MapPage from "@/pages/MapPage";
+import NPCPage from "@/pages/NPCPage";
+import EncounterPage from "@/pages/EncounterPage";
+import KillsPage from "@/pages/KillsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -43,8 +46,11 @@ function AppContent() {
             <Route path="/" element={<HeroesPage />} />
             <Route path="/bestiar" element={<BestiaryPage />} />
             <Route path="/boj" element={<BattlePage />} />
+            <Route path="/setkani" element={<EncounterPage />} />
             <Route path="/zkusenosti" element={<XPPage />} />
             <Route path="/statistika" element={<StatsPage />} />
+            <Route path="/zabiti" element={<KillsPage />} />
+            <Route path="/npc" element={<NPCPage />} />
             <Route path="/export" element={<ExportPage />} />
             <Route path="/mapa" element={<MapPage />} />
             <Route path="/admin" element={<AdminPage />} />
