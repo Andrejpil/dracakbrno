@@ -25,11 +25,12 @@ const PAGE_LABELS: Record<string, string> = {
   battle: 'Boj',
   xp: 'Zkušenosti',
   stats: 'Statistika',
+  npc: 'NPC',
   export: 'Export / Import',
   map: 'Mapa',
 };
 
-const PAGES = ['heroes', 'bestiary', 'battle', 'xp', 'stats', 'export', 'map'];
+const PAGES = ['heroes', 'bestiary', 'battle', 'xp', 'stats', 'npc', 'export', 'map'];
 
 export default function AdminPage() {
   const { user } = useAuth();
