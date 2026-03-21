@@ -139,8 +139,10 @@ export type Database = {
       map_points: {
         Row: {
           created_at: string
+          description: string
           id: string
           label: string
+          point_type: string
           route_id: string
           sort_order: number
           user_id: string
@@ -149,8 +151,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string
           id?: string
           label?: string
+          point_type?: string
           route_id: string
           sort_order?: number
           user_id: string
@@ -159,8 +163,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string
           id?: string
           label?: string
+          point_type?: string
           route_id?: string
           sort_order?: number
           user_id?: string
@@ -309,6 +315,39 @@ export type Database = {
           str?: number
           user_id?: string
           xp_reward?: number
+        }
+        Relationships: []
+      }
+      npcs: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          location: string
+          name: string
+          relationship: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          location?: string
+          name: string
+          relationship?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          location?: string
+          name?: string
+          relationship?: string
+          user_id?: string
         }
         Relationships: []
       }
