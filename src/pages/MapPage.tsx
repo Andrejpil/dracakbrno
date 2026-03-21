@@ -13,6 +13,8 @@ interface MapPoint {
   id: string;
   route_id: string;
   label: string;
+  description: string;
+  point_type: string;
   x: number;
   y: number;
   sort_order: number;
@@ -55,7 +57,7 @@ export default function MapPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
-  const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string } | null>(null);
+  const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string; description: string; point_type: string } | null>(null);
 
   // Pan & zoom state
   const [scale, setScale] = useState(0.5);
@@ -84,7 +86,7 @@ export default function MapPage() {
     const pointsByRoute: Record<string, MapPoint[]> = {};
     (pRes.data || []).forEach((p: any) => {
       if (!pointsByRoute[p.route_id]) pointsByRoute[p.route_id] = [];
-      pointsByRoute[p.route_id].push({ id: p.id, route_id: p.route_id, label: p.label, x: p.x, y: p.y, sort_order: p.sort_order });
+      pointsByRoute[p.route_id].push({ id: p.id, route_id: p.route_id, label: p.label, description: p.description || '', point_type: p.point_type || 'generic', x: p.x, y: p.y, sort_order: p.sort_order });
     });
 
     const loadedRoutes: MapRoute[] = (rRes.data || []).map((r: any) => ({
@@ -158,7 +160,7 @@ export default function MapPage() {
       user_id: user.id, route_id: routeId, x, y, sort_order: sortOrder, label: '',
     }).select().single();
     if (row) {
-      const pt: MapPoint = { id: row.id, route_id: (row as any).route_id, label: '', x: (row as any).x, y: (row as any).y, sort_order: (row as any).sort_order };
+      const pt: MapPoint = { id: row.id, route_id: (row as any).route_id, label: '', description: '', point_type: 'generic', x: (row as any).x, y: (row as any).y, sort_order: (row as any).sort_order };
       setRoutes(prev => prev.map(r => r.id === routeId ? { ...r, points: [...r.points, pt] } : r));
     }
   }
@@ -172,9 +174,13 @@ export default function MapPage() {
   // Update point label
   async function savePointLabel() {
     if (!editPointLabel) return;
-    await supabase.from('map_points').update({ label: editPointLabel.label }).eq('id', editPointLabel.pointId);
+    await supabase.from('map_points').update({
+      label: editPointLabel.label,
+      description: editPointLabel.description,
+      point_type: editPointLabel.point_type,
+    }).eq('id', editPointLabel.pointId);
     setRoutes(prev => prev.map(r => r.id === editPointLabel.routeId
-      ? { ...r, points: r.points.map(p => p.id === editPointLabel.pointId ? { ...p, label: editPointLabel.label } : p) }
+      ? { ...r, points: r.points.map(p => p.id === editPointLabel.pointId ? { ...p, label: editPointLabel.label, description: editPointLabel.description, point_type: editPointLabel.point_type } : p) }
       : r));
     setEditPointLabel(null);
   }
@@ -309,7 +315,7 @@ export default function MapPage() {
                     <MapPin size={12} style={{ color: activeRoute.color }} />
                     <span className="flex-1 truncate">{p.label || `Bod ${i + 1}`}{segDist}</span>
                     {editable && <>
-                      <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label })}>
+                      <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label, description: p.description, point_type: p.point_type })}>
                         <Edit2 size={12} />
                       </button>
                       <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
@@ -439,8 +445,39 @@ export default function MapPage() {
       {/* Edit point label dialog */}
       <Dialog open={!!editPointLabel} onOpenChange={() => setEditPointLabel(null)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Pojmenovat bod</DialogTitle></DialogHeader>
-          <Input value={editPointLabel?.label || ''} onChange={e => setEditPointLabel(prev => prev ? { ...prev, label: e.target.value } : null)} />
+          <DialogHeader><DialogTitle>Upravit bod</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-foreground font-medium">Název</label>
+              <Input value={editPointLabel?.label || ''} onChange={e => setEditPointLabel(prev => prev ? { ...prev, label: e.target.value } : null)} />
+            </div>
+            <div>
+              <label className="text-sm text-foreground font-medium">Typ lokace</label>
+              <select
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editPointLabel?.point_type || 'generic'}
+                onChange={e => setEditPointLabel(prev => prev ? { ...prev, point_type: e.target.value } : null)}
+              >
+                <option value="generic">📍 Obecný</option>
+                <option value="city">🏰 Město</option>
+                <option value="village">🏠 Vesnice</option>
+                <option value="cave">🕳️ Jeskyně</option>
+                <option value="forest">🌲 Les</option>
+                <option value="camp">⛺ Tábořiště</option>
+                <option value="ruins">🏚️ Ruiny</option>
+                <option value="temple">⛪ Chrám</option>
+                <option value="tavern">🍺 Hospoda</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm text-foreground font-medium">Popis místa</label>
+              <textarea
+                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={editPointLabel?.description || ''}
+                onChange={e => setEditPointLabel(prev => prev ? { ...prev, description: e.target.value } : null)}
+              />
+            </div>
+          </div>
           <DialogFooter>
             <Button onClick={savePointLabel}>Uložit</Button>
           </DialogFooter>
