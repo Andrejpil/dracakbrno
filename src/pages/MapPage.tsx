@@ -310,9 +310,10 @@ export default function MapPage() {
                   const px = Math.sqrt((p.x - prev.x) ** 2 + (p.y - prev.y) ** 2);
                   segDist = ` (${(px / settings.pixels_per_km).toFixed(1)} km)`;
                 }
-                return (
-                  <div key={p.id} className="flex items-center gap-1 text-xs">
-                    <MapPin size={12} style={{ color: activeRoute.color }} />
+                    const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', generic: '📍' }[p.point_type] || '📍';
+                    return (
+                      <div key={p.id} className="flex items-center gap-1 text-xs" title={p.description || undefined}>
+                        <span>{typeIcon}</span>
                     <span className="flex-1 truncate">{p.label || `Bod ${i + 1}`}{segDist}</span>
                     {editable && <>
                       <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label, description: p.description, point_type: p.point_type })}>
@@ -384,7 +385,7 @@ export default function MapPage() {
                       cx={p.x} cy={p.y} r={6 / scale}
                       fill={r.color} stroke="white" strokeWidth={2 / scale}
                     />
-                    {p.label && (
+                    {(p.label || p.point_type !== 'generic') && (
                       <text
                         x={p.x + 10 / scale} y={p.y - 10 / scale}
                         fill="white" stroke="black" strokeWidth={3 / scale}
@@ -392,7 +393,7 @@ export default function MapPage() {
                         fontSize={14 / scale}
                         fontWeight="bold"
                       >
-                        {p.label}
+                        {{ city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', generic: '' }[p.point_type] || ''} {p.label}
                       </text>
                     )}
                   </g>
