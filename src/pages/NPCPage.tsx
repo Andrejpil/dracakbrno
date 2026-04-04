@@ -43,6 +43,7 @@ export default function NPCPage() {
   // Generator state
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [genRace, setGenRace] = useState<NPCRace>('Člověk');
+  const [genGender, setGenGender] = useState<NPCGender>('random');
   const [genName, setGenName] = useState('');
   const [genForm, setGenForm] = useState({ location: '', description: '', relationship: '' });
 
