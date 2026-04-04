@@ -9,7 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Trash2, Edit2, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { NPC_RACES, generateRandomName, type NPCRace } from '@/lib/npcNames';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -37,6 +39,12 @@ export default function NPCPage() {
   const [form, setForm] = useState({ name: '', location: '', description: '', relationship: '' });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
+
+  // Generator state
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [genRace, setGenRace] = useState<NPCRace>('Člověk');
+  const [genName, setGenName] = useState('');
+  const [genForm, setGenForm] = useState({ location: '', description: '', relationship: '' });
 
   useEffect(() => {
     if (user) loadNpcs();
@@ -119,6 +127,38 @@ export default function NPCPage() {
     setImagePreview(URL.createObjectURL(file));
   }
 
+  // Generator functions
+  function openGenerator() {
+    setGenRace('Člověk');
+    setGenName(generateRandomName('Člověk'));
+    setGenForm({ location: '', description: '', relationship: '' });
+    setGeneratorOpen(true);
+  }
+
+  function rerollName() {
+    setGenName(generateRandomName(genRace));
+  }
+
+  function handleRaceChange(race: string) {
+    setGenRace(race as NPCRace);
+    setGenName(generateRandomName(race as NPCRace));
+  }
+
+  async function handleSaveGenerated() {
+    if (!user || !genName.trim()) return;
+    await supabase.from('npcs').insert({
+      user_id: user.id,
+      name: genName,
+      location: genForm.location,
+      description: genForm.description,
+      relationship: genForm.relationship,
+      image_url: '',
+    });
+    setGeneratorOpen(false);
+    loadNpcs();
+    toast({ title: 'NPC uloženo do seznamu' });
+  }
+
   const filtered = npcs.filter(n =>
     n.name.toLowerCase().includes(search.toLowerCase()) ||
     n.location.toLowerCase().includes(search.toLowerCase())
@@ -129,9 +169,14 @@ export default function NPCPage() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-display text-primary">NPC postavy</h2>
         {editable && (
-          <Button size="sm" onClick={openCreate}>
-            <Plus size={16} className="mr-1" /> Přidat NPC
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={openGenerator}>
+              <Wand2 size={16} className="mr-1" /> Generátor NPC
+            </Button>
+            <Button size="sm" onClick={openCreate}>
+              <Plus size={16} className="mr-1" /> Přidat NPC
+            </Button>
+          </div>
         )}
       </div>
 
@@ -242,6 +287,64 @@ export default function NPCPage() {
           <DialogFooter>
             <Button onClick={handleSave} disabled={!form.name.trim()}>
               {editingNpc ? 'Uložit' : 'Vytvořit'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generator Dialog */}
+      <Dialog open={generatorOpen} onOpenChange={setGeneratorOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display flex items-center gap-2">
+              <Wand2 size={20} /> Generátor NPC
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm text-foreground font-medium">Rasa</label>
+              <Select value={genRace} onValueChange={handleRaceChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {NPC_RACES.map(race => (
+                    <SelectItem key={race} value={race}>{race}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="text-sm text-foreground font-medium">Vygenerované jméno</label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={genName}
+                  onChange={e => setGenName(e.target.value)}
+                  className="flex-1 text-lg font-display"
+                />
+                <Button variant="outline" size="icon" onClick={rerollName} title="Nové jméno">
+                  <RefreshCw size={16} />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm text-foreground font-medium">Lokace</label>
+              <Input value={genForm.location} onChange={e => setGenForm(f => ({ ...f, location: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm text-foreground font-medium">Vztah k družině</label>
+              <Input value={genForm.relationship} onChange={e => setGenForm(f => ({ ...f, relationship: e.target.value }))} />
+            </div>
+            <div>
+              <label className="text-sm text-foreground font-medium">Popis</label>
+              <Textarea value={genForm.description} onChange={e => setGenForm(f => ({ ...f, description: e.target.value }))} rows={3} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSaveGenerated} disabled={!genName.trim()}>
+              <Save size={16} className="mr-1" /> Uložit do seznamu NPC
             </Button>
           </DialogFooter>
         </DialogContent>
