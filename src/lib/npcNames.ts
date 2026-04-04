@@ -95,9 +95,11 @@ export type NPCRace = keyof typeof NAME_POOLS;
 
 export const NPC_RACES = Object.keys(NAME_POOLS) as NPCRace[];
 
-export function generateRandomName(race: NPCRace): string {
+export type NPCGender = 'male' | 'female' | 'random';
+
+export function generateRandomName(race: NPCRace, gender: NPCGender = 'random'): string {
   const pool = NAME_POOLS[race];
-  const gender = Math.random() < 0.5 ? 'male' : 'female';
-  const names = pool[gender];
+  const g = gender === 'random' ? (Math.random() < 0.5 ? 'male' : 'female') : gender;
+  const names = pool[g];
   return names[Math.floor(Math.random() * names.length)];
 }

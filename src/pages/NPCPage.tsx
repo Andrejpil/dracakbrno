@@ -308,18 +308,33 @@ export default function NPCPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm text-foreground font-medium">Rasa</label>
-              <Select value={genRace} onValueChange={handleRaceChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {NPC_RACES.map(race => (
-                    <SelectItem key={race} value={race}>{race}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-foreground font-medium">Rasa</label>
+                <Select value={genRace} onValueChange={handleRaceChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NPC_RACES.map(race => (
+                      <SelectItem key={race} value={race}>{race}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm text-foreground font-medium">Pohlaví</label>
+                <Select value={genGender} onValueChange={handleGenderChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="random">Náhodné</SelectItem>
+                    <SelectItem value="male">Muž</SelectItem>
+                    <SelectItem value="female">Žena</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>
