@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { NPC_RACES, generateRandomName, type NPCRace } from '@/lib/npcNames';
+import { NPC_RACES, generateRandomName, type NPCRace, type NPCGender } from '@/lib/npcNames';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -43,6 +43,7 @@ export default function NPCPage() {
   // Generator state
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [genRace, setGenRace] = useState<NPCRace>('Člověk');
+  const [genGender, setGenGender] = useState<NPCGender>('random');
   const [genName, setGenName] = useState('');
   const [genForm, setGenForm] = useState({ location: '', description: '', relationship: '' });
 
@@ -130,18 +131,24 @@ export default function NPCPage() {
   // Generator functions
   function openGenerator() {
     setGenRace('Člověk');
-    setGenName(generateRandomName('Člověk'));
+    setGenGender('random');
+    setGenName(generateRandomName('Člověk', 'random'));
     setGenForm({ location: '', description: '', relationship: '' });
     setGeneratorOpen(true);
   }
 
   function rerollName() {
-    setGenName(generateRandomName(genRace));
+    setGenName(generateRandomName(genRace, genGender));
   }
 
   function handleRaceChange(race: string) {
     setGenRace(race as NPCRace);
-    setGenName(generateRandomName(race as NPCRace));
+    setGenName(generateRandomName(race as NPCRace, genGender));
+  }
+
+  function handleGenderChange(gender: string) {
+    setGenGender(gender as NPCGender);
+    setGenName(generateRandomName(genRace, gender as NPCGender));
   }
 
   async function handleSaveGenerated() {
@@ -301,18 +308,33 @@ export default function NPCPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="text-sm text-foreground font-medium">Rasa</label>
-              <Select value={genRace} onValueChange={handleRaceChange}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {NPC_RACES.map(race => (
-                    <SelectItem key={race} value={race}>{race}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm text-foreground font-medium">Rasa</label>
+                <Select value={genRace} onValueChange={handleRaceChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NPC_RACES.map(race => (
+                      <SelectItem key={race} value={race}>{race}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm text-foreground font-medium">Pohlaví</label>
+                <Select value={genGender} onValueChange={handleGenderChange}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="random">Náhodné</SelectItem>
+                    <SelectItem value="male">Muž</SelectItem>
+                    <SelectItem value="female">Žena</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div>
