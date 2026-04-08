@@ -54,6 +54,7 @@ export default function MapPage() {
   const [routes, setRoutes] = useState<MapRoute[]>([]);
   const [settings, setSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
+  const [addingPoint, setAddingPoint] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
@@ -145,11 +146,12 @@ export default function MapPage() {
 
   // Add point on map click
   function handleMapClick(e: React.MouseEvent) {
-    if (!editable || !activeRouteId || !imgRef.current || isPanning) return;
+    if (!addingPoint || !activeRouteId || !imgRef.current || isPanning) return;
     const rect = imgRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
     const y = (e.clientY - rect.top) / scale;
     addPoint(activeRouteId, x, y);
+    setAddingPoint(false);
   }
 
   async function addPoint(routeId: string, x: number, y: number) {
@@ -255,7 +257,18 @@ export default function MapPage() {
         {/* Routes list */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-foreground">Trasy</span>
-          {editable && <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová</Button>}
+          <div className="flex gap-1">
+            {editable && activeRouteId && (
+              <Button
+                size="sm"
+                variant={addingPoint ? 'default' : 'outline'}
+                onClick={() => setAddingPoint(!addingPoint)}
+              >
+                <MapPin size={14} className="mr-1" /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
+              </Button>
+            )}
+            {editable && <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová trasa</Button>}
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
@@ -344,7 +357,7 @@ export default function MapPage() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: isPanning ? 'grabbing' : 'crosshair' }}
+        style={{ cursor: isPanning ? 'grabbing' : addingPoint ? 'crosshair' : 'grab' }}
       >
         <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <img
