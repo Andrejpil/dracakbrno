@@ -257,7 +257,18 @@ export default function MapPage() {
         {/* Routes list */}
         <div className="flex items-center justify-between">
           <span className="text-sm font-semibold text-foreground">Trasy</span>
-          {editable && <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová</Button>}
+          <div className="flex gap-1">
+            {editable && activeRouteId && (
+              <Button
+                size="sm"
+                variant={addingPoint ? 'default' : 'outline'}
+                onClick={() => setAddingPoint(!addingPoint)}
+              >
+                <MapPin size={14} className="mr-1" /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
+              </Button>
+            )}
+            {editable && <Button size="sm" variant="outline" onClick={addRoute}><Plus size={14} className="mr-1" /> Nová trasa</Button>}
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">
