@@ -357,7 +357,7 @@ export default function MapPage() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: isPanning ? 'grabbing' : 'crosshair' }}
+        style={{ cursor: isPanning ? 'grabbing' : addingPoint ? 'crosshair' : 'grab' }}
       >
         <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <img
