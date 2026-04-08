@@ -54,6 +54,7 @@ export default function MapPage() {
   const [routes, setRoutes] = useState<MapRoute[]>([]);
   const [settings, setSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
+  const [addingPoint, setAddingPoint] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
