@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, ZoomIn, ZoomOut } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface MapPoint {
@@ -209,12 +209,18 @@ export default function MapPage() {
     return `${h}h ${m}m`;
   }
 
+  // Zoom helper – smooth small steps
+  const zoomBy = useCallback((factor: number) => {
+    setScale(prev => Math.min(5, Math.max(0.05, prev * factor)));
+  }, []);
+
   // Pan & zoom handlers
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setScale(prev => Math.min(5, Math.max(0.1, prev * delta)));
-  }, []);
+    // Smaller steps for smoother zoom (especially on trackpad)
+    const delta = e.deltaY > 0 ? 0.97 : 1.03;
+    zoomBy(delta);
+  }, [zoomBy]);
 
   function handleMouseDown(e: React.MouseEvent) {
     if (e.button === 1 || e.altKey) {
@@ -235,8 +241,20 @@ export default function MapPage() {
   }
 
   function handleImgLoad() {
-    if (imgRef.current) {
-      setNaturalSize({ w: imgRef.current.naturalWidth, h: imgRef.current.naturalHeight });
+    if (imgRef.current && containerRef.current) {
+      const nw = imgRef.current.naturalWidth;
+      const nh = imgRef.current.naturalHeight;
+      setNaturalSize({ w: nw, h: nh });
+
+      // Center the map in the container
+      const cw = containerRef.current.clientWidth;
+      const ch = containerRef.current.clientHeight;
+      const fitScale = Math.min(cw / nw, ch / nh, 1);
+      setScale(fitScale);
+      setOffset({
+        x: (cw - nw * fitScale) / 2,
+        y: (ch - nh * fitScale) / 2,
+      });
     }
   }
 
@@ -307,6 +325,28 @@ export default function MapPage() {
               </g>
             ))}
           </svg>
+        </div>
+
+        {/* Zoom buttons */}
+        <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
+          <Button
+            size="icon"
+            variant="secondary"
+            className="h-9 w-9 rounded-md shadow-md"
+            onClick={() => zoomBy(1.2)}
+            title="Přiblížit"
+          >
+            <Plus size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant="secondary"
+            className="h-9 w-9 rounded-md shadow-md"
+            onClick={() => zoomBy(0.8)}
+            title="Oddálit"
+          >
+            <Minus size={18} />
+          </Button>
         </div>
       </div>
 
