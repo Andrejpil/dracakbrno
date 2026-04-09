@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, ZoomIn, ZoomOut } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 
 interface MapPoint {
@@ -66,6 +66,10 @@ export default function MapPage() {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [naturalSize, setNaturalSize] = useState({ w: 1, h: 1 });
+
+  // Drag point state
+  const [draggingPoint, setDraggingPoint] = useState<{ routeId: string; pointId: string } | null>(null);
+  const didDragRef = useRef(false);
 
   // Temp settings form
   const [tempSettings, setTempSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
@@ -144,13 +148,40 @@ export default function MapPage() {
     setRenameOpen(null);
   }
 
+  // Convert client coordinates to map coordinates
+  function clientToMap(clientX: number, clientY: number): { x: number; y: number } | null {
+    if (!imgRef.current) return null;
+    const rect = imgRef.current.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left) / scale,
+      y: (clientY - rect.top) / scale,
+    };
+  }
+
+  // Find point near given map coordinates
+  function findPointAt(mapX: number, mapY: number): { routeId: string; pointId: string } | null {
+    const hitRadius = 12 / scale; // pixels in map space
+    for (const r of routes) {
+      if (!r.visible) continue;
+      for (const p of r.points) {
+        const dist = Math.sqrt((p.x - mapX) ** 2 + (p.y - mapY) ** 2);
+        if (dist <= hitRadius) return { routeId: r.id, pointId: p.id };
+      }
+    }
+    return null;
+  }
+
   // Add point on map click
   function handleMapClick(e: React.MouseEvent) {
-    if (!addingPoint || !activeRouteId || !imgRef.current || isPanning) return;
-    const rect = imgRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-    addPoint(activeRouteId, x, y);
+    // Don't add point if we just finished dragging
+    if (didDragRef.current) {
+      didDragRef.current = false;
+      return;
+    }
+    if (!addingPoint || !activeRouteId || !imgRef.current) return;
+    const coords = clientToMap(e.clientX, e.clientY);
+    if (!coords) return;
+    addPoint(activeRouteId, coords.x, coords.y);
     setAddingPoint(false);
   }
 
@@ -187,6 +218,11 @@ export default function MapPage() {
     setEditPointLabel(null);
   }
 
+  // Save point position after drag
+  async function savePointPosition(routeId: string, pointId: string, x: number, y: number) {
+    await supabase.from('map_points').update({ x, y }).eq('id', pointId);
+  }
+
   // Distance calculation
   function routeDistanceKm(route: MapRoute): number {
     let totalPx = 0;
@@ -209,34 +245,68 @@ export default function MapPage() {
     return `${h}h ${m}m`;
   }
 
-  // Zoom helper – smooth small steps
+  // Zoom helper
   const zoomBy = useCallback((factor: number) => {
     setScale(prev => Math.min(5, Math.max(0.05, prev * factor)));
   }, []);
 
-  // Pan & zoom handlers
+  // Wheel zoom
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    // Smaller steps for smoother zoom (especially on trackpad)
     const delta = e.deltaY > 0 ? 0.97 : 1.03;
     zoomBy(delta);
   }, [zoomBy]);
 
   function handleMouseDown(e: React.MouseEvent) {
-    if (e.button === 1 || e.altKey) {
-      e.preventDefault();
-      setIsPanning(true);
-      setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+    if (e.button !== 0) return; // only left button
+
+    const coords = clientToMap(e.clientX, e.clientY);
+
+    // If editable and hovering over a point, start dragging the point
+    if (editable && coords && !addingPoint) {
+      const hit = findPointAt(coords.x, coords.y);
+      if (hit) {
+        e.preventDefault();
+        setDraggingPoint(hit);
+        didDragRef.current = false;
+        return;
+      }
     }
+
+    // Otherwise start panning
+    e.preventDefault();
+    setIsPanning(true);
+    setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
   }
 
   function handleMouseMove(e: React.MouseEvent) {
+    if (draggingPoint) {
+      // Move the point
+      const coords = clientToMap(e.clientX, e.clientY);
+      if (!coords) return;
+      didDragRef.current = true;
+      setRoutes(prev => prev.map(r =>
+        r.id === draggingPoint.routeId
+          ? { ...r, points: r.points.map(p => p.id === draggingPoint.pointId ? { ...p, x: coords.x, y: coords.y } : p) }
+          : r
+      ));
+      return;
+    }
     if (isPanning) {
       setOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
     }
   }
 
   function handleMouseUp() {
+    if (draggingPoint) {
+      // Save new position to DB
+      const route = routes.find(r => r.id === draggingPoint.routeId);
+      const point = route?.points.find(p => p.id === draggingPoint.pointId);
+      if (point && didDragRef.current) {
+        savePointPosition(draggingPoint.routeId, draggingPoint.pointId, point.x, point.y);
+      }
+      setDraggingPoint(null);
+    }
     setIsPanning(false);
   }
 
@@ -246,7 +316,6 @@ export default function MapPage() {
       const nh = imgRef.current.naturalHeight;
       setNaturalSize({ w: nw, h: nh });
 
-      // Center the map in the container
       const cw = containerRef.current.clientWidth;
       const ch = containerRef.current.clientHeight;
       const fitScale = Math.min(cw / nw, ch / nh, 1);
@@ -258,12 +327,20 @@ export default function MapPage() {
     }
   }
 
+  // Determine cursor
+  function getCursor(): string {
+    if (draggingPoint) return 'grabbing';
+    if (addingPoint) return 'crosshair';
+    if (isPanning) return 'grabbing';
+    return 'grab';
+  }
+
   const activeRoute = routes.find(r => r.id === activeRouteId);
   const activeDistKm = activeRoute ? routeDistanceKm(activeRoute) : 0;
 
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)]">
-      {/* Map area - takes most space */}
+      {/* Map area */}
       <div
         ref={containerRef}
         className="flex-1 min-h-0 overflow-hidden rounded-lg border border-border bg-card relative select-none"
@@ -272,7 +349,7 @@ export default function MapPage() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: isPanning ? 'grabbing' : addingPoint ? 'crosshair' : 'grab' }}
+        style={{ cursor: getCursor() }}
       >
         <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <img
@@ -303,11 +380,16 @@ export default function MapPage() {
                     opacity={0.8}
                   />
                 )}
-                {r.points.map((p, i) => (
-                  <g key={p.id}>
+                {r.points.map((p) => (
+                  <g key={p.id} style={{ pointerEvents: editable ? 'auto' : 'none', cursor: editable ? 'move' : 'default' }}>
                     <circle
                       cx={p.x} cy={p.y} r={6 / scale}
                       fill={r.color} stroke="white" strokeWidth={2 / scale}
+                    />
+                    {/* Larger invisible hit area for easier grabbing */}
+                    <circle
+                      cx={p.x} cy={p.y} r={14 / scale}
+                      fill="transparent"
                     />
                     {(p.label || p.point_type !== 'generic') && (
                       <text
@@ -316,6 +398,7 @@ export default function MapPage() {
                         paintOrder="stroke"
                         fontSize={14 / scale}
                         fontWeight="bold"
+                        style={{ pointerEvents: 'none' }}
                       >
                         {{ city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', generic: '' }[p.point_type] || ''} {p.label}
                       </text>
