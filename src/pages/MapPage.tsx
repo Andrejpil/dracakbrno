@@ -400,7 +400,7 @@ export default function MapPage() {
                         fontWeight="bold"
                         style={{ pointerEvents: 'none' }}
                       >
-                        {{ city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', generic: '' }[p.point_type] || ''} {p.label}
+                        {{ city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', generic: '' }[p.point_type] || ''} {p.label}
                       </text>
                     )}
                   </g>
@@ -513,7 +513,7 @@ export default function MapPage() {
                     const px = Math.sqrt((p.x - prev.x) ** 2 + (p.y - prev.y) ** 2);
                     segDist = ` (${(px / settings.pixels_per_km).toFixed(1)} km)`;
                   }
-                  const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', generic: '📍' }[p.point_type] || '📍';
+                  const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', generic: '📍' }[p.point_type] || '📍';
                   return (
                     <div key={p.id} className="flex items-center gap-1 text-xs" title={p.description || undefined}>
                       <span>{typeIcon}</span>
@@ -599,6 +599,10 @@ export default function MapPage() {
                 <option value="ruins">🏚️ Ruiny</option>
                 <option value="temple">⛪ Chrám</option>
                 <option value="tavern">🍺 Hospoda</option>
+                <option value="road">🛤️ Cesta</option>
+                <option value="meadow">🌾 Louka</option>
+                <option value="landmark">⭐ Významné místo</option>
+                <option value="battlefield">⚔️ Bojiště</option>
               </select>
             </div>
             <div>
