@@ -400,7 +400,7 @@ export default function MapPage() {
                         fontWeight="bold"
                         style={{ pointerEvents: 'none' }}
                       >
-                        {{ city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', generic: '' }[p.point_type] || ''} {p.label}
+                        {{ city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', dam: '🌊', ford: '🚿', mountains: '⛰️', generic: '' }[p.point_type] || ''} {p.label}
                       </text>
                     )}
                   </g>
@@ -451,6 +451,20 @@ export default function MapPage() {
                 </Button>
               )}
               {editable && <Button size="sm" variant="outline" onClick={addRoute} className="h-7 text-xs"><Plus size={12} className="mr-1" /> Nová trasa</Button>}
+              {routes.length > 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const allVisible = routes.every(r => r.visible);
+                    setRoutes(prev => prev.map(r => ({ ...r, visible: !allVisible })));
+                  }}
+                >
+                  {routes.every(r => r.visible) ? <EyeOff size={12} className="mr-1" /> : <Eye size={12} className="mr-1" />}
+                  {routes.every(r => r.visible) ? 'Skrýt vše' : 'Zobrazit vše'}
+                </Button>
+              )}
               {editable && <Button size="icon" variant="ghost" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }} className="h-7 w-7">
                 <Settings size={14} />
               </Button>}
@@ -513,7 +527,7 @@ export default function MapPage() {
                     const px = Math.sqrt((p.x - prev.x) ** 2 + (p.y - prev.y) ** 2);
                     segDist = ` (${(px / settings.pixels_per_km).toFixed(1)} km)`;
                   }
-                  const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', generic: '📍' }[p.point_type] || '📍';
+                  const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', dam: '🌊', ford: '🚿', mountains: '⛰️', generic: '📍' }[p.point_type] || '📍';
                   return (
                     <div key={p.id} className="flex items-center gap-1 text-xs" title={p.description || undefined}>
                       <span>{typeIcon}</span>
@@ -603,6 +617,9 @@ export default function MapPage() {
                 <option value="meadow">🌾 Louka</option>
                 <option value="landmark">⭐ Významné místo</option>
                 <option value="battlefield">⚔️ Bojiště</option>
+                <option value="dam">🌊 Jez</option>
+                <option value="ford">🚿 Brod</option>
+                <option value="mountains">⛰️ Hory</option>
               </select>
             </div>
             <div>
