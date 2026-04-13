@@ -393,6 +393,39 @@ export type Database = {
         }
         Relationships: []
       }
+      special_map_points: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          name: string
+          user_id: string
+          visible_to_viewers: boolean
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          user_id: string
+          visible_to_viewers?: boolean
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          user_id?: string
+          visible_to_viewers?: boolean
+          x?: number
+          y?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
