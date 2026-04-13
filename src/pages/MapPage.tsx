@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 
 interface MapPoint {
   id: string;
@@ -35,6 +37,15 @@ interface MapSettings {
   speed_broom: number;
 }
 
+interface SpecialPoint {
+  id: string;
+  name: string;
+  description: string;
+  x: number;
+  y: number;
+  visible_to_viewers: boolean;
+}
+
 const DEFAULT_SETTINGS: MapSettings = {
   pixels_per_km: 10,
   speed_walk: 5,
@@ -46,7 +57,7 @@ const ROUTE_COLORS = ['#ff0000', '#00cc44', '#3388ff', '#ff8800', '#cc00ff', '#f
 
 export default function MapPage() {
   const { user } = useAuth();
-  const { canEdit: canEditPage } = useUserRole();
+  const { canEdit: canEditPage, isAdmin, isEditor, role } = useUserRole();
   const editable = canEditPage('map');
   const containerRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -60,6 +71,13 @@ export default function MapPage() {
   const [renameName, setRenameName] = useState('');
   const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string; description: string; point_type: string } | null>(null);
 
+  // Special points state
+  const [specialPoints, setSpecialPoints] = useState<SpecialPoint[]>([]);
+  const [showSpecialPoints, setShowSpecialPoints] = useState(true);
+  const [addingSpecialPoint, setAddingSpecialPoint] = useState(false);
+  const [editSpecialPoint, setEditSpecialPoint] = useState<SpecialPoint | null>(null);
+  const [viewSpecialPoint, setViewSpecialPoint] = useState<SpecialPoint | null>(null);
+
   // Pan & zoom state
   const [scale, setScale] = useState(0.5);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -69,6 +87,7 @@ export default function MapPage() {
 
   // Drag point state
   const [draggingPoint, setDraggingPoint] = useState<{ routeId: string; pointId: string } | null>(null);
+  const [draggingSpecialPoint, setDraggingSpecialPoint] = useState<string | null>(null);
   const didDragRef = useRef(false);
 
   // Temp settings form
@@ -82,10 +101,11 @@ export default function MapPage() {
 
   async function loadData() {
     if (!user) return;
-    const [rRes, pRes, sRes] = await Promise.all([
+    const [rRes, pRes, sRes, spRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
       supabase.from('map_settings').select('*').eq('user_id', user!.id).maybeSingle(),
+      supabase.from('special_map_points').select('*').order('created_at'),
     ]);
 
     const pointsByRoute: Record<string, MapPoint[]> = {};
@@ -106,7 +126,19 @@ export default function MapPage() {
       const s = sRes.data as any;
       setSettings({ pixels_per_km: s.pixels_per_km, speed_walk: s.speed_walk, speed_horse: s.speed_horse, speed_broom: s.speed_broom });
     }
+
+    // Load special points
+    const allSp: SpecialPoint[] = (spRes.data || []).map((sp: any) => ({
+      id: sp.id, name: sp.name, description: sp.description, x: sp.x, y: sp.y, visible_to_viewers: sp.visible_to_viewers,
+    }));
+    setSpecialPoints(allSp);
   }
+
+  // Filter special points based on role
+  const visibleSpecialPoints = specialPoints.filter(sp => {
+    if (isAdmin || isEditor) return true;
+    return sp.visible_to_viewers;
+  });
 
   // Save settings
   async function saveSettings() {
@@ -160,7 +192,7 @@ export default function MapPage() {
 
   // Find point near given map coordinates
   function findPointAt(mapX: number, mapY: number): { routeId: string; pointId: string } | null {
-    const hitRadius = 12 / scale; // pixels in map space
+    const hitRadius = 12 / scale;
     for (const r of routes) {
       if (!r.visible) continue;
       for (const p of r.points) {
@@ -171,16 +203,45 @@ export default function MapPage() {
     return null;
   }
 
+  // Find special point near coordinates
+  function findSpecialPointAt(mapX: number, mapY: number): string | null {
+    if (!showSpecialPoints) return null;
+    const hitRadius = 14 / scale;
+    for (const sp of visibleSpecialPoints) {
+      const dist = Math.sqrt((sp.x - mapX) ** 2 + (sp.y - mapY) ** 2);
+      if (dist <= hitRadius) return sp.id;
+    }
+    return null;
+  }
+
   // Add point on map click
   function handleMapClick(e: React.MouseEvent) {
-    // Don't add point if we just finished dragging
     if (didDragRef.current) {
       didDragRef.current = false;
       return;
     }
-    if (!addingPoint || !activeRouteId || !imgRef.current) return;
+
     const coords = clientToMap(e.clientX, e.clientY);
     if (!coords) return;
+
+    // Check if clicking on a special point to view it
+    if (!addingPoint && !addingSpecialPoint) {
+      const spId = findSpecialPointAt(coords.x, coords.y);
+      if (spId) {
+        const sp = visibleSpecialPoints.find(s => s.id === spId);
+        if (sp) setViewSpecialPoint(sp);
+        return;
+      }
+    }
+
+    // Adding special point
+    if (addingSpecialPoint && editable) {
+      addSpecialPoint(coords.x, coords.y);
+      setAddingSpecialPoint(false);
+      return;
+    }
+
+    if (!addingPoint || !activeRouteId || !imgRef.current) return;
     addPoint(activeRouteId, coords.x, coords.y);
     setAddingPoint(false);
   }
@@ -196,6 +257,42 @@ export default function MapPage() {
       const pt: MapPoint = { id: row.id, route_id: (row as any).route_id, label: '', description: '', point_type: 'generic', x: (row as any).x, y: (row as any).y, sort_order: (row as any).sort_order };
       setRoutes(prev => prev.map(r => r.id === routeId ? { ...r, points: [...r.points, pt] } : r));
     }
+  }
+
+  // Special points CRUD
+  async function addSpecialPoint(x: number, y: number) {
+    if (!user) return;
+    const { data: row } = await supabase.from('special_map_points').insert({
+      user_id: user.id, x, y, name: 'Nový bod', description: '', visible_to_viewers: false,
+    }).select().single();
+    if (row) {
+      const sp: SpecialPoint = { id: row.id, name: (row as any).name, description: (row as any).description, x: (row as any).x, y: (row as any).y, visible_to_viewers: (row as any).visible_to_viewers };
+      setSpecialPoints(prev => [...prev, sp]);
+      setEditSpecialPoint(sp);
+    }
+  }
+
+  async function saveSpecialPoint() {
+    if (!editSpecialPoint) return;
+    await supabase.from('special_map_points').update({
+      name: editSpecialPoint.name,
+      description: editSpecialPoint.description,
+      visible_to_viewers: editSpecialPoint.visible_to_viewers,
+    }).eq('id', editSpecialPoint.id);
+    setSpecialPoints(prev => prev.map(sp => sp.id === editSpecialPoint.id ? editSpecialPoint : sp));
+    setEditSpecialPoint(null);
+    toast({ title: 'Speciální bod uložen' });
+  }
+
+  async function deleteSpecialPoint(id: string) {
+    await supabase.from('special_map_points').delete().eq('id', id);
+    setSpecialPoints(prev => prev.filter(sp => sp.id !== id));
+    setEditSpecialPoint(null);
+    setViewSpecialPoint(null);
+  }
+
+  async function saveSpecialPointPosition(id: string, x: number, y: number) {
+    await supabase.from('special_map_points').update({ x, y }).eq('id', id);
   }
 
   // Delete point
@@ -258,12 +355,23 @@ export default function MapPage() {
   }, [zoomBy]);
 
   function handleMouseDown(e: React.MouseEvent) {
-    if (e.button !== 0) return; // only left button
+    if (e.button !== 0) return;
 
     const coords = clientToMap(e.clientX, e.clientY);
 
-    // If editable and hovering over a point, start dragging the point
-    if (editable && coords && !addingPoint) {
+    // If editable and hovering over a special point, start dragging
+    if (editable && coords && !addingPoint && !addingSpecialPoint) {
+      const spId = findSpecialPointAt(coords.x, coords.y);
+      if (spId) {
+        e.preventDefault();
+        setDraggingSpecialPoint(spId);
+        didDragRef.current = false;
+        return;
+      }
+    }
+
+    // If editable and hovering over a route point, start dragging
+    if (editable && coords && !addingPoint && !addingSpecialPoint) {
       const hit = findPointAt(coords.x, coords.y);
       if (hit) {
         e.preventDefault();
@@ -280,8 +388,16 @@ export default function MapPage() {
   }
 
   function handleMouseMove(e: React.MouseEvent) {
+    if (draggingSpecialPoint) {
+      const coords = clientToMap(e.clientX, e.clientY);
+      if (!coords) return;
+      didDragRef.current = true;
+      setSpecialPoints(prev => prev.map(sp =>
+        sp.id === draggingSpecialPoint ? { ...sp, x: coords.x, y: coords.y } : sp
+      ));
+      return;
+    }
     if (draggingPoint) {
-      // Move the point
       const coords = clientToMap(e.clientX, e.clientY);
       if (!coords) return;
       didDragRef.current = true;
@@ -298,8 +414,14 @@ export default function MapPage() {
   }
 
   function handleMouseUp() {
+    if (draggingSpecialPoint) {
+      const sp = specialPoints.find(s => s.id === draggingSpecialPoint);
+      if (sp && didDragRef.current) {
+        saveSpecialPointPosition(draggingSpecialPoint, sp.x, sp.y);
+      }
+      setDraggingSpecialPoint(null);
+    }
     if (draggingPoint) {
-      // Save new position to DB
       const route = routes.find(r => r.id === draggingPoint.routeId);
       const point = route?.points.find(p => p.id === draggingPoint.pointId);
       if (point && didDragRef.current) {
@@ -329,8 +451,8 @@ export default function MapPage() {
 
   // Determine cursor
   function getCursor(): string {
-    if (draggingPoint) return 'grabbing';
-    if (addingPoint) return 'crosshair';
+    if (draggingPoint || draggingSpecialPoint) return 'grabbing';
+    if (addingPoint || addingSpecialPoint) return 'crosshair';
     if (isPanning) return 'grabbing';
     return 'grab';
   }
@@ -386,7 +508,6 @@ export default function MapPage() {
                       cx={p.x} cy={p.y} r={6 / scale}
                       fill={r.color} stroke="white" strokeWidth={2 / scale}
                     />
-                    {/* Larger invisible hit area for easier grabbing */}
                     <circle
                       cx={p.x} cy={p.y} r={14 / scale}
                       fill="transparent"
@@ -405,6 +526,51 @@ export default function MapPage() {
                     )}
                   </g>
                 ))}
+              </g>
+            ))}
+
+            {/* Special points */}
+            {showSpecialPoints && visibleSpecialPoints.map(sp => (
+              <g key={sp.id} style={{ pointerEvents: 'auto', cursor: 'pointer' }}>
+                {/* Star shape */}
+                <text
+                  x={sp.x} y={sp.y}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={22 / scale}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  ⭐
+                </text>
+                {/* Invisible hit area */}
+                <circle
+                  cx={sp.x} cy={sp.y} r={14 / scale}
+                  fill="transparent"
+                />
+                {sp.name && (
+                  <text
+                    x={sp.x + 14 / scale} y={sp.y - 14 / scale}
+                    fill="#FFD700" stroke="black" strokeWidth={3 / scale}
+                    paintOrder="stroke"
+                    fontSize={13 / scale}
+                    fontWeight="bold"
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    {sp.name}
+                  </text>
+                )}
+                {/* Visibility indicator for admins/editors */}
+                {(isAdmin || isEditor) && !sp.visible_to_viewers && (
+                  <text
+                    x={sp.x + 14 / scale} y={sp.y + 4 / scale}
+                    fill="#ff6666" stroke="black" strokeWidth={2 / scale}
+                    paintOrder="stroke"
+                    fontSize={10 / scale}
+                    style={{ pointerEvents: 'none' }}
+                  >
+                    🔒 skrytý
+                  </text>
+                )}
               </g>
             ))}
           </svg>
@@ -444,7 +610,7 @@ export default function MapPage() {
                 <Button
                   size="sm"
                   variant={addingPoint ? 'default' : 'outline'}
-                  onClick={() => setAddingPoint(!addingPoint)}
+                  onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); }}
                   className="h-7 text-xs"
                 >
                   <MapPin size={12} className="mr-1" /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
@@ -493,6 +659,58 @@ export default function MapPage() {
                   </>}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Special points section */}
+          <div className="border-l border-border pl-4 min-w-[180px]">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h2 className="font-display text-sm font-semibold" style={{ color: '#FFD700' }}>⭐ Speciální body</h2>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => setShowSpecialPoints(!showSpecialPoints)}
+              >
+                {showSpecialPoints ? <EyeOff size={12} className="mr-1" /> : <Eye size={12} className="mr-1" />}
+                {showSpecialPoints ? 'Skrýt' : 'Zobrazit'}
+              </Button>
+              {editable && (
+                <Button
+                  size="sm"
+                  variant={addingSpecialPoint ? 'default' : 'outline'}
+                  onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); }}
+                  className="h-7 text-xs"
+                >
+                  <Star size={12} className="mr-1" /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový bod'}
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1 max-h-[100px] overflow-auto">
+              {visibleSpecialPoints.map(sp => (
+                <div
+                  key={sp.id}
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:bg-secondary/50 cursor-pointer text-foreground"
+                  onClick={() => setViewSpecialPoint(sp)}
+                >
+                  <span>⭐</span>
+                  <span className="truncate max-w-[120px]">{sp.name || 'Bez názvu'}</span>
+                  {(isAdmin || isEditor) && !sp.visible_to_viewers && <span className="text-destructive text-[10px]">🔒</span>}
+                  {editable && (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); setEditSpecialPoint(sp); }}>
+                        <Edit2 size={10} />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteSpecialPoint(sp.id); }} className="text-destructive">
+                        <Trash2 size={10} />
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+              {visibleSpecialPoints.length === 0 && (
+                <span className="text-xs text-muted-foreground">Žádné speciální body</span>
+              )}
             </div>
           </div>
 
@@ -633,6 +851,81 @@ export default function MapPage() {
           </div>
           <DialogFooter>
             <Button onClick={savePointLabel}>Uložit</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View special point dialog (click on star) */}
+      <Dialog open={!!viewSpecialPoint} onOpenChange={() => setViewSpecialPoint(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span>⭐</span> {viewSpecialPoint?.name || 'Speciální bod'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            {viewSpecialPoint?.description ? (
+              <p className="text-sm text-foreground whitespace-pre-wrap">{viewSpecialPoint.description}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">Žádný popis.</p>
+            )}
+            {(isAdmin || isEditor) && (
+              <p className="text-xs text-muted-foreground">
+                Viditelnost: {viewSpecialPoint?.visible_to_viewers ? '👁️ Viditelné pro všechny' : '🔒 Pouze admin/editor'}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            {editable && viewSpecialPoint && (
+              <Button variant="outline" onClick={() => { setEditSpecialPoint(viewSpecialPoint); setViewSpecialPoint(null); }}>
+                <Edit2 size={14} className="mr-1" /> Upravit
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setViewSpecialPoint(null)}>Zavřít</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit special point dialog */}
+      <Dialog open={!!editSpecialPoint} onOpenChange={() => setEditSpecialPoint(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upravit speciální bod</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-foreground font-medium">Název místa</label>
+              <Input
+                value={editSpecialPoint?.name || ''}
+                onChange={e => setEditSpecialPoint(prev => prev ? { ...prev, name: e.target.value } : null)}
+              />
+            </div>
+            <div>
+              <label className="text-sm text-foreground font-medium">Popis (co se tam nachází nebo stalo)</label>
+              <Textarea
+                className="min-h-[100px]"
+                value={editSpecialPoint?.description || ''}
+                onChange={e => setEditSpecialPoint(prev => prev ? { ...prev, description: e.target.value } : null)}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={editSpecialPoint?.visible_to_viewers ?? false}
+                onCheckedChange={checked => setEditSpecialPoint(prev => prev ? { ...prev, visible_to_viewers: checked } : null)}
+              />
+              <label className="text-sm text-foreground">Viditelné pro čtenáře (viewer)</label>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Admin a editor vidí tento bod vždy. Čtenář ho uvidí pouze pokud je viditelnost zapnutá.
+            </p>
+          </div>
+          <DialogFooter>
+            {editSpecialPoint && (
+              <Button variant="destructive" onClick={() => deleteSpecialPoint(editSpecialPoint.id)} className="mr-auto">
+                <Trash2 size={14} className="mr-1" /> Smazat
+              </Button>
+            )}
+            <Button onClick={saveSpecialPoint}>Uložit</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
