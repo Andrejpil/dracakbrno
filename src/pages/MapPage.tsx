@@ -231,7 +231,10 @@ export default function MapPage() {
       const spId = findSpecialPointAt(coords.x, coords.y);
       if (spId) {
         const sp = visibleSpecialPoints.find(s => s.id === spId);
-        if (sp) setViewSpecialPoint(sp);
+        if (sp) {
+          setViewSpecialPoint(sp);
+          setSpecialPointsDialogOpen(true);
+        }
         return;
       }
     }
