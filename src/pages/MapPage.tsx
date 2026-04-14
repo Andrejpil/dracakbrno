@@ -915,36 +915,7 @@ export default function MapPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View special point dialog (click on star) */}
-      <Dialog open={!!viewSpecialPoint} onOpenChange={() => setViewSpecialPoint(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span>⭐</span> {viewSpecialPoint?.name || 'Speciální bod'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            {viewSpecialPoint?.description ? (
-              <p className="text-sm text-foreground whitespace-pre-wrap">{viewSpecialPoint.description}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">Žádný popis.</p>
-            )}
-            {(isAdmin || isEditor) && (
-              <p className="text-xs text-muted-foreground">
-                Viditelnost: {viewSpecialPoint?.visible_to_viewers ? '👁️ Viditelné pro všechny' : '🔒 Pouze admin/editor'}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            {editable && viewSpecialPoint && (
-              <Button variant="outline" onClick={() => { setEditSpecialPoint(viewSpecialPoint); setViewSpecialPoint(null); }}>
-                <Edit2 size={14} className="mr-1" /> Upravit
-              </Button>
-            )}
-            <Button variant="secondary" onClick={() => setViewSpecialPoint(null)}>Zavřít</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Edit special point dialog */}
       <Dialog open={!!editSpecialPoint} onOpenChange={() => setEditSpecialPoint(null)}>
