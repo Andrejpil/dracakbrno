@@ -4,9 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, Map } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -67,6 +67,8 @@ export default function MapPage() {
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
   const [addingPoint, setAddingPoint] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [routesDialogOpen, setRoutesDialogOpen] = useState(false);
+  const [specialPointsDialogOpen, setSpecialPointsDialogOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
   const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string; description: string; point_type: string } | null>(null);
@@ -229,7 +231,10 @@ export default function MapPage() {
       const spId = findSpecialPointAt(coords.x, coords.y);
       if (spId) {
         const sp = visibleSpecialPoints.find(s => s.id === spId);
-        if (sp) setViewSpecialPoint(sp);
+        if (sp) {
+          setViewSpecialPoint(sp);
+          setSpecialPointsDialogOpen(true);
+        }
         return;
       }
     }
@@ -461,11 +466,11 @@ export default function MapPage() {
   const activeDistKm = activeRoute ? routeDistanceKm(activeRoute) : 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)]">
+    <div className="h-[calc(100vh-3rem)] relative">
       {/* Map area */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 overflow-hidden rounded-lg border border-border bg-card relative select-none"
+        className="h-full overflow-hidden rounded-lg border border-border bg-card relative select-none"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -576,125 +581,206 @@ export default function MapPage() {
           </svg>
         </div>
 
+        {/* Floating toolbar - top left */}
+        <div className="absolute top-3 left-3 flex items-center gap-1 z-10 flex-wrap">
+          <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setRoutesDialogOpen(true)}>
+            <Route size={14} /> Trasy
+          </Button>
+          <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setSpecialPointsDialogOpen(true)}>
+            <Star size={14} /> Speciální body
+          </Button>
+          {editable && (
+            <Button size="sm" variant="secondary" className="h-8 w-8 shadow-md p-0" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }} title="Nastavení mapy">
+              <Settings size={14} />
+            </Button>
+          )}
+          {editable && activeRouteId && (
+            <Button size="sm" variant={addingPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); }}>
+              <MapPin size={14} /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
+            </Button>
+          )}
+          {editable && (
+            <Button size="sm" variant={addingSpecialPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); }}>
+              <Star size={14} /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový ⭐'}
+            </Button>
+          )}
+        </div>
+
+        {/* Active route info - bottom center */}
+        {activeRoute && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-card/90 backdrop-blur border border-border rounded-md px-3 py-1.5 shadow-md max-w-[90%]">
+            <div className="flex items-center gap-3 text-xs flex-wrap justify-center">
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: activeRoute.color }} />
+              <span className="font-semibold text-foreground">{activeRoute.name}</span>
+              <span className="text-muted-foreground">Body: {activeRoute.points.length}</span>
+              <span className="text-muted-foreground">{activeDistKm.toFixed(1)} km</span>
+              {activeDistKm > 0 && (
+                <>
+                  <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
+                  <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
+                  <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Zoom buttons */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-9 w-9 rounded-md shadow-md"
-            onClick={() => zoomBy(1.2)}
-            title="Přiblížit"
-          >
+          <Button size="icon" variant="secondary" className="h-9 w-9 rounded-md shadow-md" onClick={() => zoomBy(1.2)} title="Přiblížit">
             <Plus size={18} />
           </Button>
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-9 w-9 rounded-md shadow-md"
-            onClick={() => zoomBy(0.8)}
-            title="Oddálit"
-          >
+          <Button size="icon" variant="secondary" className="h-9 w-9 rounded-md shadow-md" onClick={() => zoomBy(0.8)} title="Oddálit">
             <Minus size={18} />
           </Button>
         </div>
       </div>
 
-      {/* Bottom panel */}
-      <Card className="shrink-0 p-3 mt-2 overflow-auto max-h-[260px]">
-        <div className="flex gap-6 flex-wrap">
-          {/* Left: routes + actions */}
-          <div className="flex flex-col gap-2 min-w-[200px]">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-display text-sm text-primary font-semibold">Trasy</h2>
-              {editable && activeRouteId && (
-                <Button
-                  size="sm"
-                  variant={addingPoint ? 'default' : 'outline'}
-                  onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); }}
-                  className="h-7 text-xs"
-                >
-                  <MapPin size={12} className="mr-1" /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
-                </Button>
-              )}
-              {editable && <Button size="sm" variant="outline" onClick={addRoute} className="h-7 text-xs"><Plus size={12} className="mr-1" /> Nová trasa</Button>}
-              {routes.length > 0 && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    const allVisible = routes.every(r => r.visible);
-                    setRoutes(prev => prev.map(r => ({ ...r, visible: !allVisible })));
-                  }}
-                >
-                  {routes.every(r => r.visible) ? <EyeOff size={12} className="mr-1" /> : <Eye size={12} className="mr-1" />}
-                  {routes.every(r => r.visible) ? 'Skrýt vše' : 'Zobrazit vše'}
-                </Button>
-              )}
-              {editable && <Button size="icon" variant="ghost" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }} className="h-7 w-7">
-                <Settings size={14} />
-              </Button>}
+      {/* Routes dialog */}
+      <Dialog open={routesDialogOpen} onOpenChange={setRoutesDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Route size={18} /> Správa tras
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex gap-4 flex-1 min-h-0 overflow-auto">
+            {/* Left: route list */}
+            <div className="w-[280px] shrink-0 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {editable && <Button size="sm" variant="outline" onClick={addRoute} className="h-7 text-xs"><Plus size={12} className="mr-1" /> Nová trasa</Button>}
+                {routes.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      const allVisible = routes.every(r => r.visible);
+                      setRoutes(prev => prev.map(r => ({ ...r, visible: !allVisible })));
+                    }}
+                  >
+                    {routes.every(r => r.visible) ? <EyeOff size={12} className="mr-1" /> : <Eye size={12} className="mr-1" />}
+                    {routes.every(r => r.visible) ? 'Skrýt vše' : 'Zobrazit vše'}
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-1 max-h-[50vh] overflow-auto">
+                {routes.map(r => {
+                  const dist = routeDistanceKm(r);
+                  return (
+                    <div
+                      key={r.id}
+                      className={`flex items-center gap-1.5 px-2 py-1.5 rounded cursor-pointer text-xs transition-colors ${
+                        r.id === activeRouteId ? 'bg-secondary text-primary font-semibold' : 'hover:bg-secondary/50 text-foreground'
+                      }`}
+                      onClick={() => setActiveRouteId(r.id)}
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
+                      <span className="truncate flex-1">{r.name}</span>
+                      <span className="text-muted-foreground">{dist.toFixed(1)} km</span>
+                      <button onClick={(e) => { e.stopPropagation(); setRoutes(prev => prev.map(x => x.id === r.id ? { ...x, visible: !x.visible } : x)); }}>
+                        {r.visible ? <Eye size={12} /> : <EyeOff size={12} />}
+                      </button>
+                      {editable && <>
+                        <button onClick={(e) => { e.stopPropagation(); setRenameName(r.name); setRenameOpen(r.id); }}>
+                          <Edit2 size={12} />
+                        </button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteRoute(r.id); }} className="text-destructive">
+                          <Trash2 size={12} />
+                        </button>
+                      </>}
+                    </div>
+                  );
+                })}
+                {routes.length === 0 && <p className="text-xs text-muted-foreground">Žádné trasy</p>}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-1">
-              {routes.map(r => (
-                <div
-                  key={r.id}
-                  className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer text-xs transition-colors ${
-                    r.id === activeRouteId ? 'bg-secondary text-primary font-semibold' : 'hover:bg-secondary/50 text-foreground'
-                  }`}
-                  onClick={() => setActiveRouteId(r.id)}
-                >
-                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-                  <span className="truncate">{r.name}</span>
-                  <button onClick={(e) => { e.stopPropagation(); setRoutes(prev => prev.map(x => x.id === r.id ? { ...x, visible: !x.visible } : x)); }}>
-                    {r.visible ? <Eye size={12} /> : <EyeOff size={12} />}
-                  </button>
-                  {editable && <>
-                    <button onClick={(e) => { e.stopPropagation(); setRenameName(r.name); setRenameOpen(r.id); }}>
-                      <Edit2 size={12} />
-                    </button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteRoute(r.id); }} className="text-destructive">
-                      <Trash2 size={12} />
-                    </button>
-                  </>}
+
+            {/* Right: active route details */}
+            <div className="border-l border-border pl-4 flex-1 min-w-0 overflow-auto">
+              {activeRoute ? (
+                <div className="space-y-3">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-1" style={{ color: activeRoute.color }}>{activeRoute.name}</h3>
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span>Body: {activeRoute.points.length}</span>
+                      <span>Vzdálenost: {activeDistKm.toFixed(1)} km</span>
+                    </div>
+                    {activeDistKm > 0 && (
+                      <div className="flex gap-4 text-xs mt-1">
+                        <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
+                        <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
+                        <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1">
+                    {activeRoute.points.map((p, i) => {
+                      let segDist = '';
+                      if (i > 0) {
+                        const prev = activeRoute.points[i - 1];
+                        const px = Math.sqrt((p.x - prev.x) ** 2 + (p.y - prev.y) ** 2);
+                        segDist = ` (${(px / settings.pixels_per_km).toFixed(1)} km)`;
+                      }
+                      const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', dam: '🌊', ford: '🚿', mountains: '⛰️', generic: '📍' }[p.point_type] || '📍';
+                      return (
+                        <div key={p.id} className="flex items-center gap-1.5 text-xs py-0.5" title={p.description || undefined}>
+                          <span>{typeIcon}</span>
+                          <span className="truncate flex-1">{p.label || `Bod ${i + 1}`}{segDist}</span>
+                          {editable && <>
+                            <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label, description: p.description, point_type: p.point_type })}>
+                              <Edit2 size={10} />
+                            </button>
+                            <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
+                              <Trash2 size={10} />
+                            </button>
+                          </>}
+                        </div>
+                      );
+                    })}
+                    {activeRoute.points.length === 0 && <p className="text-xs text-muted-foreground">Žádné body v trase</p>}
+                  </div>
                 </div>
-              ))}
+              ) : (
+                <p className="text-sm text-muted-foreground">Vyberte trasu ze seznamu vlevo</p>
+              )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          {/* Special points section */}
-          <div className="border-l border-border pl-4 min-w-[180px]">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h2 className="font-display text-sm font-semibold" style={{ color: '#FFD700' }}>⭐ Speciální body</h2>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 text-xs"
-                onClick={() => setShowSpecialPoints(!showSpecialPoints)}
-              >
-                {showSpecialPoints ? <EyeOff size={12} className="mr-1" /> : <Eye size={12} className="mr-1" />}
-                {showSpecialPoints ? 'Skrýt' : 'Zobrazit'}
-              </Button>
-              {editable && (
-                <Button
-                  size="sm"
-                  variant={addingSpecialPoint ? 'default' : 'outline'}
-                  onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); }}
-                  className="h-7 text-xs"
-                >
-                  <Star size={12} className="mr-1" /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový bod'}
-                </Button>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1 max-h-[100px] overflow-auto">
+      {/* Special points dialog */}
+      <Dialog open={specialPointsDialogOpen} onOpenChange={setSpecialPointsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star size={18} className="text-yellow-400" /> Speciální body
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => setShowSpecialPoints(!showSpecialPoints)}
+            >
+              {showSpecialPoints ? <EyeOff size={12} className="mr-1" /> : <Eye size={12} className="mr-1" />}
+              {showSpecialPoints ? 'Skrýt na mapě' : 'Zobrazit na mapě'}
+            </Button>
+          </div>
+          <div className="flex gap-4 flex-1 min-h-0 overflow-auto">
+            {/* Left: list */}
+            <div className="w-[250px] shrink-0 space-y-1 max-h-[50vh] overflow-auto">
               {visibleSpecialPoints.map(sp => (
                 <div
                   key={sp.id}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-xs hover:bg-secondary/50 cursor-pointer text-foreground"
+                  className={`flex items-center gap-1.5 px-2 py-1.5 rounded cursor-pointer text-xs transition-colors ${
+                    viewSpecialPoint?.id === sp.id ? 'bg-secondary text-primary font-semibold' : 'hover:bg-secondary/50 text-foreground'
+                  }`}
                   onClick={() => setViewSpecialPoint(sp)}
                 >
                   <span>⭐</span>
-                  <span className="truncate max-w-[120px]">{sp.name || 'Bez názvu'}</span>
+                  <span className="truncate flex-1">{sp.name || 'Bez názvu'}</span>
                   {(isAdmin || isEditor) && !sp.visible_to_viewers && <span className="text-destructive text-[10px]">🔒</span>}
                   {editable && (
                     <>
@@ -708,64 +794,38 @@ export default function MapPage() {
                   )}
                 </div>
               ))}
-              {visibleSpecialPoints.length === 0 && (
-                <span className="text-xs text-muted-foreground">Žádné speciální body</span>
+              {visibleSpecialPoints.length === 0 && <p className="text-xs text-muted-foreground">Žádné speciální body</p>}
+            </div>
+            {/* Right: detail */}
+            <div className="border-l border-border pl-4 flex-1 min-w-0">
+              {viewSpecialPoint ? (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <span>⭐</span> {viewSpecialPoint.name || 'Bez názvu'}
+                  </h3>
+                  {viewSpecialPoint.description ? (
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{viewSpecialPoint.description}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Žádný popis.</p>
+                  )}
+                  {(isAdmin || isEditor) && (
+                    <p className="text-xs text-muted-foreground">
+                      {viewSpecialPoint.visible_to_viewers ? '👁️ Viditelné pro všechny' : '🔒 Pouze admin/editor'}
+                    </p>
+                  )}
+                  {editable && (
+                    <Button variant="outline" size="sm" onClick={() => { setEditSpecialPoint(viewSpecialPoint); }}>
+                      <Edit2 size={14} className="mr-1" /> Upravit
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">Klikněte na bod v seznamu pro zobrazení detailu</p>
               )}
             </div>
           </div>
-
-          {/* Middle: active route info */}
-          {activeRoute && (
-            <div className="border-l border-border pl-4 min-w-[200px]">
-              <h3 className="text-xs font-semibold mb-1" style={{ color: activeRoute.color }}>
-                {activeRoute.name}
-              </h3>
-              <div className="flex gap-4 text-xs text-muted-foreground mb-1">
-                <span>Body: {activeRoute.points.length}</span>
-                <span>Vzdálenost: {activeDistKm.toFixed(1)} km</span>
-              </div>
-              {activeDistKm > 0 && (
-                <div className="flex gap-4 text-xs">
-                  <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
-                  <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
-                  <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Right: points list */}
-          {activeRoute && activeRoute.points.length > 0 && (
-            <div className="border-l border-border pl-4 flex-1 min-w-[200px] overflow-auto">
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                {activeRoute.points.map((p, i) => {
-                  let segDist = '';
-                  if (i > 0) {
-                    const prev = activeRoute.points[i - 1];
-                    const px = Math.sqrt((p.x - prev.x) ** 2 + (p.y - prev.y) ** 2);
-                    segDist = ` (${(px / settings.pixels_per_km).toFixed(1)} km)`;
-                  }
-                  const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', dam: '🌊', ford: '🚿', mountains: '⛰️', generic: '📍' }[p.point_type] || '📍';
-                  return (
-                    <div key={p.id} className="flex items-center gap-1 text-xs" title={p.description || undefined}>
-                      <span>{typeIcon}</span>
-                      <span className="truncate">{p.label || `Bod ${i + 1}`}{segDist}</span>
-                      {editable && <>
-                        <button onClick={() => setEditPointLabel({ routeId: activeRoute.id, pointId: p.id, label: p.label, description: p.description, point_type: p.point_type })}>
-                          <Edit2 size={10} />
-                        </button>
-                        <button onClick={() => deletePoint(activeRoute.id, p.id)} className="text-destructive">
-                          <Trash2 size={10} />
-                        </button>
-                      </>}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-      </Card>
+        </DialogContent>
+      </Dialog>
 
       {/* Settings dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
@@ -855,36 +915,7 @@ export default function MapPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View special point dialog (click on star) */}
-      <Dialog open={!!viewSpecialPoint} onOpenChange={() => setViewSpecialPoint(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span>⭐</span> {viewSpecialPoint?.name || 'Speciální bod'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            {viewSpecialPoint?.description ? (
-              <p className="text-sm text-foreground whitespace-pre-wrap">{viewSpecialPoint.description}</p>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">Žádný popis.</p>
-            )}
-            {(isAdmin || isEditor) && (
-              <p className="text-xs text-muted-foreground">
-                Viditelnost: {viewSpecialPoint?.visible_to_viewers ? '👁️ Viditelné pro všechny' : '🔒 Pouze admin/editor'}
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            {editable && viewSpecialPoint && (
-              <Button variant="outline" onClick={() => { setEditSpecialPoint(viewSpecialPoint); setViewSpecialPoint(null); }}>
-                <Edit2 size={14} className="mr-1" /> Upravit
-              </Button>
-            )}
-            <Button variant="secondary" onClick={() => setViewSpecialPoint(null)}>Zavřít</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Edit special point dialog */}
       <Dialog open={!!editSpecialPoint} onOpenChange={() => setEditSpecialPoint(null)}>
