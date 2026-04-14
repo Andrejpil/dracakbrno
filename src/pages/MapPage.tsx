@@ -67,6 +67,8 @@ export default function MapPage() {
   const [activeRouteId, setActiveRouteId] = useState<string | null>(null);
   const [addingPoint, setAddingPoint] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [routesDialogOpen, setRoutesDialogOpen] = useState(false);
+  const [specialPointsDialogOpen, setSpecialPointsDialogOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
   const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string; description: string; point_type: string } | null>(null);
