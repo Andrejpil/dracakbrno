@@ -578,97 +578,60 @@ export default function MapPage() {
           </svg>
         </div>
 
+        {/* Floating toolbar - top left */}
+        <div className="absolute top-3 left-3 flex items-center gap-1 z-10 flex-wrap">
+          <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setRoutesDialogOpen(true)}>
+            <Route size={14} /> Trasy
+          </Button>
+          <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setSpecialPointsDialogOpen(true)}>
+            <Star size={14} /> Speciální body
+          </Button>
+          {editable && (
+            <Button size="sm" variant="secondary" className="h-8 w-8 shadow-md p-0" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }} title="Nastavení mapy">
+              <Settings size={14} />
+            </Button>
+          )}
+          {editable && activeRouteId && (
+            <Button size="sm" variant={addingPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); }}>
+              <MapPin size={14} /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
+            </Button>
+          )}
+          {editable && (
+            <Button size="sm" variant={addingSpecialPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); }}>
+              <Star size={14} /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový ⭐'}
+            </Button>
+          )}
+        </div>
+
+        {/* Active route info - bottom center */}
+        {activeRoute && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-card/90 backdrop-blur border border-border rounded-md px-3 py-1.5 shadow-md max-w-[90%]">
+            <div className="flex items-center gap-3 text-xs flex-wrap justify-center">
+              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: activeRoute.color }} />
+              <span className="font-semibold text-foreground">{activeRoute.name}</span>
+              <span className="text-muted-foreground">Body: {activeRoute.points.length}</span>
+              <span className="text-muted-foreground">{activeDistKm.toFixed(1)} km</span>
+              {activeDistKm > 0 && (
+                <>
+                  <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
+                  <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
+                  <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Zoom buttons */}
         <div className="absolute bottom-3 right-3 flex flex-col gap-1 z-10">
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-9 w-9 rounded-md shadow-md"
-            onClick={() => zoomBy(1.2)}
-            title="Přiblížit"
-          >
+          <Button size="icon" variant="secondary" className="h-9 w-9 rounded-md shadow-md" onClick={() => zoomBy(1.2)} title="Přiblížit">
             <Plus size={18} />
           </Button>
-          <Button
-            size="icon"
-            variant="secondary"
-            className="h-9 w-9 rounded-md shadow-md"
-            onClick={() => zoomBy(0.8)}
-            title="Oddálit"
-          >
+          <Button size="icon" variant="secondary" className="h-9 w-9 rounded-md shadow-md" onClick={() => zoomBy(0.8)} title="Oddálit">
             <Minus size={18} />
           </Button>
         </div>
       </div>
-
-      {/* Floating toolbar - bottom left */}
-      <div className="absolute bottom-3 left-3 flex items-center gap-1 z-10">
-        <Button
-          size="sm"
-          variant="secondary"
-          className="h-9 shadow-md gap-1.5"
-          onClick={() => setRoutesDialogOpen(true)}
-        >
-          <Route size={14} /> Trasy
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          className="h-9 shadow-md gap-1.5"
-          onClick={() => setSpecialPointsDialogOpen(true)}
-        >
-          <Star size={14} /> Speciální body
-        </Button>
-        {editable && (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-9 shadow-md gap-1.5"
-            onClick={() => { setTempSettings(settings); setSettingsOpen(true); }}
-          >
-            <Settings size={14} />
-          </Button>
-        )}
-        {editable && activeRouteId && (
-          <Button
-            size="sm"
-            variant={addingPoint ? 'default' : 'secondary'}
-            className="h-9 shadow-md gap-1.5"
-            onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); }}
-          >
-            <MapPin size={14} /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
-          </Button>
-        )}
-        {editable && (
-          <Button
-            size="sm"
-            variant={addingSpecialPoint ? 'default' : 'secondary'}
-            className="h-9 shadow-md gap-1.5"
-            onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); }}
-          >
-            <Star size={14} /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový ⭐'}
-          </Button>
-        )}
-      </div>
-
-      {/* Active route info - bottom center */}
-      {activeRoute && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-card/90 backdrop-blur border border-border rounded-md px-3 py-1.5 shadow-md">
-          <div className="flex items-center gap-3 text-xs">
-            <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: activeRoute.color }} />
-            <span className="font-semibold text-foreground">{activeRoute.name}</span>
-            <span className="text-muted-foreground">Body: {activeRoute.points.length}</span>
-            <span className="text-muted-foreground">{activeDistKm.toFixed(1)} km</span>
-            {activeDistKm > 0 && (
-              <>
-                <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
-                <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
-                <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Settings dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
