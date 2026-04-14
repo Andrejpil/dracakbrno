@@ -467,7 +467,7 @@ export default function MapPage() {
       {/* Map area */}
       <div
         ref={containerRef}
-        className="flex-1 min-h-0 overflow-hidden rounded-lg border border-border bg-card relative select-none"
+        className="h-full overflow-hidden rounded-lg border border-border bg-card relative select-none"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
