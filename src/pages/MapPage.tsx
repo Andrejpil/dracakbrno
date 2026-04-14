@@ -463,7 +463,7 @@ export default function MapPage() {
   const activeDistKm = activeRoute ? routeDistanceKm(activeRoute) : 0;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3rem)]">
+    <div className="h-[calc(100vh-3rem)] relative">
       {/* Map area */}
       <div
         ref={containerRef}
