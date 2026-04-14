@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, Map } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
@@ -607,20 +607,44 @@ export default function MapPage() {
         </div>
 
         {/* Active route info - bottom center */}
-        {activeRoute && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-card/90 backdrop-blur border border-border rounded-md px-3 py-1.5 shadow-md max-w-[90%]">
-            <div className="flex items-center gap-3 text-xs flex-wrap justify-center">
-              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: activeRoute.color }} />
-              <span className="font-semibold text-foreground">{activeRoute.name}</span>
-              <span className="text-muted-foreground">Body: {activeRoute.points.length}</span>
-              <span className="text-muted-foreground">{activeDistKm.toFixed(1)} km</span>
-              {activeDistKm > 0 && (
+        {routes.length > 0 && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-card/90 backdrop-blur border border-border rounded-md px-2 py-1.5 shadow-md max-w-[90%]">
+            <div className="flex items-center gap-2 text-xs">
+              <button
+                className="p-0.5 rounded hover:bg-secondary transition-colors"
+                onClick={() => {
+                  const idx = routes.findIndex(r => r.id === activeRouteId);
+                  const prev = idx <= 0 ? routes.length - 1 : idx - 1;
+                  setActiveRouteId(routes[prev].id);
+                }}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              {activeRoute && (
                 <>
-                  <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
-                  <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
-                  <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
+                  <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: activeRoute.color }} />
+                  <span className="font-semibold text-foreground">{activeRoute.name}</span>
+                  <span className="text-muted-foreground">Body: {activeRoute.points.length}</span>
+                  <span className="text-muted-foreground">{activeDistKm.toFixed(1)} km</span>
+                  {activeDistKm > 0 && (
+                    <>
+                      <span>🚶 {formatTime(activeDistKm / settings.speed_walk)}</span>
+                      <span>🐴 {formatTime(activeDistKm / settings.speed_horse)}</span>
+                      <span>🧹 {formatTime(activeDistKm / settings.speed_broom)}</span>
+                    </>
+                  )}
                 </>
               )}
+              <button
+                className="p-0.5 rounded hover:bg-secondary transition-colors"
+                onClick={() => {
+                  const idx = routes.findIndex(r => r.id === activeRouteId);
+                  const next = idx >= routes.length - 1 ? 0 : idx + 1;
+                  setActiveRouteId(routes[next].id);
+                }}
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
           </div>
         )}
