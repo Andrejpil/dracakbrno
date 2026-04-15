@@ -177,7 +177,64 @@ export default function MapPage() {
     toast({ title: 'Nastavení uloženo' });
   }
 
-  // Add route
+  // Map management
+  async function handleMapUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingMap(true);
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('map-images').upload(path, file);
+    if (uploadError) {
+      toast({ title: 'Chyba při nahrávání', description: uploadError.message, variant: 'destructive' });
+      setUploadingMap(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('map-images').getPublicUrl(path);
+    const imageUrl = urlData.publicUrl;
+    const mapName = newMapName || file.name.replace(/\.[^.]+$/, '');
+    const isFirst = maps.length === 0;
+    const { data: row } = await supabase.from('maps').insert({
+      user_id: user.id, name: mapName, image_url: imageUrl, is_active: isFirst,
+    }).select().single();
+    if (row) {
+      const newMap: MapImage = { id: row.id, name: (row as any).name, image_url: (row as any).image_url, is_active: (row as any).is_active };
+      setMaps(prev => [...prev, newMap]);
+      if (isFirst) setActiveMapUrl(imageUrl);
+      toast({ title: 'Mapa nahrána' });
+    }
+    setNewMapName('');
+    setUploadingMap(false);
+    if (mapFileRef.current) mapFileRef.current.value = '';
+  }
+
+  async function selectMap(mapId: string) {
+    if (!user) return;
+    // Deactivate all, activate selected
+    await supabase.from('maps').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('maps').update({ is_active: true }).eq('id', mapId);
+    setMaps(prev => prev.map(m => ({ ...m, is_active: m.id === mapId })));
+    const selected = maps.find(m => m.id === mapId);
+    if (selected) setActiveMapUrl(selected.image_url);
+  }
+
+  async function deleteMap(mapId: string) {
+    const map = maps.find(m => m.id === mapId);
+    if (!map) return;
+    await supabase.from('maps').delete().eq('id', mapId);
+    setMaps(prev => prev.filter(m => m.id !== mapId));
+    if (map.is_active && maps.length > 1) {
+      const remaining = maps.filter(m => m.id !== mapId);
+      if (remaining.length > 0) selectMap(remaining[0].id);
+    }
+  }
+
+  async function renameMap(mapId: string, newName: string) {
+    await supabase.from('maps').update({ name: newName }).eq('id', mapId);
+    setMaps(prev => prev.map(m => m.id === mapId ? { ...m, name: newName } : m));
+  }
+
+
   async function addRoute() {
     if (!user) return;
     const color = ROUTE_COLORS[routes.length % ROUTE_COLORS.length];
