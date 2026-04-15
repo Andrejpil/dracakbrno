@@ -118,11 +118,12 @@ export default function MapPage() {
 
   async function loadData() {
     if (!user) return;
-    const [rRes, pRes, sRes, spRes] = await Promise.all([
+    const [rRes, pRes, sRes, spRes, mRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
       supabase.from('map_settings').select('*').eq('user_id', user!.id).maybeSingle(),
       supabase.from('special_map_points').select('*').order('created_at'),
+      supabase.from('maps').select('*').order('created_at'),
     ]);
 
     const pointsByRoute: Record<string, MapPoint[]> = {};
@@ -149,6 +150,14 @@ export default function MapPage() {
       id: sp.id, name: sp.name, description: sp.description, x: sp.x, y: sp.y, visible_to_viewers: sp.visible_to_viewers,
     }));
     setSpecialPoints(allSp);
+
+    // Load maps
+    const loadedMaps: MapImage[] = (mRes.data || []).map((m: any) => ({
+      id: m.id, name: m.name, image_url: m.image_url, is_active: m.is_active,
+    }));
+    setMaps(loadedMaps);
+    const activeMap = loadedMaps.find(m => m.is_active);
+    if (activeMap) setActiveMapUrl(activeMap.image_url);
   }
 
   // Filter special points based on role
