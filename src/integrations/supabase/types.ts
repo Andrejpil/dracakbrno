@@ -211,6 +211,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          map_id: string | null
           pixels_per_km: number
           speed_broom: number
           speed_horse: number
@@ -220,6 +221,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          map_id?: string | null
           pixels_per_km?: number
           speed_broom?: number
           speed_horse?: number
@@ -229,13 +231,22 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          map_id?: string | null
           pixels_per_km?: number
           speed_broom?: number
           speed_horse?: number
           speed_walk?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "map_settings_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       maps: {
         Row: {
