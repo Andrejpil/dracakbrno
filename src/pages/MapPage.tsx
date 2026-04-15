@@ -671,6 +671,11 @@ export default function MapPage() {
             <Star size={14} /> Speciální body
           </Button>
           {editable && (
+            <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setMapsDialogOpen(true)}>
+              <Image size={14} /> Mapy
+            </Button>
+          )}
+          {editable && (
             <Button size="sm" variant="secondary" className="h-8 w-8 shadow-md p-0" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }} title="Nastavení mapy">
               <Settings size={14} />
             </Button>
