@@ -85,9 +85,11 @@ export default function MapPage() {
   // Maps state
   const [maps, setMaps] = useState<MapImage[]>([]);
   const [activeMapUrl, setActiveMapUrl] = useState<string>('/images/map-othion.jpg');
+  const [activeMapId, setActiveMapId] = useState<string | null>(null);
   const [uploadingMap, setUploadingMap] = useState(false);
   const [newMapName, setNewMapName] = useState('');
   const mapFileRef = useRef<HTMLInputElement>(null);
+  const [allMapSettings, setAllMapSettings] = useState<Record<string, MapSettings>>({});
 
   // Special points state
   const [specialPoints, setSpecialPoints] = useState<SpecialPoint[]>([]);
