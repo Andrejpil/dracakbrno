@@ -6,10 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, ChevronLeft, ChevronRight, Image, Upload, Check } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+
+interface MapImage {
+  id: string;
+  name: string;
+  image_url: string;
+  is_active: boolean;
+}
 
 interface MapPoint {
   id: string;
