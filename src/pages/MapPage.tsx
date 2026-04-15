@@ -6,10 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Trash2, Edit2, Settings, Eye, EyeOff, MapPin, Star, Route, ChevronLeft, ChevronRight, Image, Upload, Check } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+
+interface MapImage {
+  id: string;
+  name: string;
+  image_url: string;
+  is_active: boolean;
+}
 
 interface MapPoint {
   id: string;
@@ -69,9 +76,17 @@ export default function MapPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [routesDialogOpen, setRoutesDialogOpen] = useState(false);
   const [specialPointsDialogOpen, setSpecialPointsDialogOpen] = useState(false);
+  const [mapsDialogOpen, setMapsDialogOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
   const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string; description: string; point_type: string } | null>(null);
+
+  // Maps state
+  const [maps, setMaps] = useState<MapImage[]>([]);
+  const [activeMapUrl, setActiveMapUrl] = useState<string>('/images/map-othion.jpg');
+  const [uploadingMap, setUploadingMap] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
+  const mapFileRef = useRef<HTMLInputElement>(null);
 
   // Special points state
   const [specialPoints, setSpecialPoints] = useState<SpecialPoint[]>([]);
@@ -103,11 +118,12 @@ export default function MapPage() {
 
   async function loadData() {
     if (!user) return;
-    const [rRes, pRes, sRes, spRes] = await Promise.all([
+    const [rRes, pRes, sRes, spRes, mRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
       supabase.from('map_settings').select('*').eq('user_id', user!.id).maybeSingle(),
       supabase.from('special_map_points').select('*').order('created_at'),
+      supabase.from('maps').select('*').order('created_at'),
     ]);
 
     const pointsByRoute: Record<string, MapPoint[]> = {};
@@ -134,6 +150,14 @@ export default function MapPage() {
       id: sp.id, name: sp.name, description: sp.description, x: sp.x, y: sp.y, visible_to_viewers: sp.visible_to_viewers,
     }));
     setSpecialPoints(allSp);
+
+    // Load maps
+    const loadedMaps: MapImage[] = (mRes.data || []).map((m: any) => ({
+      id: m.id, name: m.name, image_url: m.image_url, is_active: m.is_active,
+    }));
+    setMaps(loadedMaps);
+    const activeMap = loadedMaps.find(m => m.is_active);
+    if (activeMap) setActiveMapUrl(activeMap.image_url);
   }
 
   // Filter special points based on role
@@ -153,7 +177,64 @@ export default function MapPage() {
     toast({ title: 'Nastavení uloženo' });
   }
 
-  // Add route
+  // Map management
+  async function handleMapUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    setUploadingMap(true);
+    const ext = file.name.split('.').pop();
+    const path = `${user.id}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from('map-images').upload(path, file);
+    if (uploadError) {
+      toast({ title: 'Chyba při nahrávání', description: uploadError.message, variant: 'destructive' });
+      setUploadingMap(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('map-images').getPublicUrl(path);
+    const imageUrl = urlData.publicUrl;
+    const mapName = newMapName || file.name.replace(/\.[^.]+$/, '');
+    const isFirst = maps.length === 0;
+    const { data: row } = await supabase.from('maps').insert({
+      user_id: user.id, name: mapName, image_url: imageUrl, is_active: isFirst,
+    }).select().single();
+    if (row) {
+      const newMap: MapImage = { id: row.id, name: (row as any).name, image_url: (row as any).image_url, is_active: (row as any).is_active };
+      setMaps(prev => [...prev, newMap]);
+      if (isFirst) setActiveMapUrl(imageUrl);
+      toast({ title: 'Mapa nahrána' });
+    }
+    setNewMapName('');
+    setUploadingMap(false);
+    if (mapFileRef.current) mapFileRef.current.value = '';
+  }
+
+  async function selectMap(mapId: string) {
+    if (!user) return;
+    // Deactivate all, activate selected
+    await supabase.from('maps').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('maps').update({ is_active: true }).eq('id', mapId);
+    setMaps(prev => prev.map(m => ({ ...m, is_active: m.id === mapId })));
+    const selected = maps.find(m => m.id === mapId);
+    if (selected) setActiveMapUrl(selected.image_url);
+  }
+
+  async function deleteMap(mapId: string) {
+    const map = maps.find(m => m.id === mapId);
+    if (!map) return;
+    await supabase.from('maps').delete().eq('id', mapId);
+    setMaps(prev => prev.filter(m => m.id !== mapId));
+    if (map.is_active && maps.length > 1) {
+      const remaining = maps.filter(m => m.id !== mapId);
+      if (remaining.length > 0) selectMap(remaining[0].id);
+    }
+  }
+
+  async function renameMap(mapId: string, newName: string) {
+    await supabase.from('maps').update({ name: newName }).eq('id', mapId);
+    setMaps(prev => prev.map(m => m.id === mapId ? { ...m, name: newName } : m));
+  }
+
+
   async function addRoute() {
     if (!user) return;
     const color = ROUTE_COLORS[routes.length % ROUTE_COLORS.length];
@@ -481,8 +562,8 @@ export default function MapPage() {
         <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <img
             ref={imgRef}
-            src="/images/map-othion.jpg"
-            alt="Mapa Othion"
+            src={activeMapUrl}
+            alt="Mapa"
             onLoad={handleImgLoad}
             onClick={handleMapClick}
             className="block max-w-none"
@@ -589,6 +670,11 @@ export default function MapPage() {
           <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setSpecialPointsDialogOpen(true)}>
             <Star size={14} /> Speciální body
           </Button>
+          {editable && (
+            <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setMapsDialogOpen(true)}>
+              <Image size={14} /> Mapy
+            </Button>
+          )}
           {editable && (
             <Button size="sm" variant="secondary" className="h-8 w-8 shadow-md p-0" onClick={() => { setTempSettings(settings); setSettingsOpen(true); }} title="Nastavení mapy">
               <Settings size={14} />
@@ -982,6 +1068,111 @@ export default function MapPage() {
             )}
             <Button onClick={saveSpecialPoint}>Uložit</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Maps dialog */}
+      <Dialog open={mapsDialogOpen} onOpenChange={setMapsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Image size={18} /> Správa map
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 overflow-auto flex-1">
+            {/* Upload new map */}
+            <div className="border border-dashed border-border rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-foreground">Nahrát novou mapu</h4>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Název mapy</label>
+                  <Input
+                    value={newMapName}
+                    onChange={e => setNewMapName(e.target.value)}
+                    placeholder="Např. Mapa Othionu"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <input
+                    ref={mapFileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleMapUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9"
+                    onClick={() => mapFileRef.current?.click()}
+                    disabled={uploadingMap}
+                  >
+                    <Upload size={14} className="mr-1" />
+                    {uploadingMap ? 'Nahrávám...' : 'Vybrat soubor'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Map list */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground">Dostupné mapy ({maps.length})</h4>
+              {maps.length === 0 && (
+                <p className="text-xs text-muted-foreground">Žádné mapy. Nahrajte první mapu výše.</p>
+              )}
+              {maps.map(m => (
+                <div
+                  key={m.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    m.is_active ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
+                  }`}
+                >
+                  <img
+                    src={m.image_url}
+                    alt={m.name}
+                    className="w-16 h-12 object-cover rounded border border-border"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{m.name || 'Bez názvu'}</p>
+                    {m.is_active && (
+                      <span className="text-xs text-primary font-medium flex items-center gap-1">
+                        <Check size={12} /> Aktivní
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {!m.is_active && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => selectMap(m.id)}>
+                        Použít
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => {
+                        const newName = prompt('Nový název mapy:', m.name);
+                        if (newName !== null && newName.trim()) renameMap(m.id, newName.trim());
+                      }}
+                    >
+                      <Edit2 size={12} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => {
+                        if (confirm('Opravdu smazat tuto mapu?')) deleteMap(m.id);
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
