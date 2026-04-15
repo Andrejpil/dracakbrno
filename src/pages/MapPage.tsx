@@ -122,7 +122,7 @@ export default function MapPage() {
     const [rRes, pRes, sRes, spRes, mRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
-      supabase.from('map_settings').select('*').eq('user_id', user!.id).maybeSingle(),
+      supabase.from('map_settings').select('*'),
       supabase.from('special_map_points').select('*').order('created_at'),
       supabase.from('maps').select('*').order('created_at'),
     ]);
@@ -141,10 +141,13 @@ export default function MapPage() {
     setRoutes(loadedRoutes);
     if (loadedRoutes.length > 0 && !activeRouteId) setActiveRouteId(loadedRoutes[0].id);
 
-    if (sRes.data) {
-      const s = sRes.data as any;
-      setSettings({ pixels_per_km: s.pixels_per_km, speed_walk: s.speed_walk, speed_horse: s.speed_horse, speed_broom: s.speed_broom });
-    }
+    // Load all map settings into a map keyed by map_id
+    const allSettings: Record<string, MapSettings> = {};
+    (sRes.data || []).forEach((s: any) => {
+      const key = s.map_id || '__global__';
+      allSettings[key] = { pixels_per_km: s.pixels_per_km, speed_walk: s.speed_walk, speed_horse: s.speed_horse, speed_broom: s.speed_broom, map_id: s.map_id };
+    });
+    setAllMapSettings(allSettings);
 
     // Load special points
     const allSp: SpecialPoint[] = (spRes.data || []).map((sp: any) => ({
@@ -158,7 +161,11 @@ export default function MapPage() {
     }));
     setMaps(loadedMaps);
     const activeMap = loadedMaps.find(m => m.is_active);
-    if (activeMap) setActiveMapUrl(activeMap.image_url);
+    if (activeMap) {
+      setActiveMapUrl(activeMap.image_url);
+      setActiveMapId(activeMap.id);
+      if (allSettings[activeMap.id]) setSettings(allSettings[activeMap.id]);
+    }
   }
 
   // Filter special points based on role
