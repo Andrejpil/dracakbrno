@@ -562,8 +562,8 @@ export default function MapPage() {
         <div style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: '0 0' }}>
           <img
             ref={imgRef}
-            src="/images/map-othion.jpg"
-            alt="Mapa Othion"
+            src={activeMapUrl}
+            alt="Mapa"
             onLoad={handleImgLoad}
             onClick={handleMapClick}
             className="block max-w-none"
