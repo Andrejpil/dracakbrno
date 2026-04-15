@@ -683,6 +683,64 @@ export default function MapPage() {
           </svg>
         </div>
 
+        {/* Point distance tooltip */}
+        {hoveredPoint && (() => {
+          const route = routes.find(r => r.id === hoveredPoint.routeId);
+          if (!route) return null;
+          const pointIndex = route.points.findIndex(p => p.id === hoveredPoint.pointId);
+          if (pointIndex < 0) return null;
+          const point = route.points[pointIndex];
+          const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', dam: '🌊', ford: '🚿', mountains: '⛰️', generic: '📍' }[point.point_type] || '📍';
+
+          // Distance from previous point
+          let segDistKm = 0;
+          if (pointIndex > 0) {
+            const prev = route.points[pointIndex - 1];
+            segDistKm = Math.sqrt((point.x - prev.x) ** 2 + (point.y - prev.y) ** 2) / (settings.pixels_per_km || 1);
+          }
+
+          // Distance from start to this point
+          let fromStartKm = 0;
+          for (let i = 1; i <= pointIndex; i++) {
+            const a = route.points[i - 1], b = route.points[i];
+            fromStartKm += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) / (settings.pixels_per_km || 1);
+          }
+
+          // Position tooltip near cursor but within container
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const tooltipX = hoveredPoint.clientX - (containerRect?.left || 0) + 16;
+          const tooltipY = hoveredPoint.clientY - (containerRect?.top || 0) - 10;
+
+          return (
+            <div
+              className="absolute z-50 bg-card/95 backdrop-blur border border-border rounded-lg px-3 py-2 shadow-lg pointer-events-none"
+              style={{ left: tooltipX, top: tooltipY, maxWidth: 280 }}
+            >
+              <div className="text-xs font-semibold text-foreground mb-1">
+                {typeIcon} {point.label || `Bod ${pointIndex + 1}`}
+              </div>
+              {pointIndex > 0 && (
+                <>
+                  <div className="text-[10px] text-muted-foreground mb-0.5 font-medium">Z předchozího bodu ({segDistKm.toFixed(1)} km):</div>
+                  <div className="flex gap-2 text-[10px] mb-1">
+                    <span>🚶 {formatTime(segDistKm / settings.speed_walk)}</span>
+                    <span>🐴 {formatTime(segDistKm / settings.speed_horse)}</span>
+                    <span>🧹 {formatTime(segDistKm / settings.speed_broom)}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5 font-medium">Od startu ({fromStartKm.toFixed(1)} km):</div>
+                  <div className="flex gap-2 text-[10px]">
+                    <span>🚶 {formatTime(fromStartKm / settings.speed_walk)}</span>
+                    <span>🐴 {formatTime(fromStartKm / settings.speed_horse)}</span>
+                    <span>🧹 {formatTime(fromStartKm / settings.speed_broom)}</span>
+                  </div>
+                </>
+              )}
+              {pointIndex === 0 && (
+                <div className="text-[10px] text-muted-foreground">📍 Startovní bod trasy</div>
+              )}
+            </div>
+          );
+        })()}
         {/* Floating toolbar - top left */}
         <div className="absolute top-3 left-3 flex items-center gap-1 z-10 flex-wrap">
           <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setRoutesDialogOpen(true)}>
