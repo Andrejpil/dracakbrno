@@ -42,6 +42,7 @@ interface MapSettings {
   speed_walk: number;
   speed_horse: number;
   speed_broom: number;
+  map_id?: string;
 }
 
 interface SpecialPoint {
@@ -84,9 +85,11 @@ export default function MapPage() {
   // Maps state
   const [maps, setMaps] = useState<MapImage[]>([]);
   const [activeMapUrl, setActiveMapUrl] = useState<string>('/images/map-othion.jpg');
+  const [activeMapId, setActiveMapId] = useState<string | null>(null);
   const [uploadingMap, setUploadingMap] = useState(false);
   const [newMapName, setNewMapName] = useState('');
   const mapFileRef = useRef<HTMLInputElement>(null);
+  const [allMapSettings, setAllMapSettings] = useState<Record<string, MapSettings>>({});
 
   // Special points state
   const [specialPoints, setSpecialPoints] = useState<SpecialPoint[]>([]);
@@ -94,6 +97,9 @@ export default function MapPage() {
   const [addingSpecialPoint, setAddingSpecialPoint] = useState(false);
   const [editSpecialPoint, setEditSpecialPoint] = useState<SpecialPoint | null>(null);
   const [viewSpecialPoint, setViewSpecialPoint] = useState<SpecialPoint | null>(null);
+
+  // Hovered point for tooltip
+  const [hoveredPoint, setHoveredPoint] = useState<{ routeId: string; pointId: string; clientX: number; clientY: number } | null>(null);
 
   // Pan & zoom state
   const [scale, setScale] = useState(0.5);
@@ -121,7 +127,7 @@ export default function MapPage() {
     const [rRes, pRes, sRes, spRes, mRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
-      supabase.from('map_settings').select('*').eq('user_id', user!.id).maybeSingle(),
+      supabase.from('map_settings').select('*'),
       supabase.from('special_map_points').select('*').order('created_at'),
       supabase.from('maps').select('*').order('created_at'),
     ]);
@@ -140,10 +146,13 @@ export default function MapPage() {
     setRoutes(loadedRoutes);
     if (loadedRoutes.length > 0 && !activeRouteId) setActiveRouteId(loadedRoutes[0].id);
 
-    if (sRes.data) {
-      const s = sRes.data as any;
-      setSettings({ pixels_per_km: s.pixels_per_km, speed_walk: s.speed_walk, speed_horse: s.speed_horse, speed_broom: s.speed_broom });
-    }
+    // Load all map settings into a map keyed by map_id
+    const allSettings: Record<string, MapSettings> = {};
+    (sRes.data || []).forEach((s: any) => {
+      const key = s.map_id || '__global__';
+      allSettings[key] = { pixels_per_km: s.pixels_per_km, speed_walk: s.speed_walk, speed_horse: s.speed_horse, speed_broom: s.speed_broom, map_id: s.map_id };
+    });
+    setAllMapSettings(allSettings);
 
     // Load special points
     const allSp: SpecialPoint[] = (spRes.data || []).map((sp: any) => ({
@@ -157,7 +166,11 @@ export default function MapPage() {
     }));
     setMaps(loadedMaps);
     const activeMap = loadedMaps.find(m => m.is_active);
-    if (activeMap) setActiveMapUrl(activeMap.image_url);
+    if (activeMap) {
+      setActiveMapUrl(activeMap.image_url);
+      setActiveMapId(activeMap.id);
+      if (allSettings[activeMap.id]) setSettings(allSettings[activeMap.id]);
+    }
   }
 
   // Filter special points based on role
@@ -166,13 +179,14 @@ export default function MapPage() {
     return sp.visible_to_viewers;
   });
 
-  // Save settings
+  // Save settings (per-map)
   async function saveSettings() {
-    if (!user) return;
+    if (!user || !activeMapId) return;
     await supabase.from('map_settings').upsert({
-      user_id: user.id, ...tempSettings,
-    }, { onConflict: 'user_id' });
+      user_id: user.id, map_id: activeMapId, ...tempSettings,
+    }, { onConflict: 'user_id,map_id' });
     setSettings(tempSettings);
+    setAllMapSettings(prev => ({ ...prev, [activeMapId]: tempSettings }));
     setSettingsOpen(false);
     toast({ title: 'Nastavení uloženo' });
   }
@@ -210,12 +224,15 @@ export default function MapPage() {
 
   async function selectMap(mapId: string) {
     if (!user) return;
-    // Deactivate all, activate selected
     await supabase.from('maps').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('maps').update({ is_active: true }).eq('id', mapId);
     setMaps(prev => prev.map(m => ({ ...m, is_active: m.id === mapId })));
     const selected = maps.find(m => m.id === mapId);
     if (selected) setActiveMapUrl(selected.image_url);
+    setActiveMapId(mapId);
+    // Load settings for this map
+    const mapSettings = allMapSettings[mapId];
+    setSettings(mapSettings || DEFAULT_SETTINGS);
   }
 
   async function deleteMap(mapId: string) {
@@ -470,6 +487,7 @@ export default function MapPage() {
     // Otherwise start panning
     e.preventDefault();
     setIsPanning(true);
+    setHoveredPoint(null);
     setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
   }
 
@@ -589,7 +607,11 @@ export default function MapPage() {
                   />
                 )}
                 {r.points.map((p) => (
-                  <g key={p.id} style={{ pointerEvents: editable ? 'auto' : 'none', cursor: editable ? 'move' : 'default' }}>
+                  <g key={p.id} style={{ pointerEvents: 'auto', cursor: editable ? 'move' : 'pointer' }}
+                    onMouseEnter={(e) => setHoveredPoint({ routeId: r.id, pointId: p.id, clientX: e.clientX, clientY: e.clientY })}
+                    onMouseMove={(e) => { if (hoveredPoint?.pointId === p.id) setHoveredPoint(prev => prev ? { ...prev, clientX: e.clientX, clientY: e.clientY } : null); }}
+                    onMouseLeave={() => { if (hoveredPoint?.pointId === p.id) setHoveredPoint(null); }}
+                  >
                     <circle
                       cx={p.x} cy={p.y} r={6 / scale}
                       fill={r.color} stroke="white" strokeWidth={2 / scale}
@@ -662,6 +684,64 @@ export default function MapPage() {
           </svg>
         </div>
 
+        {/* Point distance tooltip */}
+        {hoveredPoint && (() => {
+          const route = routes.find(r => r.id === hoveredPoint.routeId);
+          if (!route) return null;
+          const pointIndex = route.points.findIndex(p => p.id === hoveredPoint.pointId);
+          if (pointIndex < 0) return null;
+          const point = route.points[pointIndex];
+          const typeIcon = { city: '🏰', village: '🏠', cave: '🕳️', forest: '🌲', camp: '⛺', ruins: '🏚️', temple: '⛪', tavern: '🍺', road: '🛤️', meadow: '🌾', landmark: '⭐', battlefield: '⚔️', dam: '🌊', ford: '🚿', mountains: '⛰️', generic: '📍' }[point.point_type] || '📍';
+
+          // Distance from previous point
+          let segDistKm = 0;
+          if (pointIndex > 0) {
+            const prev = route.points[pointIndex - 1];
+            segDistKm = Math.sqrt((point.x - prev.x) ** 2 + (point.y - prev.y) ** 2) / (settings.pixels_per_km || 1);
+          }
+
+          // Distance from start to this point
+          let fromStartKm = 0;
+          for (let i = 1; i <= pointIndex; i++) {
+            const a = route.points[i - 1], b = route.points[i];
+            fromStartKm += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2) / (settings.pixels_per_km || 1);
+          }
+
+          // Position tooltip near cursor but within container
+          const containerRect = containerRef.current?.getBoundingClientRect();
+          const tooltipX = hoveredPoint.clientX - (containerRect?.left || 0) + 16;
+          const tooltipY = hoveredPoint.clientY - (containerRect?.top || 0) - 10;
+
+          return (
+            <div
+              className="absolute z-50 bg-card/95 backdrop-blur border border-border rounded-lg px-3 py-2 shadow-lg pointer-events-none"
+              style={{ left: tooltipX, top: tooltipY, maxWidth: 280 }}
+            >
+              <div className="text-xs font-semibold text-foreground mb-1">
+                {typeIcon} {point.label || `Bod ${pointIndex + 1}`}
+              </div>
+              {pointIndex > 0 && (
+                <>
+                  <div className="text-[10px] text-muted-foreground mb-0.5 font-medium">Z předchozího bodu ({segDistKm.toFixed(1)} km):</div>
+                  <div className="flex gap-2 text-[10px] mb-1">
+                    <span>🚶 {formatTime(segDistKm / settings.speed_walk)}</span>
+                    <span>🐴 {formatTime(segDistKm / settings.speed_horse)}</span>
+                    <span>🧹 {formatTime(segDistKm / settings.speed_broom)}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5 font-medium">Od startu ({fromStartKm.toFixed(1)} km):</div>
+                  <div className="flex gap-2 text-[10px]">
+                    <span>🚶 {formatTime(fromStartKm / settings.speed_walk)}</span>
+                    <span>🐴 {formatTime(fromStartKm / settings.speed_horse)}</span>
+                    <span>🧹 {formatTime(fromStartKm / settings.speed_broom)}</span>
+                  </div>
+                </>
+              )}
+              {pointIndex === 0 && (
+                <div className="text-[10px] text-muted-foreground">📍 Startovní bod trasy</div>
+              )}
+            </div>
+          );
+        })()}
         {/* Floating toolbar - top left */}
         <div className="absolute top-3 left-3 flex items-center gap-1 z-10 flex-wrap">
           <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setRoutesDialogOpen(true)}>
@@ -940,7 +1020,7 @@ export default function MapPage() {
       {/* Settings dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nastavení mapy</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nastavení mapy{activeMapId ? ` – ${maps.find(m => m.id === activeMapId)?.name || ''}` : ''}</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-3">
             <div>
               <label className="text-sm text-foreground">Pixelů na 1 km</label>
