@@ -42,6 +42,7 @@ interface MapSettings {
   speed_walk: number;
   speed_horse: number;
   speed_broom: number;
+  map_id?: string;
 }
 
 interface SpecialPoint {
