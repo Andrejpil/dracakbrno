@@ -606,7 +606,11 @@ export default function MapPage() {
                   />
                 )}
                 {r.points.map((p) => (
-                  <g key={p.id} style={{ pointerEvents: editable ? 'auto' : 'none', cursor: editable ? 'move' : 'default' }}>
+                  <g key={p.id} style={{ pointerEvents: 'auto', cursor: editable ? 'move' : 'pointer' }}
+                    onMouseEnter={(e) => setHoveredPoint({ routeId: r.id, pointId: p.id, clientX: e.clientX, clientY: e.clientY })}
+                    onMouseMove={(e) => { if (hoveredPoint?.pointId === p.id) setHoveredPoint(prev => prev ? { ...prev, clientX: e.clientX, clientY: e.clientY } : null); }}
+                    onMouseLeave={() => { if (hoveredPoint?.pointId === p.id) setHoveredPoint(null); }}
+                  >
                     <circle
                       cx={p.x} cy={p.y} r={6 / scale}
                       fill={r.color} stroke="white" strokeWidth={2 / scale}
