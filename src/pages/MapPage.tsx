@@ -98,6 +98,9 @@ export default function MapPage() {
   const [editSpecialPoint, setEditSpecialPoint] = useState<SpecialPoint | null>(null);
   const [viewSpecialPoint, setViewSpecialPoint] = useState<SpecialPoint | null>(null);
 
+  // Hovered point for tooltip
+  const [hoveredPoint, setHoveredPoint] = useState<{ routeId: string; pointId: string; clientX: number; clientY: number } | null>(null);
+
   // Pan & zoom state
   const [scale, setScale] = useState(0.5);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -176,13 +179,14 @@ export default function MapPage() {
     return sp.visible_to_viewers;
   });
 
-  // Save settings
+  // Save settings (per-map)
   async function saveSettings() {
-    if (!user) return;
+    if (!user || !activeMapId) return;
     await supabase.from('map_settings').upsert({
-      user_id: user.id, ...tempSettings,
-    }, { onConflict: 'user_id' });
+      user_id: user.id, map_id: activeMapId, ...tempSettings,
+    }, { onConflict: 'user_id,map_id' });
     setSettings(tempSettings);
+    setAllMapSettings(prev => ({ ...prev, [activeMapId]: tempSettings }));
     setSettingsOpen(false);
     toast({ title: 'Nastavení uloženo' });
   }
