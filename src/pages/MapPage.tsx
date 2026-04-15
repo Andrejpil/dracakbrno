@@ -224,12 +224,15 @@ export default function MapPage() {
 
   async function selectMap(mapId: string) {
     if (!user) return;
-    // Deactivate all, activate selected
     await supabase.from('maps').update({ is_active: false }).neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('maps').update({ is_active: true }).eq('id', mapId);
     setMaps(prev => prev.map(m => ({ ...m, is_active: m.id === mapId })));
     const selected = maps.find(m => m.id === mapId);
     if (selected) setActiveMapUrl(selected.image_url);
+    setActiveMapId(mapId);
+    // Load settings for this map
+    const mapSettings = allMapSettings[mapId];
+    setSettings(mapSettings || DEFAULT_SETTINGS);
   }
 
   async function deleteMap(mapId: string) {
