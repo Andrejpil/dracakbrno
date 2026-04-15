@@ -1070,6 +1070,111 @@ export default function MapPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Maps dialog */}
+      <Dialog open={mapsDialogOpen} onOpenChange={setMapsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Image size={18} /> Správa map
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 overflow-auto flex-1">
+            {/* Upload new map */}
+            <div className="border border-dashed border-border rounded-lg p-4 space-y-3">
+              <h4 className="text-sm font-semibold text-foreground">Nahrát novou mapu</h4>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <label className="text-xs text-muted-foreground">Název mapy</label>
+                  <Input
+                    value={newMapName}
+                    onChange={e => setNewMapName(e.target.value)}
+                    placeholder="Např. Mapa Othionu"
+                    className="h-9"
+                  />
+                </div>
+                <div>
+                  <input
+                    ref={mapFileRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleMapUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9"
+                    onClick={() => mapFileRef.current?.click()}
+                    disabled={uploadingMap}
+                  >
+                    <Upload size={14} className="mr-1" />
+                    {uploadingMap ? 'Nahrávám...' : 'Vybrat soubor'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Map list */}
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground">Dostupné mapy ({maps.length})</h4>
+              {maps.length === 0 && (
+                <p className="text-xs text-muted-foreground">Žádné mapy. Nahrajte první mapu výše.</p>
+              )}
+              {maps.map(m => (
+                <div
+                  key={m.id}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    m.is_active ? 'border-primary bg-primary/5' : 'border-border hover:bg-secondary/50'
+                  }`}
+                >
+                  <img
+                    src={m.image_url}
+                    alt={m.name}
+                    className="w-16 h-12 object-cover rounded border border-border"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{m.name || 'Bez názvu'}</p>
+                    {m.is_active && (
+                      <span className="text-xs text-primary font-medium flex items-center gap-1">
+                        <Check size={12} /> Aktivní
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {!m.is_active && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => selectMap(m.id)}>
+                        Použít
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => {
+                        const newName = prompt('Nový název mapy:', m.name);
+                        if (newName !== null && newName.trim()) renameMap(m.id, newName.trim());
+                      }}
+                    >
+                      <Edit2 size={12} />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-destructive"
+                      onClick={() => {
+                        if (confirm('Opravdu smazat tuto mapu?')) deleteMap(m.id);
+                      }}
+                    >
+                      <Trash2 size={12} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
