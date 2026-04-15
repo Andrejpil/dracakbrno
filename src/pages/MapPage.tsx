@@ -487,6 +487,7 @@ export default function MapPage() {
     // Otherwise start panning
     e.preventDefault();
     setIsPanning(true);
+    setHoveredPoint(null);
     setPanStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
   }
 
