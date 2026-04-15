@@ -1020,7 +1020,7 @@ export default function MapPage() {
       {/* Settings dialog */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Nastavení mapy</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Nastavení mapy{activeMapId ? ` – ${maps.find(m => m.id === activeMapId)?.name || ''}` : ''}</DialogTitle></DialogHeader>
           <div className="flex flex-col gap-3">
             <div>
               <label className="text-sm text-foreground">Pixelů na 1 km</label>
