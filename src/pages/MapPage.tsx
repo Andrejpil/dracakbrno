@@ -76,9 +76,17 @@ export default function MapPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [routesDialogOpen, setRoutesDialogOpen] = useState(false);
   const [specialPointsDialogOpen, setSpecialPointsDialogOpen] = useState(false);
+  const [mapsDialogOpen, setMapsDialogOpen] = useState(false);
   const [renameOpen, setRenameOpen] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
   const [editPointLabel, setEditPointLabel] = useState<{ routeId: string; pointId: string; label: string; description: string; point_type: string } | null>(null);
+
+  // Maps state
+  const [maps, setMaps] = useState<MapImage[]>([]);
+  const [activeMapUrl, setActiveMapUrl] = useState<string>('/images/map-othion.jpg');
+  const [uploadingMap, setUploadingMap] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
+  const mapFileRef = useRef<HTMLInputElement>(null);
 
   // Special points state
   const [specialPoints, setSpecialPoints] = useState<SpecialPoint[]>([]);
