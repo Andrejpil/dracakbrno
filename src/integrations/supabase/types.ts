@@ -136,6 +136,44 @@ export type Database = {
         }
         Relationships: []
       }
+      map_fog_reveals: {
+        Row: {
+          created_at: string
+          id: string
+          map_id: string
+          radius: number
+          user_id: string
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          map_id: string
+          radius?: number
+          user_id: string
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          map_id?: string
+          radius?: number
+          user_id?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_fog_reveals_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       map_points: {
         Row: {
           created_at: string
@@ -248,9 +286,67 @@ export type Database = {
           },
         ]
       }
+      map_tokens: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string
+          icon: string
+          id: string
+          light_source: string
+          map_id: string
+          name: string
+          notes: string
+          owner_user_id: string | null
+          reveal_radius: number
+          x: number
+          y: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by: string
+          icon?: string
+          id?: string
+          light_source?: string
+          map_id: string
+          name?: string
+          notes?: string
+          owner_user_id?: string | null
+          reveal_radius?: number
+          x?: number
+          y?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string
+          icon?: string
+          id?: string
+          light_source?: string
+          map_id?: string
+          name?: string
+          notes?: string
+          owner_user_id?: string | null
+          reveal_radius?: number
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_tokens_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maps: {
         Row: {
           created_at: string
+          default_reveal_radius: number
+          fog_enabled: boolean
           id: string
           image_url: string
           is_active: boolean
@@ -259,6 +355,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_reveal_radius?: number
+          fog_enabled?: boolean
           id?: string
           image_url?: string
           is_active?: boolean
@@ -267,6 +365,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_reveal_radius?: number
+          fog_enabled?: boolean
           id?: string
           image_url?: string
           is_active?: boolean
@@ -436,6 +536,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          map_id: string | null
           name: string
           user_id: string
           visible_to_viewers: boolean
@@ -446,6 +547,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          map_id?: string | null
           name?: string
           user_id: string
           visible_to_viewers?: boolean
@@ -456,13 +558,22 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          map_id?: string | null
           name?: string
           user_id?: string
           visible_to_viewers?: boolean
           x?: number
           y?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "special_map_points_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
