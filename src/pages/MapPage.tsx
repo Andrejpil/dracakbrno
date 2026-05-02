@@ -38,6 +38,7 @@ interface MapRoute {
   color: string;
   points: MapPoint[];
   visible: boolean;
+  map_id: string | null;
 }
 
 interface MapSettings {
@@ -79,6 +80,25 @@ interface FogReveal {
   x: number;
   y: number;
   radius: number;
+}
+
+interface MapBeast {
+  id: string;
+  map_id: string;
+  monster_id: string | null;
+  battle_id: string | null;
+  short_code: string;
+  name: string;
+  level: number;
+  hp: number;
+  current_hp: number;
+  color: string;
+  x: number;
+  y: number;
+  reveal_radius: number;
+  revealed: boolean;
+  stealth_mode: 'none' | 'manual' | 'auto';
+  notes: string;
 }
 
 const DEFAULT_SETTINGS: MapSettings = {
