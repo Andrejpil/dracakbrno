@@ -287,7 +287,7 @@ export default function MapPage() {
 
   async function loadData() {
     if (!user) return;
-    const [rRes, pRes, sRes, spRes, mRes, tRes, fRes, profRes] = await Promise.all([
+    const [rRes, pRes, sRes, spRes, mRes, tRes, fRes, profRes, bRes, mnRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
       supabase.from('map_settings').select('*'),
@@ -296,7 +296,11 @@ export default function MapPage() {
       supabase.from('map_tokens').select('*'),
       supabase.from('map_fog_reveals').select('*'),
       supabase.from('profiles').select('id,email'),
+      supabase.from('map_beasts').select('*').order('created_at'),
+      supabase.from('monsters').select('id,name,con,xp_reward,is_unique,image_url').order('name'),
     ]);
+    setBeasts((bRes.data || []).map((b: any) => beastFromRow(b)));
+    setMonstersList((mnRes.data || []).map((m: any) => ({ id: m.id, name: m.name, con: m.con, xp_reward: m.xp_reward, is_unique: m.is_unique, image_url: m.image_url || '' })));
 
     const pointsByRoute: Record<string, MapPoint[]> = {};
     (pRes.data || []).forEach((p: any) => {
