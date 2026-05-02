@@ -806,6 +806,17 @@ export default function MapPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMapTokens, activeMapBeasts, editBeasts]);
 
+  // Switch active route when active map changes (pick first matching)
+  useEffect(() => {
+    if (!activeMapId) return;
+    const current = routes.find(r => r.id === activeRouteId);
+    if (!current || (current.map_id !== null && current.map_id !== activeMapId)) {
+      const first = routes.find(r => r.map_id === null || r.map_id === activeMapId);
+      setActiveRouteId(first?.id || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMapId, routes]);
+
   async function revealFog(x: number, y: number, radius: number) {
     if (!user || !activeMapId || !fogEnabled) return;
     // Throttle: don't insert if very close to last reveal
