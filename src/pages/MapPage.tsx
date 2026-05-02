@@ -246,9 +246,32 @@ export default function MapPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'map_points' }, () => {
         loadRoutes();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_beasts' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          const r: any = payload.new;
+          setBeasts(prev => prev.some(b => b.id === r.id) ? prev : [...prev, beastFromRow(r)]);
+        } else if (payload.eventType === 'UPDATE') {
+          const r: any = payload.new;
+          setBeasts(prev => prev.map(b => b.id === r.id ? beastFromRow(r) : b));
+        } else if (payload.eventType === 'DELETE') {
+          const r: any = payload.old;
+          setBeasts(prev => prev.filter(b => b.id !== r.id));
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  function beastFromRow(r: any): MapBeast {
+    return {
+      id: r.id, map_id: r.map_id, monster_id: r.monster_id, battle_id: r.battle_id,
+      short_code: r.short_code || '??', name: r.name || 'Bestie', level: r.level || 1,
+      hp: r.hp || 10, current_hp: r.current_hp ?? r.hp ?? 10, color: r.color || '#dc2626',
+      x: r.x, y: r.y, reveal_radius: r.reveal_radius ?? 80,
+      revealed: !!r.revealed, stealth_mode: (r.stealth_mode || 'none') as 'none'|'manual'|'auto',
+      notes: r.notes || '',
+    };
+  }
 
   function mapTokenFromRow(r: any): MapToken {
     return {
