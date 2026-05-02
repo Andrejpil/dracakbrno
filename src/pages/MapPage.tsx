@@ -529,7 +529,7 @@ export default function MapPage() {
 
   function findPointAt(mapX: number, mapY: number): { routeId: string; pointId: string } | null {
     const hitRadius = 12 / scale;
-    for (const r of routes) {
+    for (const r of visibleRoutes) {
       if (!r.visible) continue;
       for (const p of r.points) {
         const dist = Math.sqrt((p.x - mapX) ** 2 + (p.y - mapY) ** 2);
