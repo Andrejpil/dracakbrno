@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
 interface MapImage {
   id: string;
