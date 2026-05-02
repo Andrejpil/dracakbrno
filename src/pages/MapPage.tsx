@@ -435,12 +435,13 @@ export default function MapPage() {
     if (!user) return;
     const color = ROUTE_COLORS[routes.length % ROUTE_COLORS.length];
     const { data: row } = await supabase.from('map_routes').insert({
-      user_id: user.id, name: `Trasa ${routes.length + 1}`, color,
-    }).select().single();
+      user_id: user.id, name: `Trasa ${routes.length + 1}`, color, map_id: activeMapId,
+    } as any).select().single();
     if (row) {
-      const newRoute: MapRoute = { id: row.id, name: (row as any).name, color: (row as any).color, points: [], visible: true };
+      const r: any = row;
+      const newRoute: MapRoute = { id: r.id, name: r.name, color: r.color, map_id: r.map_id ?? null, points: [], visible: true };
       setRoutes(prev => [...prev, newRoute]);
-      setActiveRouteId(row.id);
+      setActiveRouteId(r.id);
     }
   }
 
