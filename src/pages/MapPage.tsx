@@ -586,6 +586,12 @@ export default function MapPage() {
       return;
     }
 
+    if (addingBeast && editBeasts && activeMapId) {
+      addBeastAt(coords.x, coords.y);
+      setAddingBeast(false);
+      return;
+    }
+
     if (addingSpecialPoint && editable) {
       addSpecialPoint(coords.x, coords.y);
       setAddingSpecialPoint(false);
