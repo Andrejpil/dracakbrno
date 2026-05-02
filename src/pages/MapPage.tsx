@@ -1067,7 +1067,7 @@ export default function MapPage() {
               </>
             )}
 
-            {routes.filter(r => r.visible).map(r => (
+            {visibleRoutes.filter(r => r.visible).map(r => (
               <g key={r.id}>
                 {r.points.length > 1 && (
                   <polyline
