@@ -296,6 +296,7 @@ export default function MapPage() {
 
     const loadedRoutes: MapRoute[] = (rRes.data || []).map((r: any) => ({
       id: r.id, name: r.name, color: r.color,
+      map_id: r.map_id ?? null,
       points: (pointsByRoute[r.id] || []).sort((a: MapPoint, b: MapPoint) => a.sort_order - b.sort_order),
       visible: true,
     }));
