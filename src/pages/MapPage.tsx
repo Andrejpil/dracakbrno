@@ -1151,6 +1151,33 @@ export default function MapPage() {
                 </g>
               );
             })}
+
+            {/* Beasts (monsters placed by GM) */}
+            {visibleBeastsForUser.map(b => {
+              const isHidden = !b.revealed; // only admin/editor will see hidden ones (visibleBeastsForUser handles viewer filter)
+              return (
+                <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'move' : 'pointer' }}
+                  opacity={isHidden ? 0.45 : 1}>
+                  {/* Vision radius for admin/editor */}
+                  {(isAdmin || isEditor) && (
+                    <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={b.color} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
+                  )}
+                  {/* Diamond/square shape so it differs from player tokens */}
+                  <rect x={b.x - 14 / scale} y={b.y - 14 / scale} width={28 / scale} height={28 / scale}
+                    transform={`rotate(45 ${b.x} ${b.y})`}
+                    fill={b.color} stroke="white" strokeWidth={3 / scale} />
+                  <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
+                    fontSize={12 / scale} fill="white" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                    {b.short_code}
+                  </text>
+                  {(isAdmin || isEditor) && (
+                    <text x={b.x + 18 / scale} y={b.y - 14 / scale} fill="#ff8888" stroke="black" strokeWidth={3 / scale} paintOrder="stroke" fontSize={11 / scale} fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                      {isHidden ? (b.stealth_mode === 'manual' ? '🫥 záloha' : b.stealth_mode === 'auto' ? '👀 čeká' : '❓ skrytá') : ''} {b.name} (úr.{b.level})
+                    </text>
+                  )}
+                </g>
+              );
+            })}
           </svg>
         </div>
 
