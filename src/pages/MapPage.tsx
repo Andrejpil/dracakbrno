@@ -1747,6 +1747,89 @@ export default function MapPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Beast: choose monster + level when adding new */}
+      <Dialog open={!!editBeast && !editBeast.id} onOpenChange={o => { if (!o) { setEditBeast(null); setBeastForm(f => ({ ...f, pendingPos: null })); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Přidat bestii na mapu</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Bestie z bestiáře</Label>
+              <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={beastForm.monster_id}
+                onChange={e => setBeastForm(f => ({ ...f, monster_id: e.target.value }))}>
+                <option value="">— vyber —</option>
+                {monstersList.map(m => <option key={m.id} value={m.id}>{m.name}{m.is_unique ? ' ★' : ''}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Úroveň od</Label><Input type="number" min={1} value={beastForm.level_min} onChange={e => setBeastForm(f => ({ ...f, level_min: parseInt(e.target.value) || 1 }))} /></div>
+              <div><Label>Úroveň do</Label><Input type="number" min={1} value={beastForm.level_max} onChange={e => setBeastForm(f => ({ ...f, level_max: parseInt(e.target.value) || 1 }))} /></div>
+            </div>
+            <div>
+              <Label>Dosvit/zorné pole</Label>
+              <Input type="number" value={beastForm.reveal_radius} onChange={e => setBeastForm(f => ({ ...f, reveal_radius: parseInt(e.target.value) || 80 }))} />
+            </div>
+            <div>
+              <Label>Stealth režim</Label>
+              <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={beastForm.stealth_mode}
+                onChange={e => setBeastForm(f => ({ ...f, stealth_mode: e.target.value as any }))}>
+                <option value="none">Viditelná hned</option>
+                <option value="auto">Odhalí se přiblížením postavy</option>
+                <option value="manual">Záloha — odhalí jen GM ručně</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => { setEditBeast(null); setBeastForm(f => ({ ...f, pendingPos: null })); }}>Zrušit</Button>
+              <Button onClick={confirmAddBeast}>Přidat do mapy i do BOJ</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Beast list / management */}
+      <Dialog open={beastsDialogOpen} onOpenChange={setBeastsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Bestie na mapě</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1">
+              {activeMapBeasts.map(b => (
+                <button key={b.id} className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-secondary ${editBeast?.id === b.id ? 'bg-secondary' : ''}`} onClick={() => setEditBeast(b)}>
+                  <span className="font-mono mr-2">[{b.short_code}]</span>{b.name} <span className="text-xs text-muted-foreground">úr.{b.level} • HP {b.current_hp}/{b.hp}</span>
+                </button>
+              ))}
+              {activeMapBeasts.length === 0 && <p className="text-sm text-muted-foreground">Žádné bestie na této mapě.</p>}
+            </div>
+            <div>
+              {editBeast && editBeast.id ? (
+                <div className="space-y-2">
+                  <div><Label>Jméno</Label><Input value={editBeast.name} onChange={e => setEditBeast({ ...editBeast, name: e.target.value })} /></div>
+                  <div><Label>Zkratka</Label><Input maxLength={4} value={editBeast.short_code} onChange={e => setEditBeast({ ...editBeast, short_code: e.target.value.toUpperCase() })} /></div>
+                  <div><Label>HP</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
+                  <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+                  <div>
+                    <Label>Stealth</Label>
+                    <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={editBeast.stealth_mode}
+                      onChange={e => setEditBeast({ ...editBeast, stealth_mode: e.target.value as any })}>
+                      <option value="none">Viditelná</option>
+                      <option value="auto">Auto-odhalení</option>
+                      <option value="manual">Záloha</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={editBeast.revealed} onChange={e => setEditBeast({ ...editBeast, revealed: e.target.checked })} />
+                    <Label className="!mt-0">Odhalená pro hráče</Label>
+                  </div>
+                  <div><Label>Poznámky</Label><Textarea value={editBeast.notes} onChange={e => setEditBeast({ ...editBeast, notes: e.target.value })} /></div>
+                  <div className="flex justify-between pt-2">
+                    <Button variant="destructive" size="sm" onClick={() => deleteBeast(editBeast.id)}>Smazat</Button>
+                    <Button size="sm" onClick={saveBeast}>Uložit</Button>
+                  </div>
+                </div>
+              ) : <p className="text-sm text-muted-foreground">Vyber bestii v seznamu.</p>}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
