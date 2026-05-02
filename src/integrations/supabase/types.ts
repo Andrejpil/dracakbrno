@@ -136,6 +136,84 @@ export type Database = {
         }
         Relationships: []
       }
+      map_beasts: {
+        Row: {
+          battle_id: string | null
+          color: string
+          created_at: string
+          created_by: string
+          current_hp: number
+          hp: number
+          id: string
+          level: number
+          map_id: string
+          monster_id: string | null
+          name: string
+          notes: string
+          reveal_radius: number
+          revealed: boolean
+          short_code: string
+          stealth_mode: string
+          x: number
+          y: number
+        }
+        Insert: {
+          battle_id?: string | null
+          color?: string
+          created_at?: string
+          created_by: string
+          current_hp?: number
+          hp?: number
+          id?: string
+          level?: number
+          map_id: string
+          monster_id?: string | null
+          name?: string
+          notes?: string
+          reveal_radius?: number
+          revealed?: boolean
+          short_code?: string
+          stealth_mode?: string
+          x?: number
+          y?: number
+        }
+        Update: {
+          battle_id?: string | null
+          color?: string
+          created_at?: string
+          created_by?: string
+          current_hp?: number
+          hp?: number
+          id?: string
+          level?: number
+          map_id?: string
+          monster_id?: string | null
+          name?: string
+          notes?: string
+          reveal_radius?: number
+          revealed?: boolean
+          short_code?: string
+          stealth_mode?: string
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "map_beasts_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_beasts_monster_id_fkey"
+            columns: ["monster_id"]
+            isOneToOne: false
+            referencedRelation: "monsters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       map_fog_reveals: {
         Row: {
           created_at: string
@@ -226,6 +304,7 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          map_id: string | null
           name: string
           user_id: string
         }
@@ -233,6 +312,7 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          map_id?: string | null
           name?: string
           user_id: string
         }
@@ -240,10 +320,19 @@ export type Database = {
           color?: string
           created_at?: string
           id?: string
+          map_id?: string | null
           name?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "map_routes_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       map_settings: {
         Row: {

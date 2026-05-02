@@ -27,10 +27,15 @@ const PAGE_LABELS: Record<string, string> = {
   stats: 'Statistika',
   npc: 'NPC',
   export: 'Export / Import',
-  map: 'Mapa',
+  map: 'Mapa – přístup',
+  map_routes: '  ↳ Trasy',
+  map_special: '  ↳ Speciální body',
+  map_tokens: '  ↳ Postavy hráčů',
+  map_fog: '  ↳ Mlha (Fog of War)',
+  map_beasts: '  ↳ Bestie na mapě',
 };
 
-const PAGES = ['heroes', 'bestiary', 'battle', 'xp', 'stats', 'npc', 'export', 'map'];
+const PAGES = ['heroes', 'bestiary', 'battle', 'xp', 'stats', 'npc', 'export', 'map', 'map_routes', 'map_special', 'map_tokens', 'map_fog', 'map_beasts'];
 
 export default function AdminPage() {
   const { user } = useAuth();

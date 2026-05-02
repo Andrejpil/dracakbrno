@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
+import { Label } from '@/components/ui/label';
 
 interface MapImage {
   id: string;
@@ -38,6 +39,7 @@ interface MapRoute {
   color: string;
   points: MapPoint[];
   visible: boolean;
+  map_id: string | null;
 }
 
 interface MapSettings {
@@ -79,6 +81,25 @@ interface FogReveal {
   x: number;
   y: number;
   radius: number;
+}
+
+interface MapBeast {
+  id: string;
+  map_id: string;
+  monster_id: string | null;
+  battle_id: string | null;
+  short_code: string;
+  name: string;
+  level: number;
+  hp: number;
+  current_hp: number;
+  color: string;
+  x: number;
+  y: number;
+  reveal_radius: number;
+  revealed: boolean;
+  stealth_mode: 'none' | 'manual' | 'auto';
+  notes: string;
 }
 
 const DEFAULT_SETTINGS: MapSettings = {
@@ -146,6 +167,16 @@ export default function MapPage() {
   // Fog of war
   const [fogReveals, setFogReveals] = useState<FogReveal[]>([]);
   const [showFog, setShowFog] = useState(true);
+
+  // Beasts state
+  const [beasts, setBeasts] = useState<MapBeast[]>([]);
+  const [beastsDialogOpen, setBeastsDialogOpen] = useState(false);
+  const [addingBeast, setAddingBeast] = useState(false);
+  const [editBeast, setEditBeast] = useState<MapBeast | null>(null);
+  const [draggingBeast, setDraggingBeast] = useState<string | null>(null);
+  const [monstersList, setMonstersList] = useState<{ id: string; name: string; con: number; xp_reward: number; is_unique: boolean; image_url: string }[]>([]);
+  // Add-beast form
+  const [beastForm, setBeastForm] = useState<{ monster_id: string; level_min: number; level_max: number; stealth_mode: 'none'|'manual'|'auto'; reveal_radius: number; pendingPos: { x: number; y: number } | null }>({ monster_id: '', level_min: 1, level_max: 1, stealth_mode: 'none', reveal_radius: 80, pendingPos: null });
 
   // Hovered point for tooltip
   const [hoveredPoint, setHoveredPoint] = useState<{ routeId: string; pointId: string; clientX: number; clientY: number } | null>(null);
@@ -216,9 +247,32 @@ export default function MapPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'map_points' }, () => {
         loadRoutes();
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_beasts' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          const r: any = payload.new;
+          setBeasts(prev => prev.some(b => b.id === r.id) ? prev : [...prev, beastFromRow(r)]);
+        } else if (payload.eventType === 'UPDATE') {
+          const r: any = payload.new;
+          setBeasts(prev => prev.map(b => b.id === r.id ? beastFromRow(r) : b));
+        } else if (payload.eventType === 'DELETE') {
+          const r: any = payload.old;
+          setBeasts(prev => prev.filter(b => b.id !== r.id));
+        }
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
+
+  function beastFromRow(r: any): MapBeast {
+    return {
+      id: r.id, map_id: r.map_id, monster_id: r.monster_id, battle_id: r.battle_id,
+      short_code: r.short_code || '??', name: r.name || 'Bestie', level: r.level || 1,
+      hp: r.hp || 10, current_hp: r.current_hp ?? r.hp ?? 10, color: r.color || '#dc2626',
+      x: r.x, y: r.y, reveal_radius: r.reveal_radius ?? 80,
+      revealed: !!r.revealed, stealth_mode: (r.stealth_mode || 'none') as 'none'|'manual'|'auto',
+      notes: r.notes || '',
+    };
+  }
 
   function mapTokenFromRow(r: any): MapToken {
     return {
@@ -248,6 +302,7 @@ export default function MapPage() {
       const visMap = new Map(prev.map(r => [r.id, r.visible]));
       return (rRes.data || []).map((r: any) => ({
         id: r.id, name: r.name, color: r.color,
+        map_id: r.map_id ?? null,
         points: (pointsByRoute[r.id] || []).sort((a: MapPoint, b: MapPoint) => a.sort_order - b.sort_order),
         visible: visMap.get(r.id) ?? true,
       }));
@@ -256,7 +311,7 @@ export default function MapPage() {
 
   async function loadData() {
     if (!user) return;
-    const [rRes, pRes, sRes, spRes, mRes, tRes, fRes, profRes] = await Promise.all([
+    const [rRes, pRes, sRes, spRes, mRes, tRes, fRes, profRes, bRes, mnRes] = await Promise.all([
       supabase.from('map_routes').select('*').order('created_at'),
       supabase.from('map_points').select('*').order('sort_order'),
       supabase.from('map_settings').select('*'),
@@ -265,7 +320,11 @@ export default function MapPage() {
       supabase.from('map_tokens').select('*'),
       supabase.from('map_fog_reveals').select('*'),
       supabase.from('profiles').select('id,email'),
+      supabase.from('map_beasts').select('*').order('created_at'),
+      supabase.from('monsters').select('id,name,con,xp_reward,is_unique,image_url').order('name'),
     ]);
+    setBeasts((bRes.data || []).map((b: any) => beastFromRow(b)));
+    setMonstersList((mnRes.data || []).map((m: any) => ({ id: m.id, name: m.name, con: m.con, xp_reward: m.xp_reward, is_unique: m.is_unique, image_url: m.image_url || '' })));
 
     const pointsByRoute: Record<string, MapPoint[]> = {};
     (pRes.data || []).forEach((p: any) => {
@@ -275,6 +334,7 @@ export default function MapPage() {
 
     const loadedRoutes: MapRoute[] = (rRes.data || []).map((r: any) => ({
       id: r.id, name: r.name, color: r.color,
+      map_id: r.map_id ?? null,
       points: (pointsByRoute[r.id] || []).sort((a: MapPoint, b: MapPoint) => a.sort_order - b.sort_order),
       visible: true,
     }));
@@ -306,19 +366,42 @@ export default function MapPage() {
     }
   }
 
+  // ---- Granular permissions for map sub-features ----
+  const editRoutes = isEditor || canEditPage('map_routes');
+  const editSpecial = isEditor || canEditPage('map_special');
+  const editTokens = isEditor || canEditPage('map_tokens');
+  const editFog = isEditor || canEditPage('map_fog');
+  const editBeasts = isEditor || canEditPage('map_beasts');
+
   // Filter special points: by map AND viewer permission
   const visibleSpecialPoints = specialPoints.filter(sp => {
-    // Must match active map (or be global - no map assigned)
     if (sp.map_id !== null && sp.map_id !== activeMapId) return false;
     if (isAdmin || isEditor) return true;
     return sp.visible_to_viewers;
   });
+
+  // Routes filtered by active map (or global = NULL)
+  const visibleRoutes = routes.filter(r => r.map_id === null || r.map_id === activeMapId);
 
   // Tokens for active map
   const activeMapTokens = tokens.filter(t => t.map_id === activeMapId);
   const activeMap = maps.find(m => m.id === activeMapId);
   const fogEnabled = activeMap?.fog_enabled ?? false;
   const activeFogReveals = fogReveals.filter(f => f.map_id === activeMapId);
+  const activeMapBeasts = beasts.filter(b => b.map_id === activeMapId);
+
+  // Beasts visible to current user:
+  // - Admin/editor see all
+  // - Players (viewers) only see beasts that are 'revealed' AND currently inside any token's vision radius
+  const visibleBeastsForUser = activeMapBeasts.filter(b => {
+    if (isAdmin || isEditor) return true;
+    if (!b.revealed) return false;
+    // Must be inside at least one player token's vision radius right now
+    return activeMapTokens.some(t => {
+      const d = Math.sqrt((t.x - b.x) ** 2 + (t.y - b.y) ** 2);
+      return d <= t.reveal_radius;
+    });
+  });
 
   // Save settings (per-map)
   async function saveSettings() {
@@ -413,12 +496,13 @@ export default function MapPage() {
     if (!user) return;
     const color = ROUTE_COLORS[routes.length % ROUTE_COLORS.length];
     const { data: row } = await supabase.from('map_routes').insert({
-      user_id: user.id, name: `Trasa ${routes.length + 1}`, color,
-    }).select().single();
+      user_id: user.id, name: `Trasa ${routes.length + 1}`, color, map_id: activeMapId,
+    } as any).select().single();
     if (row) {
-      const newRoute: MapRoute = { id: row.id, name: (row as any).name, color: (row as any).color, points: [], visible: true };
+      const r: any = row;
+      const newRoute: MapRoute = { id: r.id, name: r.name, color: r.color, map_id: r.map_id ?? null, points: [], visible: true };
       setRoutes(prev => [...prev, newRoute]);
-      setActiveRouteId(row.id);
+      setActiveRouteId(r.id);
     }
   }
 
@@ -446,7 +530,7 @@ export default function MapPage() {
 
   function findPointAt(mapX: number, mapY: number): { routeId: string; pointId: string } | null {
     const hitRadius = 12 / scale;
-    for (const r of routes) {
+    for (const r of visibleRoutes) {
       if (!r.visible) continue;
       for (const p of r.points) {
         const dist = Math.sqrt((p.x - mapX) ** 2 + (p.y - mapY) ** 2);
@@ -500,6 +584,12 @@ export default function MapPage() {
     if (addingToken && editable && activeMapId) {
       addTokenAt(coords.x, coords.y);
       setAddingToken(false);
+      return;
+    }
+
+    if (addingBeast && editBeasts && activeMapId) {
+      addBeastAt(coords.x, coords.y);
+      setAddingBeast(false);
       return;
     }
 
@@ -603,6 +693,136 @@ export default function MapPage() {
   async function saveTokenPosition(id: string, x: number, y: number) {
     await supabase.from('map_tokens').update({ x, y }).eq('id', id);
   }
+
+  // ===== Beast CRUD =====
+  function calcBeastHP(con: number, level: number, isUnique: boolean): number {
+    const conBonus = Math.floor((con - 10) / 2);
+    return isUnique ? (conBonus + 10) * level : (conBonus + 5) * level + 5;
+  }
+  function calcBeastXP(baseXP: number, level: number): number {
+    return Math.round(baseXP * (1 + (level - 1) * 0.1));
+  }
+  function makeShortCode(name: string): string {
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  async function addBeastAt(x: number, y: number) {
+    if (!user || !activeMapId) return;
+    setBeastForm(f => ({ ...f, pendingPos: { x, y } }));
+    setEditBeast({
+      id: '', map_id: activeMapId, monster_id: null, battle_id: null,
+      short_code: '??', name: 'Bestie', level: 1, hp: 10, current_hp: 10,
+      color: '#dc2626', x, y, reveal_radius: 80, revealed: false, stealth_mode: 'none', notes: '',
+    });
+  }
+
+  async function confirmAddBeast() {
+    if (!user || !activeMapId || !beastForm.pendingPos || !beastForm.monster_id) {
+      toast({ title: 'Vyber bestii ze seznamu', variant: 'destructive' });
+      return;
+    }
+    const monster = monstersList.find(m => m.id === beastForm.monster_id);
+    if (!monster) return;
+    const min = Math.min(beastForm.level_min, beastForm.level_max);
+    const max = Math.max(beastForm.level_min, beastForm.level_max);
+    const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
+    const hp = calcBeastHP(monster.con, level, monster.is_unique);
+    const xpReward = calcBeastXP(monster.xp_reward, level);
+    const shortCode = makeShortCode(monster.name);
+    const battleId = crypto.randomUUID();
+
+    // 1. Insert into battle_monsters (auto add to BOJ tab)
+    await supabase.from('battle_monsters').insert({
+      user_id: user.id, monster_id: monster.id, battle_id: battleId,
+      name: monster.name, image_url: monster.image_url || '',
+      level, hp, current_hp: hp, xp_reward: xpReward,
+      con: monster.con,
+    } as any);
+
+    // 2. Insert into map_beasts
+    const { data: row } = await supabase.from('map_beasts').insert({
+      map_id: activeMapId, monster_id: monster.id, battle_id: battleId,
+      created_by: user.id, short_code: shortCode, name: monster.name,
+      level, hp, current_hp: hp, x: beastForm.pendingPos.x, y: beastForm.pendingPos.y,
+      reveal_radius: beastForm.reveal_radius, stealth_mode: beastForm.stealth_mode,
+      revealed: beastForm.stealth_mode === 'none',
+      color: '#dc2626',
+    }).select().single();
+    if (row) {
+      const b = beastFromRow(row);
+      setBeasts(prev => [...prev, b]);
+      toast({ title: `${monster.name} (úr.${level}) přidána na mapu i do boje` });
+    }
+    setEditBeast(null);
+    setAddingBeast(false);
+    setBeastForm({ monster_id: '', level_min: 1, level_max: 1, stealth_mode: 'none', reveal_radius: 80, pendingPos: null });
+  }
+
+  async function saveBeast() {
+    if (!editBeast || !editBeast.id) return;
+    await supabase.from('map_beasts').update({
+      short_code: editBeast.short_code, name: editBeast.name,
+      reveal_radius: editBeast.reveal_radius, stealth_mode: editBeast.stealth_mode,
+      revealed: editBeast.revealed, notes: editBeast.notes, color: editBeast.color,
+      current_hp: editBeast.current_hp,
+    }).eq('id', editBeast.id);
+    setBeasts(prev => prev.map(b => b.id === editBeast.id ? editBeast : b));
+    setEditBeast(null);
+    toast({ title: 'Bestie uložena' });
+  }
+
+  async function deleteBeast(id: string) {
+    const b = beasts.find(x => x.id === id);
+    await supabase.from('map_beasts').delete().eq('id', id);
+    if (b?.battle_id) {
+      await supabase.from('battle_monsters').delete().eq('battle_id', b.battle_id);
+    }
+    setBeasts(prev => prev.filter(x => x.id !== id));
+    setEditBeast(null);
+  }
+
+  async function saveBeastPosition(id: string, x: number, y: number) {
+    await supabase.from('map_beasts').update({ x, y }).eq('id', id);
+  }
+
+  async function toggleBeastReveal(id: string, revealed: boolean) {
+    await supabase.from('map_beasts').update({ revealed }).eq('id', id);
+    setBeasts(prev => prev.map(b => b.id === id ? { ...b, revealed } : b));
+  }
+
+  function findBeastAt(mapX: number, mapY: number): string | null {
+    const hitRadius = 18 / scale;
+    for (const b of visibleBeastsForUser) {
+      const dist = Math.sqrt((b.x - mapX) ** 2 + (b.y - mapY) ** 2);
+      if (dist <= hitRadius) return b.id;
+    }
+    return null;
+  }
+  function canMoveBeast(): boolean { return editBeasts; }
+
+  // Auto-reveal: any 'auto'-stealth beast that comes within any token's vision range gets revealed
+  useEffect(() => {
+    if (!editBeasts) return; // only admin/editor pushes the reveal
+    const toReveal = activeMapBeasts.filter(b => !b.revealed && b.stealth_mode === 'auto' && activeMapTokens.some(t => {
+      const d = Math.sqrt((t.x - b.x) ** 2 + (t.y - b.y) ** 2);
+      return d <= t.reveal_radius;
+    }));
+    toReveal.forEach(b => toggleBeastReveal(b.id, true));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMapTokens, activeMapBeasts, editBeasts]);
+
+  // Switch active route when active map changes (pick first matching)
+  useEffect(() => {
+    if (!activeMapId) return;
+    const current = routes.find(r => r.id === activeRouteId);
+    if (!current || (current.map_id !== null && current.map_id !== activeMapId)) {
+      const first = routes.find(r => r.map_id === null || r.map_id === activeMapId);
+      setActiveRouteId(first?.id || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMapId, routes]);
 
   async function revealFog(x: number, y: number, radius: number) {
     if (!user || !activeMapId || !fogEnabled) return;
@@ -851,11 +1071,11 @@ export default function MapPage() {
                 </defs>
                 <rect
                   x="0" y="0" width={naturalSize.w} height={naturalSize.h}
-                  fill="black" opacity="0.92"
+                  fill="black" opacity={(isAdmin || isEditor) ? 0.55 : 1.0}
                   mask={`url(#fog-mask-${activeMapId})`}
                 />
-                {/* Soft edges around current token vision */}
-                {activeMapTokens.map(t => (
+                {/* Soft edges only for admin/editor view */}
+                {(isAdmin || isEditor) && activeMapTokens.map(t => (
                   <circle
                     key={`tok-fade-${t.id}`}
                     cx={t.x} cy={t.y} r={t.reveal_radius}
@@ -865,7 +1085,7 @@ export default function MapPage() {
               </>
             )}
 
-            {routes.filter(r => r.visible).map(r => (
+            {visibleRoutes.filter(r => r.visible).map(r => (
               <g key={r.id}>
                 {r.points.length > 1 && (
                   <polyline
@@ -935,6 +1155,33 @@ export default function MapPage() {
                   <text x={t.x + 16 / scale} y={t.y - 14 / scale} fill="white" stroke="black" strokeWidth={3 / scale} paintOrder="stroke" fontSize={12 / scale} fontWeight="bold" style={{ pointerEvents: 'none' }}>
                     {LIGHT_SOURCES[t.light_source]?.emoji || ''} {t.name}
                   </text>
+                </g>
+              );
+            })}
+
+            {/* Beasts (monsters placed by GM) */}
+            {visibleBeastsForUser.map(b => {
+              const isHidden = !b.revealed; // only admin/editor will see hidden ones (visibleBeastsForUser handles viewer filter)
+              return (
+                <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'move' : 'pointer' }}
+                  opacity={isHidden ? 0.45 : 1}>
+                  {/* Vision radius for admin/editor */}
+                  {(isAdmin || isEditor) && (
+                    <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={b.color} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
+                  )}
+                  {/* Diamond/square shape so it differs from player tokens */}
+                  <rect x={b.x - 14 / scale} y={b.y - 14 / scale} width={28 / scale} height={28 / scale}
+                    transform={`rotate(45 ${b.x} ${b.y})`}
+                    fill={b.color} stroke="white" strokeWidth={3 / scale} />
+                  <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
+                    fontSize={12 / scale} fill="white" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                    {b.short_code}
+                  </text>
+                  {(isAdmin || isEditor) && (
+                    <text x={b.x + 18 / scale} y={b.y - 14 / scale} fill="#ff8888" stroke="black" strokeWidth={3 / scale} paintOrder="stroke" fontSize={11 / scale} fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                      {isHidden ? (b.stealth_mode === 'manual' ? '🫥 záloha' : b.stealth_mode === 'auto' ? '👀 čeká' : '❓ skrytá') : ''} {b.name} (úr.{b.level})
+                    </text>
+                  )}
                 </g>
               );
             })}
@@ -1031,6 +1278,16 @@ export default function MapPage() {
           {editable && activeMapId && (
             <Button size="sm" variant={addingToken ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingToken(!addingToken); setAddingPoint(false); setAddingSpecialPoint(false); }}>
               <Users size={14} /> {addingToken ? 'Klikni na mapu...' : 'Přidat postavu'}
+            </Button>
+          )}
+          {editBeasts && activeMapId && (
+            <Button size="sm" variant={addingBeast ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingBeast(!addingBeast); setAddingPoint(false); setAddingSpecialPoint(false); setAddingToken(false); }}>
+              👹 {addingBeast ? 'Klikni na mapu...' : 'Přidat bestii'}
+            </Button>
+          )}
+          {editBeasts && activeMapId && beasts.filter(b => b.map_id === activeMapId).length > 0 && (
+            <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setBeastsDialogOpen(true)}>
+              📋 Bestie ({activeMapBeasts.length})
             </Button>
           )}
         </div>
@@ -1487,6 +1744,89 @@ export default function MapPage() {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Beast: choose monster + level when adding new */}
+      <Dialog open={!!editBeast && !editBeast.id} onOpenChange={o => { if (!o) { setEditBeast(null); setBeastForm(f => ({ ...f, pendingPos: null })); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Přidat bestii na mapu</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Bestie z bestiáře</Label>
+              <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={beastForm.monster_id}
+                onChange={e => setBeastForm(f => ({ ...f, monster_id: e.target.value }))}>
+                <option value="">— vyber —</option>
+                {monstersList.map(m => <option key={m.id} value={m.id}>{m.name}{m.is_unique ? ' ★' : ''}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div><Label>Úroveň od</Label><Input type="number" min={1} value={beastForm.level_min} onChange={e => setBeastForm(f => ({ ...f, level_min: parseInt(e.target.value) || 1 }))} /></div>
+              <div><Label>Úroveň do</Label><Input type="number" min={1} value={beastForm.level_max} onChange={e => setBeastForm(f => ({ ...f, level_max: parseInt(e.target.value) || 1 }))} /></div>
+            </div>
+            <div>
+              <Label>Dosvit/zorné pole</Label>
+              <Input type="number" value={beastForm.reveal_radius} onChange={e => setBeastForm(f => ({ ...f, reveal_radius: parseInt(e.target.value) || 80 }))} />
+            </div>
+            <div>
+              <Label>Stealth režim</Label>
+              <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={beastForm.stealth_mode}
+                onChange={e => setBeastForm(f => ({ ...f, stealth_mode: e.target.value as any }))}>
+                <option value="none">Viditelná hned</option>
+                <option value="auto">Odhalí se přiblížením postavy</option>
+                <option value="manual">Záloha — odhalí jen GM ručně</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => { setEditBeast(null); setBeastForm(f => ({ ...f, pendingPos: null })); }}>Zrušit</Button>
+              <Button onClick={confirmAddBeast}>Přidat do mapy i do BOJ</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Beast list / management */}
+      <Dialog open={beastsDialogOpen} onOpenChange={setBeastsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Bestie na mapě</DialogTitle></DialogHeader>
+          <div className="grid grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto">
+            <div className="space-y-1">
+              {activeMapBeasts.map(b => (
+                <button key={b.id} className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-secondary ${editBeast?.id === b.id ? 'bg-secondary' : ''}`} onClick={() => setEditBeast(b)}>
+                  <span className="font-mono mr-2">[{b.short_code}]</span>{b.name} <span className="text-xs text-muted-foreground">úr.{b.level} • HP {b.current_hp}/{b.hp}</span>
+                </button>
+              ))}
+              {activeMapBeasts.length === 0 && <p className="text-sm text-muted-foreground">Žádné bestie na této mapě.</p>}
+            </div>
+            <div>
+              {editBeast && editBeast.id ? (
+                <div className="space-y-2">
+                  <div><Label>Jméno</Label><Input value={editBeast.name} onChange={e => setEditBeast({ ...editBeast, name: e.target.value })} /></div>
+                  <div><Label>Zkratka</Label><Input maxLength={4} value={editBeast.short_code} onChange={e => setEditBeast({ ...editBeast, short_code: e.target.value.toUpperCase() })} /></div>
+                  <div><Label>HP</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
+                  <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+                  <div>
+                    <Label>Stealth</Label>
+                    <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={editBeast.stealth_mode}
+                      onChange={e => setEditBeast({ ...editBeast, stealth_mode: e.target.value as any })}>
+                      <option value="none">Viditelná</option>
+                      <option value="auto">Auto-odhalení</option>
+                      <option value="manual">Záloha</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={editBeast.revealed} onChange={e => setEditBeast({ ...editBeast, revealed: e.target.checked })} />
+                    <Label className="!mt-0">Odhalená pro hráče</Label>
+                  </div>
+                  <div><Label>Poznámky</Label><Textarea value={editBeast.notes} onChange={e => setEditBeast({ ...editBeast, notes: e.target.value })} /></div>
+                  <div className="flex justify-between pt-2">
+                    <Button variant="destructive" size="sm" onClick={() => deleteBeast(editBeast.id)}>Smazat</Button>
+                    <Button size="sm" onClick={saveBeast}>Uložit</Button>
+                  </div>
+                </div>
+              ) : <p className="text-sm text-muted-foreground">Vyber bestii v seznamu.</p>}
             </div>
           </div>
         </DialogContent>
