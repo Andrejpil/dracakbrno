@@ -268,6 +268,7 @@ export default function MapPage() {
       const visMap = new Map(prev.map(r => [r.id, r.visible]));
       return (rRes.data || []).map((r: any) => ({
         id: r.id, name: r.name, color: r.color,
+        map_id: r.map_id ?? null,
         points: (pointsByRoute[r.id] || []).sort((a: MapPoint, b: MapPoint) => a.sort_order - b.sort_order),
         visible: visMap.get(r.id) ?? true,
       }));
