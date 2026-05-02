@@ -687,6 +687,114 @@ export default function MapPage() {
     await supabase.from('map_tokens').update({ x, y }).eq('id', id);
   }
 
+  // ===== Beast CRUD =====
+  function calcBeastHP(con: number, level: number, isUnique: boolean): number {
+    const conBonus = Math.floor((con - 10) / 2);
+    return isUnique ? (conBonus + 10) * level : (conBonus + 5) * level + 5;
+  }
+  function calcBeastXP(baseXP: number, level: number): number {
+    return Math.round(baseXP * (1 + (level - 1) * 0.1));
+  }
+  function makeShortCode(name: string): string {
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  async function addBeastAt(x: number, y: number) {
+    if (!user || !activeMapId) return;
+    setBeastForm(f => ({ ...f, pendingPos: { x, y } }));
+    setEditBeast({
+      id: '', map_id: activeMapId, monster_id: null, battle_id: null,
+      short_code: '??', name: 'Bestie', level: 1, hp: 10, current_hp: 10,
+      color: '#dc2626', x, y, reveal_radius: 80, revealed: false, stealth_mode: 'none', notes: '',
+    });
+  }
+
+  async function confirmAddBeast() {
+    if (!user || !activeMapId || !beastForm.pendingPos || !beastForm.monster_id) {
+      toast({ title: 'Vyber bestii ze seznamu', variant: 'destructive' });
+      return;
+    }
+    const monster = monstersList.find(m => m.id === beastForm.monster_id);
+    if (!monster) return;
+    const min = Math.min(beastForm.level_min, beastForm.level_max);
+    const max = Math.max(beastForm.level_min, beastForm.level_max);
+    const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
+    const hp = calcBeastHP(monster.con, level, monster.is_unique);
+    const xpReward = calcBeastXP(monster.xp_reward, level);
+    const shortCode = makeShortCode(monster.name);
+    const battleId = crypto.randomUUID();
+
+    // 1. Insert into battle_monsters (auto add to BOJ tab)
+    await supabase.from('battle_monsters').insert({
+      user_id: user.id, monster_id: monster.id, battle_id: battleId,
+      name: monster.name, image_url: monster.image_url || '',
+      level, hp, current_hp: hp, xp_reward: xpReward,
+      con: monster.con,
+    } as any);
+
+    // 2. Insert into map_beasts
+    const { data: row } = await supabase.from('map_beasts').insert({
+      map_id: activeMapId, monster_id: monster.id, battle_id: battleId,
+      created_by: user.id, short_code: shortCode, name: monster.name,
+      level, hp, current_hp: hp, x: beastForm.pendingPos.x, y: beastForm.pendingPos.y,
+      reveal_radius: beastForm.reveal_radius, stealth_mode: beastForm.stealth_mode,
+      revealed: beastForm.stealth_mode === 'none',
+      color: '#dc2626',
+    }).select().single();
+    if (row) {
+      const b = beastFromRow(row);
+      setBeasts(prev => [...prev, b]);
+      toast({ title: `${monster.name} (úr.${level}) přidána na mapu i do boje` });
+    }
+    setEditBeast(null);
+    setAddingBeast(false);
+    setBeastForm({ monster_id: '', level_min: 1, level_max: 1, stealth_mode: 'none', reveal_radius: 80, pendingPos: null });
+  }
+
+  async function saveBeast() {
+    if (!editBeast || !editBeast.id) return;
+    await supabase.from('map_beasts').update({
+      short_code: editBeast.short_code, name: editBeast.name,
+      reveal_radius: editBeast.reveal_radius, stealth_mode: editBeast.stealth_mode,
+      revealed: editBeast.revealed, notes: editBeast.notes, color: editBeast.color,
+      current_hp: editBeast.current_hp,
+    }).eq('id', editBeast.id);
+    setBeasts(prev => prev.map(b => b.id === editBeast.id ? editBeast : b));
+    setEditBeast(null);
+    toast({ title: 'Bestie uložena' });
+  }
+
+  async function deleteBeast(id: string) {
+    const b = beasts.find(x => x.id === id);
+    await supabase.from('map_beasts').delete().eq('id', id);
+    if (b?.battle_id) {
+      await supabase.from('battle_monsters').delete().eq('battle_id', b.battle_id);
+    }
+    setBeasts(prev => prev.filter(x => x.id !== id));
+    setEditBeast(null);
+  }
+
+  async function saveBeastPosition(id: string, x: number, y: number) {
+    await supabase.from('map_beasts').update({ x, y }).eq('id', id);
+  }
+
+  async function toggleBeastReveal(id: string, revealed: boolean) {
+    await supabase.from('map_beasts').update({ revealed }).eq('id', id);
+    setBeasts(prev => prev.map(b => b.id === id ? { ...b, revealed } : b));
+  }
+
+  function findBeastAt(mapX: number, mapY: number): string | null {
+    const hitRadius = 18 / scale;
+    for (const b of visibleBeastsForUser) {
+      const dist = Math.sqrt((b.x - mapX) ** 2 + (b.y - mapY) ** 2);
+      if (dist <= hitRadius) return b.id;
+    }
+    return null;
+  }
+  function canMoveBeast(): boolean { return editBeasts; }
+
   async function revealFog(x: number, y: number, radius: number) {
     if (!user || !activeMapId || !fogEnabled) return;
     // Throttle: don't insert if very close to last reveal
