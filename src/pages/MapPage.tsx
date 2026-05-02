@@ -167,6 +167,16 @@ export default function MapPage() {
   const [fogReveals, setFogReveals] = useState<FogReveal[]>([]);
   const [showFog, setShowFog] = useState(true);
 
+  // Beasts state
+  const [beasts, setBeasts] = useState<MapBeast[]>([]);
+  const [beastsDialogOpen, setBeastsDialogOpen] = useState(false);
+  const [addingBeast, setAddingBeast] = useState(false);
+  const [editBeast, setEditBeast] = useState<MapBeast | null>(null);
+  const [draggingBeast, setDraggingBeast] = useState<string | null>(null);
+  const [monstersList, setMonstersList] = useState<{ id: string; name: string; con: number; xp_reward: number; is_unique: boolean; image_url: string }[]>([]);
+  // Add-beast form
+  const [beastForm, setBeastForm] = useState<{ monster_id: string; level_min: number; level_max: number; stealth_mode: 'none'|'manual'|'auto'; reveal_radius: number; pendingPos: { x: number; y: number } | null }>({ monster_id: '', level_min: 1, level_max: 1, stealth_mode: 'none', reveal_radius: 80, pendingPos: null });
+
   // Hovered point for tooltip
   const [hoveredPoint, setHoveredPoint] = useState<{ routeId: string; pointId: string; clientX: number; clientY: number } | null>(null);
 
