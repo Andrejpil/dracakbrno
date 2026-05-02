@@ -1064,11 +1064,11 @@ export default function MapPage() {
                 </defs>
                 <rect
                   x="0" y="0" width={naturalSize.w} height={naturalSize.h}
-                  fill="black" opacity="0.92"
+                  fill="black" opacity={(isAdmin || isEditor) ? 0.55 : 1.0}
                   mask={`url(#fog-mask-${activeMapId})`}
                 />
-                {/* Soft edges around current token vision */}
-                {activeMapTokens.map(t => (
+                {/* Soft edges only for admin/editor view */}
+                {(isAdmin || isEditor) && activeMapTokens.map(t => (
                   <circle
                     key={`tok-fade-${t.id}`}
                     cx={t.x} cy={t.y} r={t.reveal_radius}
