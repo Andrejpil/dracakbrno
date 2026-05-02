@@ -1273,6 +1273,16 @@ export default function MapPage() {
               <Users size={14} /> {addingToken ? 'Klikni na mapu...' : 'Přidat postavu'}
             </Button>
           )}
+          {editBeasts && activeMapId && (
+            <Button size="sm" variant={addingBeast ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingBeast(!addingBeast); setAddingPoint(false); setAddingSpecialPoint(false); setAddingToken(false); }}>
+              👹 {addingBeast ? 'Klikni na mapu...' : 'Přidat bestii'}
+            </Button>
+          )}
+          {editBeasts && activeMapId && beasts.filter(b => b.map_id === activeMapId).length > 0 && (
+            <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setBeastsDialogOpen(true)}>
+              📋 Bestie ({activeMapBeasts.length})
+            </Button>
+          )}
         </div>
 
         {/* Active route info */}
