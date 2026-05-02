@@ -328,19 +328,42 @@ export default function MapPage() {
     }
   }
 
+  // ---- Granular permissions for map sub-features ----
+  const editRoutes = isEditor || canEditPage('map_routes');
+  const editSpecial = isEditor || canEditPage('map_special');
+  const editTokens = isEditor || canEditPage('map_tokens');
+  const editFog = isEditor || canEditPage('map_fog');
+  const editBeasts = isEditor || canEditPage('map_beasts');
+
   // Filter special points: by map AND viewer permission
   const visibleSpecialPoints = specialPoints.filter(sp => {
-    // Must match active map (or be global - no map assigned)
     if (sp.map_id !== null && sp.map_id !== activeMapId) return false;
     if (isAdmin || isEditor) return true;
     return sp.visible_to_viewers;
   });
+
+  // Routes filtered by active map (or global = NULL)
+  const visibleRoutes = routes.filter(r => r.map_id === null || r.map_id === activeMapId);
 
   // Tokens for active map
   const activeMapTokens = tokens.filter(t => t.map_id === activeMapId);
   const activeMap = maps.find(m => m.id === activeMapId);
   const fogEnabled = activeMap?.fog_enabled ?? false;
   const activeFogReveals = fogReveals.filter(f => f.map_id === activeMapId);
+  const activeMapBeasts = beasts.filter(b => b.map_id === activeMapId);
+
+  // Beasts visible to current user:
+  // - Admin/editor see all
+  // - Players (viewers) only see beasts that are 'revealed' AND currently inside any token's vision radius
+  const visibleBeastsForUser = activeMapBeasts.filter(b => {
+    if (isAdmin || isEditor) return true;
+    if (!b.revealed) return false;
+    // Must be inside at least one player token's vision radius right now
+    return activeMapTokens.some(t => {
+      const d = Math.sqrt((t.x - b.x) ** 2 + (t.y - b.y) ** 2);
+      return d <= t.reveal_radius;
+    });
+  });
 
   // Save settings (per-map)
   async function saveSettings() {
