@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { calculateHP, calculateXP, getHeroLevel } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Dices, Plus, Star, RefreshCw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dices, Plus, Star, RefreshCw, Filter } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const STORAGE_KEY = 'encounter_allowed_monsters';
 
 export default function EncounterPage() {
   const { heroes, monsters, addToBattle } = useGame();
@@ -17,6 +21,10 @@ export default function EncounterPage() {
   const [levelMin, setLevelMin] = useState(1);
   const [levelMax, setLevelMax] = useState(5);
   const [count, setCount] = useState(1);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [allowed, setAllowed] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  });
   const [generated, setGenerated] = useState<{
     monster: typeof monsters[0];
     level: number;
@@ -24,21 +32,48 @@ export default function EncounterPage() {
     xp: number;
   }[]>([]);
 
+  // Default-allow any monster not yet in map
+  useEffect(() => {
+    setAllowed(prev => {
+      const next = { ...prev };
+      let changed = false;
+      monsters.forEach(m => {
+        if (next[m.id] === undefined) { next[m.id] = true; changed = true; }
+      });
+      if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [monsters]);
+
+  function toggleAllowed(id: string, v: boolean) {
+    const next = { ...allowed, [id]: v };
+    setAllowed(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+  function setAllAllowed(v: boolean) {
+    const next: Record<string, boolean> = {};
+    monsters.forEach(m => { next[m.id] = v; });
+    setAllowed(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  const allowedMonsters = useMemo(() => monsters.filter(m => allowed[m.id] !== false), [monsters, allowed]);
+
   // Avg party level
   const avgLevel = heroes.length > 0
     ? Math.round(heroes.reduce((sum, h) => sum + getHeroLevel(h.experience), 0) / heroes.length)
     : 1;
 
   function generate() {
-    if (monsters.length === 0) {
-      toast({ title: 'Bestiář je prázdný', variant: 'destructive' });
+    if (allowedMonsters.length === 0) {
+      toast({ title: 'Žádné povolené bestie', description: 'Otevři filtr a zaškrtni alespoň jednu.', variant: 'destructive' });
       return;
     }
     const min = Math.min(levelMin, levelMax);
     const max = Math.max(levelMin, levelMax);
     const results = [];
     for (let i = 0; i < count; i++) {
-      const monster = monsters[Math.floor(Math.random() * monsters.length)];
+      const monster = allowedMonsters[Math.floor(Math.random() * allowedMonsters.length)];
       const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
       const hp = calculateHP(monster.con, level, monster.is_unique);
       const xp = calculateXP(monster.xp_reward, level);
@@ -81,17 +116,40 @@ export default function EncounterPage() {
             <Input type="number" min={1} max={10} className="w-20" value={count}
               onChange={e => setCount(Math.max(1, Math.min(10, +e.target.value || 1)))} />
           </div>
-          <Button onClick={generate} disabled={monsters.length === 0}>
+          <Button onClick={generate} disabled={allowedMonsters.length === 0}>
             <Dices size={16} className="mr-1" /> Generovat
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)}>
+            <Filter size={14} className="mr-1" /> Filtr bestií ({allowedMonsters.length}/{monsters.length})
           </Button>
           <Button variant="ghost" size="sm" onClick={() => { setLevelMin(Math.max(1, avgLevel - 2)); setLevelMax(avgLevel + 2); }}>
             Dle družiny (Úr. ~{avgLevel})
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Průměrná úroveň družiny: <span className="text-primary font-bold">{avgLevel}</span> ({heroes.length} hrdinů)
+          Průměrná úroveň družiny: <span className="text-primary font-bold">{avgLevel}</span> ({heroes.length} hrdinů) • Povoleno {allowedMonsters.length} z {monsters.length} bestií
         </p>
       </Card>
+
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Které bestie mohou být generovány?</DialogTitle></DialogHeader>
+          <div className="flex gap-2 mb-2">
+            <Button size="sm" variant="outline" onClick={() => setAllAllowed(true)}>Označit vše</Button>
+            <Button size="sm" variant="outline" onClick={() => setAllAllowed(false)}>Odznačit vše</Button>
+          </div>
+          <div className="space-y-1">
+            {monsters.map(m => (
+              <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary cursor-pointer text-sm">
+                <Checkbox checked={allowed[m.id] !== false} onCheckedChange={v => toggleAllowed(m.id, !!v)} />
+                <span className="flex-1">{m.name} {m.is_unique && <Star size={12} className="inline text-primary fill-primary" />}</span>
+                <span className="text-xs text-muted-foreground">XP {m.xp_reward}</span>
+              </label>
+            ))}
+            {monsters.length === 0 && <p className="text-sm text-muted-foreground">Bestiář je prázdný.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {generated.length > 0 && (
         <>

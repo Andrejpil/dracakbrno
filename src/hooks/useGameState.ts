@@ -189,13 +189,18 @@ export function useGameState() {
     const actualDmg = Math.min(dmg, oldHP);
     h[hi] = { ...h[hi], totalDamage: h[hi].totalDamage + actualDmg };
 
+    const scaledXP = calculateXP(m.xp_reward, m.level);
+    let xpGain = Math.floor((actualDmg / m.hp) * scaledXP);
+
     if (oldHP > 0 && m.currentHP === 0) {
       m.killedBy = heroId;
       h[hi] = { ...h[hi], kills: h[hi].kills + 1 };
       const newKills = { ...monsterKills };
       newKills[m.name] = (newKills[m.name] || 0) + 1;
       setMonsterKills(newKills);
-      // Upsert kill count
+      // Kill bonus: +5% of total XP for normal, +10% for unique
+      const bonusPct = m.is_unique ? 0.10 : 0.05;
+      xpGain += Math.floor(scaledXP * bonusPct);
       if (user) {
         await supabase.from('monster_kills').upsert(
           { user_id: user.id, monster_name: m.name, count: newKills[m.name] },
@@ -204,8 +209,6 @@ export function useGameState() {
       }
     }
 
-    const scaledXP = calculateXP(m.xp_reward, m.level);
-    const xpGain = Math.floor((actualDmg / m.hp) * scaledXP);
     h[hi] = { ...h[hi], experience: h[hi].experience + xpGain };
 
     bmArr[idx] = m;
