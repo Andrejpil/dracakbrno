@@ -763,13 +763,22 @@ export default function MapPage() {
 
   async function saveBeast() {
     if (!editBeast || !editBeast.id) return;
+    const newMax = Math.max(1, editBeast.hp);
+    const newCur = Math.max(0, Math.min(newMax, editBeast.current_hp));
+    const updated = { ...editBeast, hp: newMax, current_hp: newCur };
     await supabase.from('map_beasts').update({
-      short_code: editBeast.short_code, name: editBeast.name,
-      reveal_radius: editBeast.reveal_radius, stealth_mode: editBeast.stealth_mode,
-      revealed: editBeast.revealed, notes: editBeast.notes, color: editBeast.color,
-      current_hp: editBeast.current_hp,
+      short_code: updated.short_code, name: updated.name,
+      reveal_radius: updated.reveal_radius, stealth_mode: updated.stealth_mode,
+      revealed: updated.revealed, notes: updated.notes, color: updated.color,
+      hp: newMax, current_hp: newCur, level: updated.level,
     }).eq('id', editBeast.id);
-    setBeasts(prev => prev.map(b => b.id === editBeast.id ? editBeast : b));
+    // Sync to battle_monsters (BOJ tab)
+    if (updated.battle_id) {
+      await supabase.from('battle_monsters').update({
+        name: updated.name, hp: newMax, current_hp: newCur, level: updated.level,
+      }).eq('battle_id', updated.battle_id);
+    }
+    setBeasts(prev => prev.map(b => b.id === editBeast.id ? updated : b));
     setEditBeast(null);
     toast({ title: 'Bestie uložena' });
   }
