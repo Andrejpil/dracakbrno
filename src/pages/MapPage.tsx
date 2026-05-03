@@ -1199,25 +1199,32 @@ export default function MapPage() {
 
             {/* Beasts (monsters placed by GM) */}
             {visibleBeastsForUser.map(b => {
-              const isHidden = !b.revealed; // only admin/editor will see hidden ones (visibleBeastsForUser handles viewer filter)
+              const isHidden = !b.revealed;
+              const isDead = b.current_hp <= 0;
+              const size = 22 / scale;
+              const fillColor = isDead ? '#9ca3af' : '#ffffff';
+              const borderColor = isDead ? '#6b7280' : '#dc2626';
+              const textColor = isDead ? '#4b5563' : '#000000';
               return (
-                <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'move' : 'pointer' }}
-                  opacity={isHidden ? 0.45 : 1}>
-                  {/* Vision radius for admin/editor */}
+                <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'pointer' : 'pointer' }}
+                  opacity={isHidden ? 0.5 : 1}>
                   {(isAdmin || isEditor) && (
-                    <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={b.color} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
+                    <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={borderColor} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
                   )}
-                  {/* Diamond/square shape so it differs from player tokens */}
-                  <rect x={b.x - 14 / scale} y={b.y - 14 / scale} width={28 / scale} height={28 / scale}
-                    transform={`rotate(45 ${b.x} ${b.y})`}
-                    fill={b.color} stroke="white" strokeWidth={3 / scale} />
+                  {/* Square token: white bg, red border, black text */}
+                  <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                    fill={fillColor} stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
                   <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
-                    fontSize={12 / scale} fill="white" fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                    fontSize={18 / scale} fill={textColor} fontWeight="bold" style={{ pointerEvents: 'none' }}>
                     {b.short_code}
                   </text>
+                  {isDead && (
+                    <line x1={b.x - size} y1={b.y - size} x2={b.x + size} y2={b.y + size}
+                      stroke="#374151" strokeWidth={2 / scale} style={{ pointerEvents: 'none' }} />
+                  )}
                   {(isAdmin || isEditor) && (
-                    <text x={b.x + 18 / scale} y={b.y - 14 / scale} fill="#ff8888" stroke="black" strokeWidth={3 / scale} paintOrder="stroke" fontSize={11 / scale} fontWeight="bold" style={{ pointerEvents: 'none' }}>
-                      {isHidden ? (b.stealth_mode === 'manual' ? '🫥 záloha' : b.stealth_mode === 'auto' ? '👀 čeká' : '❓ skrytá') : ''} {b.name} (úr.{b.level})
+                    <text x={b.x + size + 4 / scale} y={b.y - size} fill="#ff8888" stroke="black" strokeWidth={3 / scale} paintOrder="stroke" fontSize={11 / scale} fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                      {isHidden ? (b.stealth_mode === 'manual' ? '🫥 záloha' : b.stealth_mode === 'auto' ? '👀 čeká' : '❓ skrytá') : ''} {b.name} (úr.{b.level}){isDead ? ' ☠' : ''}
                     </text>
                   )}
                 </g>
