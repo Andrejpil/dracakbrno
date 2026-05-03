@@ -899,6 +899,21 @@ export default function MapPage() {
     if (e.button !== 0) return;
     const coords = clientToMap(e.clientX, e.clientY);
 
+    // Beast: long-press to drag, click to open edit
+    if (coords && editBeasts && !addingPoint && !addingSpecialPoint && !addingToken && !addingBeast) {
+      const bId = findBeastAt(coords.x, coords.y);
+      if (bId) {
+        e.preventDefault();
+        didDragRef.current = false;
+        if (beastPressRef.current) clearTimeout(beastPressRef.current.timer);
+        const timer = window.setTimeout(() => {
+          setDraggingBeast(bId);
+        }, 350);
+        beastPressRef.current = { id: bId, timer };
+        return;
+      }
+    }
+
     // Token drag (admin or owner)
     if (coords && !addingPoint && !addingSpecialPoint && !addingToken) {
       const tId = findTokenAt(coords.x, coords.y);
