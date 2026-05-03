@@ -955,6 +955,13 @@ export default function MapPage() {
   }
 
   function handleMouseMove(e: React.MouseEvent) {
+    if (draggingBeast) {
+      const coords = clientToMap(e.clientX, e.clientY);
+      if (!coords) return;
+      didDragRef.current = true;
+      setBeasts(prev => prev.map(b => b.id === draggingBeast ? { ...b, x: coords.x, y: coords.y } : b));
+      return;
+    }
     if (draggingToken) {
       const coords = clientToMap(e.clientX, e.clientY);
       if (!coords) return;
