@@ -116,17 +116,40 @@ export default function EncounterPage() {
             <Input type="number" min={1} max={10} className="w-20" value={count}
               onChange={e => setCount(Math.max(1, Math.min(10, +e.target.value || 1)))} />
           </div>
-          <Button onClick={generate} disabled={monsters.length === 0}>
+          <Button onClick={generate} disabled={allowedMonsters.length === 0}>
             <Dices size={16} className="mr-1" /> Generovat
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setFilterOpen(true)}>
+            <Filter size={14} className="mr-1" /> Filtr bestií ({allowedMonsters.length}/{monsters.length})
           </Button>
           <Button variant="ghost" size="sm" onClick={() => { setLevelMin(Math.max(1, avgLevel - 2)); setLevelMax(avgLevel + 2); }}>
             Dle družiny (Úr. ~{avgLevel})
           </Button>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Průměrná úroveň družiny: <span className="text-primary font-bold">{avgLevel}</span> ({heroes.length} hrdinů)
+          Průměrná úroveň družiny: <span className="text-primary font-bold">{avgLevel}</span> ({heroes.length} hrdinů) • Povoleno {allowedMonsters.length} z {monsters.length} bestií
         </p>
       </Card>
+
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Které bestie mohou být generovány?</DialogTitle></DialogHeader>
+          <div className="flex gap-2 mb-2">
+            <Button size="sm" variant="outline" onClick={() => setAllAllowed(true)}>Označit vše</Button>
+            <Button size="sm" variant="outline" onClick={() => setAllAllowed(false)}>Odznačit vše</Button>
+          </div>
+          <div className="space-y-1">
+            {monsters.map(m => (
+              <label key={m.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-secondary cursor-pointer text-sm">
+                <Checkbox checked={allowed[m.id] !== false} onCheckedChange={v => toggleAllowed(m.id, !!v)} />
+                <span className="flex-1">{m.name} {m.is_unique && <Star size={12} className="inline text-primary fill-primary" />}</span>
+                <span className="text-xs text-muted-foreground">XP {m.xp_reward}</span>
+              </label>
+            ))}
+            {monsters.length === 0 && <p className="text-sm text-muted-foreground">Bestiář je prázdný.</p>}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {generated.length > 0 && (
         <>
