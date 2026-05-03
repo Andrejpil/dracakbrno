@@ -1,13 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useGame } from '@/contexts/GameContext';
 import { calculateHP, calculateXP, getHeroLevel } from '@/lib/gameData';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Dices, Plus, Star, RefreshCw } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dices, Plus, Star, RefreshCw, Filter } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
+const STORAGE_KEY = 'encounter_allowed_monsters';
 
 export default function EncounterPage() {
   const { heroes, monsters, addToBattle } = useGame();
@@ -17,6 +21,10 @@ export default function EncounterPage() {
   const [levelMin, setLevelMin] = useState(1);
   const [levelMax, setLevelMax] = useState(5);
   const [count, setCount] = useState(1);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [allowed, setAllowed] = useState<Record<string, boolean>>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  });
   const [generated, setGenerated] = useState<{
     monster: typeof monsters[0];
     level: number;
@@ -24,21 +32,48 @@ export default function EncounterPage() {
     xp: number;
   }[]>([]);
 
+  // Default-allow any monster not yet in map
+  useEffect(() => {
+    setAllowed(prev => {
+      const next = { ...prev };
+      let changed = false;
+      monsters.forEach(m => {
+        if (next[m.id] === undefined) { next[m.id] = true; changed = true; }
+      });
+      if (changed) localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  }, [monsters]);
+
+  function toggleAllowed(id: string, v: boolean) {
+    const next = { ...allowed, [id]: v };
+    setAllowed(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+  function setAllAllowed(v: boolean) {
+    const next: Record<string, boolean> = {};
+    monsters.forEach(m => { next[m.id] = v; });
+    setAllowed(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
+
+  const allowedMonsters = useMemo(() => monsters.filter(m => allowed[m.id] !== false), [monsters, allowed]);
+
   // Avg party level
   const avgLevel = heroes.length > 0
     ? Math.round(heroes.reduce((sum, h) => sum + getHeroLevel(h.experience), 0) / heroes.length)
     : 1;
 
   function generate() {
-    if (monsters.length === 0) {
-      toast({ title: 'Bestiář je prázdný', variant: 'destructive' });
+    if (allowedMonsters.length === 0) {
+      toast({ title: 'Žádné povolené bestie', description: 'Otevři filtr a zaškrtni alespoň jednu.', variant: 'destructive' });
       return;
     }
     const min = Math.min(levelMin, levelMax);
     const max = Math.max(levelMin, levelMax);
     const results = [];
     for (let i = 0; i < count; i++) {
-      const monster = monsters[Math.floor(Math.random() * monsters.length)];
+      const monster = allowedMonsters[Math.floor(Math.random() * allowedMonsters.length)];
       const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
       const hp = calculateHP(monster.con, level, monster.is_unique);
       const xp = calculateXP(monster.xp_reward, level);
