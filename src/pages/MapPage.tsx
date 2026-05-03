@@ -1051,8 +1051,8 @@ export default function MapPage() {
   }
 
   function getCursor(): string {
-    if (draggingPoint || draggingSpecialPoint || draggingToken) return 'grabbing';
-    if (addingPoint || addingSpecialPoint || addingToken) return 'crosshair';
+    if (draggingPoint || draggingSpecialPoint || draggingToken || draggingBeast) return 'grabbing';
+    if (addingPoint || addingSpecialPoint || addingToken || addingBeast) return 'crosshair';
     if (isPanning) return 'grabbing';
     return 'grab';
   }
