@@ -998,6 +998,21 @@ export default function MapPage() {
   }
 
   function handleMouseUp() {
+    // Beast: short click → open edit; drag end → save position
+    if (beastPressRef.current) {
+      clearTimeout(beastPressRef.current.timer);
+      const pressedId = beastPressRef.current.id;
+      beastPressRef.current = null;
+      if (!draggingBeast && !didDragRef.current) {
+        const b = beasts.find(x => x.id === pressedId);
+        if (b) setEditBeast(b);
+      }
+    }
+    if (draggingBeast) {
+      const b = beasts.find(x => x.id === draggingBeast);
+      if (b && didDragRef.current) saveBeastPosition(draggingBeast, b.x, b.y);
+      setDraggingBeast(null);
+    }
     if (draggingToken) {
       const t = tokens.find(x => x.id === draggingToken);
       if (t && didDragRef.current) saveTokenPosition(draggingToken, t.x, t.y);
