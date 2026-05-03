@@ -60,15 +60,16 @@ export default function BattlePage() {
         {battleMonsters.map(m => {
           const state = getDmgState(m.battleId);
           const scaledXP = calculateXP(m.xp_reward, m.level);
+          const isDead = m.currentHP <= 0;
           return (
-            <div key={m.battleId} className="bg-card rounded-lg p-4 border border-border">
+            <div key={m.battleId} className={`bg-card rounded-lg p-4 border border-border transition-opacity ${isDead ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-start mb-2">
                 <div className="flex items-center gap-2">
-                  <Avatar className="h-[150px] w-[150px] rounded-md">
+                  <Avatar className={`h-[150px] w-[150px] rounded-md ${isDead ? 'grayscale' : ''}`}>
                     {m.image_url ? <AvatarImage src={m.image_url} alt={m.name} className="object-cover" /> : null}
                     <AvatarFallback className="rounded-md text-sm">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                  <h3 className="font-display text-lg text-foreground">{m.name}</h3>
+                  <h3 className={`font-display text-lg ${isDead ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{m.name}{isDead ? ' ☠' : ''}</h3>
                   {m.is_unique && <Star size={14} className="text-primary fill-primary" />}
                   <span className="text-xs text-muted-foreground">Úr. {m.level}</span>
                 </div>
