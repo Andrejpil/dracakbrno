@@ -260,6 +260,11 @@ export default function MapPage() {
           setBeasts(prev => prev.filter(b => b.id !== r.id));
         }
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'battle_monsters' }, payload => {
+        const r: any = payload.new;
+        // Sync HP from battle to map beast
+        setBeasts(prev => prev.map(b => b.battle_id === r.battle_id ? { ...b, current_hp: r.current_hp, hp: r.hp } : b));
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user]);
