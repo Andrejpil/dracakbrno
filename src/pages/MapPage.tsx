@@ -1859,7 +1859,11 @@ export default function MapPage() {
                 <div className="space-y-2">
                   <div><Label>Jméno</Label><Input value={editBeast.name} onChange={e => setEditBeast({ ...editBeast, name: e.target.value })} /></div>
                   <div><Label>Zkratka</Label><Input maxLength={4} value={editBeast.short_code} onChange={e => setEditBeast({ ...editBeast, short_code: e.target.value.toUpperCase() })} /></div>
-                  <div><Label>HP</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div><Label>Úroveň</Label><Input type="number" min={1} value={editBeast.level} onChange={e => setEditBeast({ ...editBeast, level: parseInt(e.target.value) || 1 })} /></div>
+                    <div><Label>HP max</Label><Input type="number" min={1} value={editBeast.hp} onChange={e => setEditBeast({ ...editBeast, hp: parseInt(e.target.value) || 1 })} /></div>
+                    <div><Label>HP nyní</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
+                  </div>
                   <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
                   <div>
                     <Label>Stealth</Label>
@@ -1883,6 +1887,43 @@ export default function MapPage() {
               ) : <p className="text-sm text-muted-foreground">Vyber bestii v seznamu.</p>}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Quick edit dialog when clicking beast token on map */}
+      <Dialog open={!!editBeast && !!editBeast.id && !beastsDialogOpen} onOpenChange={o => { if (!o) setEditBeast(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Bestie: {editBeast?.name}</DialogTitle></DialogHeader>
+          {editBeast && editBeast.id && (
+            <div className="space-y-2">
+              <div><Label>Jméno</Label><Input value={editBeast.name} onChange={e => setEditBeast({ ...editBeast, name: e.target.value })} /></div>
+              <div><Label>Zkratka</Label><Input maxLength={4} value={editBeast.short_code} onChange={e => setEditBeast({ ...editBeast, short_code: e.target.value.toUpperCase() })} /></div>
+              <div className="grid grid-cols-3 gap-2">
+                <div><Label>Úroveň</Label><Input type="number" min={1} value={editBeast.level} onChange={e => setEditBeast({ ...editBeast, level: parseInt(e.target.value) || 1 })} /></div>
+                <div><Label>HP max</Label><Input type="number" min={1} value={editBeast.hp} onChange={e => setEditBeast({ ...editBeast, hp: parseInt(e.target.value) || 1 })} /></div>
+                <div><Label>HP nyní</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
+              </div>
+              <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+              <div>
+                <Label>Stealth</Label>
+                <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={editBeast.stealth_mode}
+                  onChange={e => setEditBeast({ ...editBeast, stealth_mode: e.target.value as any })}>
+                  <option value="none">Viditelná</option>
+                  <option value="auto">Auto-odhalení</option>
+                  <option value="manual">Záloha</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="rev-quick" checked={editBeast.revealed} onChange={e => setEditBeast({ ...editBeast, revealed: e.target.checked })} />
+                <Label htmlFor="rev-quick" className="!mt-0">Odhalená pro hráče</Label>
+              </div>
+              <div><Label>Poznámky</Label><Textarea value={editBeast.notes} onChange={e => setEditBeast({ ...editBeast, notes: e.target.value })} /></div>
+              <div className="flex justify-between pt-2">
+                <Button variant="destructive" size="sm" onClick={() => deleteBeast(editBeast.id)}>Smazat</Button>
+                <Button size="sm" onClick={saveBeast}>Uložit</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
