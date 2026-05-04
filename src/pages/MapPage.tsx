@@ -254,8 +254,16 @@ export default function MapPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'map_routes' }, () => {
         loadRoutes();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_points' }, () => {
-        loadRoutes();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_points' }, payload => {
+        if (payload.eventType === 'UPDATE') {
+          const r: any = payload.new;
+          setRoutes(prev => prev.map(rt => rt.id === r.route_id ? {
+            ...rt,
+            points: rt.points.map(p => p.id === r.id ? { ...p, x: r.x, y: r.y, label: r.label, description: r.description || '', point_type: r.point_type || 'generic', sort_order: r.sort_order } : p)
+          } : rt));
+        } else {
+          loadRoutes();
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'map_beasts' }, payload => {
         if (payload.eventType === 'INSERT') {
