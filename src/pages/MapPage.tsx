@@ -983,6 +983,9 @@ export default function MapPage() {
       if (!coords) return;
       didDragRef.current = true;
       setBeasts(prev => prev.map(b => b.id === draggingBeast ? { ...b, x: coords.x, y: coords.y } : b));
+      if (throttleWrite(`beast:${draggingBeast}`)) {
+        supabase.from('map_beasts').update({ x: coords.x, y: coords.y }).eq('id', draggingBeast);
+      }
       return;
     }
     if (draggingToken) {
@@ -990,6 +993,9 @@ export default function MapPage() {
       if (!coords) return;
       didDragRef.current = true;
       setTokens(prev => prev.map(t => t.id === draggingToken ? { ...t, x: coords.x, y: coords.y } : t));
+      if (throttleWrite(`token:${draggingToken}`)) {
+        supabase.from('map_tokens').update({ x: coords.x, y: coords.y }).eq('id', draggingToken);
+      }
       // Reveal fog as token moves
       const tok = tokens.find(t => t.id === draggingToken);
       if (tok && fogEnabled) revealFog(coords.x, coords.y, tok.reveal_radius);
@@ -1002,6 +1008,9 @@ export default function MapPage() {
       setSpecialPoints(prev => prev.map(sp =>
         sp.id === draggingSpecialPoint ? { ...sp, x: coords.x, y: coords.y } : sp
       ));
+      if (throttleWrite(`sp:${draggingSpecialPoint}`)) {
+        supabase.from('special_map_points').update({ x: coords.x, y: coords.y }).eq('id', draggingSpecialPoint);
+      }
       return;
     }
     if (draggingPoint) {
@@ -1013,6 +1022,9 @@ export default function MapPage() {
           ? { ...r, points: r.points.map(p => p.id === draggingPoint.pointId ? { ...p, x: coords.x, y: coords.y } : p) }
           : r
       ));
+      if (throttleWrite(`pt:${draggingPoint.pointId}`)) {
+        supabase.from('map_points').update({ x: coords.x, y: coords.y }).eq('id', draggingPoint.pointId);
+      }
       return;
     }
     if (isPanning) {
