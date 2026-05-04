@@ -71,10 +71,12 @@ export interface Monster {
 
 export function calculateHP(con: number, level: number, isUnique: boolean): number {
   const bonus = getAttributeBonus(con);
-  if (isUnique) {
-    return (bonus + 10) * level;
-  }
-  return (bonus + 5) * level + 5;
+  // Level 1 base: (bonus + 10) * 1.5
+  const base = Math.round((bonus + 10) * 1.5);
+  if (level <= 1) return base;
+  // Each additional level adds (bonus + 5), unique gets (bonus + 10)
+  const perLevel = isUnique ? (bonus + 10) : (bonus + 5);
+  return base + perLevel * (level - 1);
 }
 
 export function calculateXP(baseXP: number, level: number): number {

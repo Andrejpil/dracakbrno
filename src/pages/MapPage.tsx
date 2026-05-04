@@ -720,7 +720,10 @@ export default function MapPage() {
   // ===== Beast CRUD =====
   function calcBeastHP(con: number, level: number, isUnique: boolean): number {
     const conBonus = Math.floor((con - 10) / 2);
-    return isUnique ? (conBonus + 10) * level : (conBonus + 5) * level + 5;
+    const base = Math.round((conBonus + 10) * 1.5);
+    if (level <= 1) return base;
+    const perLevel = isUnique ? (conBonus + 10) : (conBonus + 5);
+    return base + perLevel * (level - 1);
   }
   function calcBeastXP(baseXP: number, level: number): number {
     return Math.round(baseXP * (1 + (level - 1) * 0.1));
