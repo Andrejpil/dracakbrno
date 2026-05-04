@@ -194,6 +194,15 @@ export default function MapPage() {
   const [draggingSpecialPoint, setDraggingSpecialPoint] = useState<string | null>(null);
   const didDragRef = useRef(false);
   const lastFogPosRef = useRef<{ x: number; y: number } | null>(null);
+  // Throttle realtime position writes during drag (ms)
+  const lastPosWriteRef = useRef<Record<string, number>>({});
+  function throttleWrite(key: string, ms: number = 80): boolean {
+    const now = Date.now();
+    const last = lastPosWriteRef.current[key] || 0;
+    if (now - last < ms) return false;
+    lastPosWriteRef.current[key] = now;
+    return true;
+  }
 
   // Temp settings form
   const [tempSettings, setTempSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
@@ -245,8 +254,16 @@ export default function MapPage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'map_routes' }, () => {
         loadRoutes();
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_points' }, () => {
-        loadRoutes();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_points' }, payload => {
+        if (payload.eventType === 'UPDATE') {
+          const r: any = payload.new;
+          setRoutes(prev => prev.map(rt => rt.id === r.route_id ? {
+            ...rt,
+            points: rt.points.map(p => p.id === r.id ? { ...p, x: r.x, y: r.y, label: r.label, description: r.description || '', point_type: r.point_type || 'generic', sort_order: r.sort_order } : p)
+          } : rt));
+        } else {
+          loadRoutes();
+        }
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'map_beasts' }, payload => {
         if (payload.eventType === 'INSERT') {
@@ -703,7 +720,10 @@ export default function MapPage() {
   // ===== Beast CRUD =====
   function calcBeastHP(con: number, level: number, isUnique: boolean): number {
     const conBonus = Math.floor((con - 10) / 2);
-    return isUnique ? (conBonus + 10) * level : (conBonus + 5) * level + 5;
+    const base = Math.round((conBonus + 10) * 1.5);
+    if (level <= 1) return base;
+    const perLevel = isUnique ? (conBonus + 10) : (conBonus + 5);
+    return base + perLevel * (level - 1);
   }
   function calcBeastXP(baseXP: number, level: number): number {
     return Math.round(baseXP * (1 + (level - 1) * 0.1));
@@ -974,6 +994,9 @@ export default function MapPage() {
       if (!coords) return;
       didDragRef.current = true;
       setBeasts(prev => prev.map(b => b.id === draggingBeast ? { ...b, x: coords.x, y: coords.y } : b));
+      if (throttleWrite(`beast:${draggingBeast}`)) {
+        supabase.from('map_beasts').update({ x: coords.x, y: coords.y }).eq('id', draggingBeast);
+      }
       return;
     }
     if (draggingToken) {
@@ -981,6 +1004,9 @@ export default function MapPage() {
       if (!coords) return;
       didDragRef.current = true;
       setTokens(prev => prev.map(t => t.id === draggingToken ? { ...t, x: coords.x, y: coords.y } : t));
+      if (throttleWrite(`token:${draggingToken}`)) {
+        supabase.from('map_tokens').update({ x: coords.x, y: coords.y }).eq('id', draggingToken);
+      }
       // Reveal fog as token moves
       const tok = tokens.find(t => t.id === draggingToken);
       if (tok && fogEnabled) revealFog(coords.x, coords.y, tok.reveal_radius);
@@ -993,6 +1019,9 @@ export default function MapPage() {
       setSpecialPoints(prev => prev.map(sp =>
         sp.id === draggingSpecialPoint ? { ...sp, x: coords.x, y: coords.y } : sp
       ));
+      if (throttleWrite(`sp:${draggingSpecialPoint}`)) {
+        supabase.from('special_map_points').update({ x: coords.x, y: coords.y }).eq('id', draggingSpecialPoint);
+      }
       return;
     }
     if (draggingPoint) {
@@ -1004,6 +1033,9 @@ export default function MapPage() {
           ? { ...r, points: r.points.map(p => p.id === draggingPoint.pointId ? { ...p, x: coords.x, y: coords.y } : p) }
           : r
       ));
+      if (throttleWrite(`pt:${draggingPoint.pointId}`)) {
+        supabase.from('map_points').update({ x: coords.x, y: coords.y }).eq('id', draggingPoint.pointId);
+      }
       return;
     }
     if (isPanning) {
