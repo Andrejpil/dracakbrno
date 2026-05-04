@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, Skull } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 
@@ -10,7 +10,6 @@ const allLinks = [
   { to: '/setkani', label: 'Setkání', icon: Dices, page: 'battle' },
   { to: '/zkusenosti', label: 'Zkušenosti', icon: Star, page: 'xp' },
   { to: '/statistika', label: 'Statistika', icon: BarChart3, page: 'stats' },
-  { to: '/zabiti', label: 'Přehled zabití', icon: Skull, page: 'stats' },
   { to: '/npc', label: 'NPC', icon: UserCircle, page: 'npc' },
   { to: '/export', label: 'Export / Import', icon: Download, page: 'export' },
   { to: '/mapa', label: 'Mapa', icon: Map, page: 'map' },
