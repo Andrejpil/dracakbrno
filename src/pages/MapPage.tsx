@@ -282,9 +282,52 @@ export default function MapPage() {
         // Sync HP from battle to map beast
         setBeasts(prev => prev.map(b => b.battle_id === r.battle_id ? { ...b, current_hp: r.current_hp, hp: r.hp } : b));
       })
-      .subscribe();
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'maps' }, payload => {
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const r: any = payload.new;
+          const mapped: MapImage = {
+            id: r.id, name: r.name, image_url: r.image_url, is_active: r.is_active,
+            fog_enabled: r.fog_enabled ?? false, default_reveal_radius: r.default_reveal_radius ?? 60,
+          };
+          setMaps(prev => {
+            const exists = prev.some(m => m.id === r.id);
+            const next = exists ? prev.map(m => m.id === r.id ? mapped : m) : [...prev, mapped];
+            // Pokud změna označila tuto mapu jako aktivní, přepni
+            if (r.is_active) {
+              setActiveMapId(r.id);
+              setActiveMapUrl(r.image_url);
+            } else if (activeMapId === r.id && !r.is_active) {
+              // pokud byla deaktivována, najdi novou aktivní
+              const newActive = next.find(m => m.is_active);
+              if (newActive) { setActiveMapId(newActive.id); setActiveMapUrl(newActive.image_url); }
+            } else if (activeMapId === r.id) {
+              // aktualizuj URL pokud se změnil obrázek
+              setActiveMapUrl(r.image_url);
+            }
+            return next;
+          });
+        } else if (payload.eventType === 'DELETE') {
+          const r: any = payload.old;
+          setMaps(prev => prev.filter(m => m.id !== r.id));
+        }
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'map_settings' }, payload => {
+        const r: any = payload.new || payload.old;
+        if (!r) return;
+        const key = r.map_id || '__global__';
+        if (payload.eventType === 'DELETE') {
+          setAllMapSettings(prev => { const n = { ...prev }; delete n[key]; return n; });
+        } else {
+          const s: MapSettings = { pixels_per_km: r.pixels_per_km, speed_walk: r.speed_walk, speed_horse: r.speed_horse, speed_broom: r.speed_broom, map_id: r.map_id };
+          setAllMapSettings(prev => ({ ...prev, [key]: s }));
+          if (key === activeMapId) setSettings(s);
+        }
+      })
+      .subscribe((status) => {
+        console.log('[MapPage] realtime status:', status);
+      });
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user, activeMapId]);
 
   function beastFromRow(r: any): MapBeast {
     return {
