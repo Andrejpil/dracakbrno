@@ -194,6 +194,15 @@ export default function MapPage() {
   const [draggingSpecialPoint, setDraggingSpecialPoint] = useState<string | null>(null);
   const didDragRef = useRef(false);
   const lastFogPosRef = useRef<{ x: number; y: number } | null>(null);
+  // Throttle realtime position writes during drag (ms)
+  const lastPosWriteRef = useRef<Record<string, number>>({});
+  function throttleWrite(key: string, ms: number = 80): boolean {
+    const now = Date.now();
+    const last = lastPosWriteRef.current[key] || 0;
+    if (now - last < ms) return false;
+    lastPosWriteRef.current[key] = now;
+    return true;
+  }
 
   // Temp settings form
   const [tempSettings, setTempSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
