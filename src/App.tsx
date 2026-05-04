@@ -16,7 +16,7 @@ import AdminPage from "@/pages/AdminPage";
 import MapPage from "@/pages/MapPage";
 import NPCPage from "@/pages/NPCPage";
 import EncounterPage from "@/pages/EncounterPage";
-import KillsPage from "@/pages/KillsPage";
+import StatsPage2 from "@/pages/StatsPage";
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
 
