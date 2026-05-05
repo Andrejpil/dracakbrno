@@ -84,6 +84,8 @@ export default function BattlePage() {
                   <span className="text-muted-foreground">/ {m.mp}</span>
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  <BonusBadge label="SÍL" value={m.str} />
+                  <BonusBadge label="ODO" value={m.con} />
                   <BonusBadge label="OBR" value={m.dex} />
                   <BonusBadge label="INT" value={m.int} />
                   <BonusBadge label="CHA" value={m.cha} />
