@@ -8,6 +8,23 @@ export interface Hero {
   experience: number;
   kills: number;
   totalDamage: number;
+  good_trait?: number | null;
+  bad_trait?: number | null;
+}
+
+export interface Trait {
+  id: string;
+  kind: 'good' | 'bad';
+  number: number;
+  name: string;
+  description: string;
+}
+
+// Map 1-100 to canonical odd number used as key (1-2 => 1, 3-4 => 3, ...)
+export function traitKey(n: number | null | undefined): number {
+  if (!n || n < 1) return 0;
+  const v = Math.min(100, Math.max(1, n));
+  return v % 2 === 0 ? v - 1 : v;
 }
 
 // XP thresholds per level
