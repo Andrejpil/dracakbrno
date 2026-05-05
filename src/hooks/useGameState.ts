@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
-  createHero, createMonster, calculateHP, calculateXP, getHeroLevel,
+  createHero, createMonster, calculateHP, calculateXP, getHeroLevel, randInRange,
 } from '@/lib/gameData';
 
 export function useGameState() {
