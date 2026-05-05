@@ -99,8 +99,10 @@ export type Database = {
       }
       heroes: {
         Row: {
+          bad_trait: number | null
           created_at: string
           experience: number
+          good_trait: number | null
           id: string
           kills: number
           name: string
@@ -111,8 +113,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bad_trait?: number | null
           created_at?: string
           experience?: number
+          good_trait?: number | null
           id?: string
           kills?: number
           name: string
@@ -123,8 +127,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bad_trait?: number | null
           created_at?: string
           experience?: number
+          good_trait?: number | null
           id?: string
           kills?: number
           name?: string
@@ -489,57 +495,90 @@ export type Database = {
         Row: {
           attack: number
           cha: number
+          cha_max: number
+          cha_min: number
           con: number
+          con_max: number
+          con_min: number
           created_at: string
           defense: number
           dex: number
+          dex_max: number
+          dex_min: number
           hp: number
+          hp_multiplier: number
           id: string
           image_url: string
           int: number
+          int_max: number
+          int_min: number
           is_unique: boolean
           mp: number
           name: string
           special: string
           str: number
+          str_max: number
+          str_min: number
           user_id: string
           xp_reward: number
         }
         Insert: {
           attack?: number
           cha?: number
+          cha_max?: number
+          cha_min?: number
           con?: number
+          con_max?: number
+          con_min?: number
           created_at?: string
           defense?: number
           dex?: number
+          dex_max?: number
+          dex_min?: number
           hp?: number
+          hp_multiplier?: number
           id?: string
           image_url?: string
           int?: number
+          int_max?: number
+          int_min?: number
           is_unique?: boolean
           mp?: number
           name: string
           special?: string
           str?: number
+          str_max?: number
+          str_min?: number
           user_id: string
           xp_reward?: number
         }
         Update: {
           attack?: number
           cha?: number
+          cha_max?: number
+          cha_min?: number
           con?: number
+          con_max?: number
+          con_min?: number
           created_at?: string
           defense?: number
           dex?: number
+          dex_max?: number
+          dex_min?: number
           hp?: number
+          hp_multiplier?: number
           id?: string
           image_url?: string
           int?: number
+          int_max?: number
+          int_min?: number
           is_unique?: boolean
           mp?: number
           name?: string
           special?: string
           str?: number
+          str_max?: number
+          str_min?: number
           user_id?: string
           xp_reward?: number
         }
@@ -663,6 +702,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      traits: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          name: string
+          number: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          kind: string
+          name?: string
+          number: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          name?: string
+          number?: number
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
