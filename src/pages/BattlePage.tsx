@@ -23,8 +23,11 @@ export default function BattlePage() {
   const [damageInputs, setDamageInputs] = useState<Record<string, { heroId: string; amount: number }>>({});
 
   const selectedM = monsters.find(m => m.id === selectedMonster);
-  const previewHPMin = selectedM ? calculateHP(selectedM.con, levelMin, selectedM.is_unique) : 0;
-  const previewHPMax = selectedM ? calculateHP(selectedM.con, levelMax, selectedM.is_unique) : 0;
+  const conLo = selectedM ? (selectedM.con_min ?? selectedM.con) : 0;
+  const conHi = selectedM ? (selectedM.con_max ?? selectedM.con) : 0;
+  const hpMul = selectedM?.hp_multiplier ?? 1.0;
+  const previewHPMin = selectedM ? calculateHP(conLo, levelMin, selectedM.is_unique, hpMul) : 0;
+  const previewHPMax = selectedM ? calculateHP(conHi, levelMax, selectedM.is_unique, hpMul) : 0;
   const previewXPMin = selectedM ? calculateXP(selectedM.xp_reward, levelMin) : 0;
   const previewXPMax = selectedM ? calculateXP(selectedM.xp_reward, levelMax) : 0;
 
@@ -84,6 +87,8 @@ export default function BattlePage() {
                   <span className="text-muted-foreground">/ {m.mp}</span>
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1">
+                  <BonusBadge label="SÍL" value={m.str} />
+                  <BonusBadge label="ODO" value={m.con} />
                   <BonusBadge label="OBR" value={m.dex} />
                   <BonusBadge label="INT" value={m.int} />
                   <BonusBadge label="CHA" value={m.cha} />

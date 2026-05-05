@@ -8,6 +8,23 @@ export interface Hero {
   experience: number;
   kills: number;
   totalDamage: number;
+  good_trait?: number | null;
+  bad_trait?: number | null;
+}
+
+export interface Trait {
+  id: string;
+  kind: 'good' | 'bad';
+  number: number;
+  name: string;
+  description: string;
+}
+
+// Map 1-100 to canonical odd number used as key (1-2 => 1, 3-4 => 3, ...)
+export function traitKey(n: number | null | undefined): number {
+  if (!n || n < 1) return 0;
+  const v = Math.min(100, Math.max(1, n));
+  return v % 2 === 0 ? v - 1 : v;
 }
 
 // XP thresholds per level
@@ -59,6 +76,11 @@ export interface Monster {
   dex: number;
   int: number;
   cha: number;
+  str_min?: number; str_max?: number;
+  con_min?: number; con_max?: number;
+  dex_min?: number; dex_max?: number;
+  int_min?: number; int_max?: number;
+  cha_min?: number; cha_max?: number;
   hp: number;
   mp: number;
   attack: number;
@@ -67,16 +89,22 @@ export interface Monster {
   special: string;
   is_unique: boolean;
   image_url: string;
+  hp_multiplier?: number;
 }
 
-export function calculateHP(con: number, level: number, isUnique: boolean): number {
+export function calculateHP(con: number, level: number, isUnique: boolean, hpMultiplier: number = 1.0): number {
   const bonus = getAttributeBonus(con);
-  // Level 1 base: (bonus + 10) * 1.5
-  const base = Math.round((bonus + 10) * 1.5);
-  if (level <= 1) return base;
-  // Each additional level adds (bonus + 5), unique gets (bonus + 10)
+  // Level 1 base: (bonus + 10) * hpMultiplier (multiplier is 0..1, default 1 = original)
+  const base = Math.round((bonus + 10) * hpMultiplier);
+  if (level <= 1) return Math.max(1, base);
   const perLevel = isUnique ? (bonus + 10) : (bonus + 5);
-  return base + perLevel * (level - 1);
+  return Math.max(1, base + perLevel * (level - 1));
+}
+
+export function randInRange(min: number, max: number): number {
+  const lo = Math.min(min, max);
+  const hi = Math.max(min, max);
+  return Math.floor(Math.random() * (hi - lo + 1)) + lo;
 }
 
 export function calculateXP(baseXP: number, level: number): number {
@@ -147,7 +175,16 @@ export function getAttributeBonus(value: number): number {
   if (value <= 17) return 3;
   if (value <= 19) return 4;
   if (value <= 21) return 5;
-  return 6;
+  if (value <= 23) return 6;
+  if (value <= 25) return 7;
+  if (value <= 27) return 8;
+  if (value <= 29) return 9;
+  if (value <= 31) return 10;
+  if (value <= 33) return 11;
+  if (value <= 35) return 12;
+  if (value <= 37) return 13;
+  if (value <= 39) return 14;
+  return 15;
 }
 
 export function formatBonus(bonus: number): string {

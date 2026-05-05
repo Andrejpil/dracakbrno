@@ -761,12 +761,23 @@ export default function MapPage() {
   }
 
   // ===== Beast CRUD =====
-  function calcBeastHP(con: number, level: number, isUnique: boolean): number {
-    const conBonus = Math.floor((con - 10) / 2);
-    const base = Math.round((conBonus + 10) * 1.5);
+  function calcBeastHP(con: number, level: number, isUnique: boolean, multiplier: number = 1.0): number {
+    // Use shared bonus table (matches gameData.getAttributeBonus)
+    const conBonus = (() => {
+      if (con <= 1) return -5; if (con <= 3) return -4; if (con <= 5) return -3; if (con <= 7) return -2; if (con <= 9) return -1;
+      if (con <= 11) return 0; if (con <= 13) return 1; if (con <= 15) return 2; if (con <= 17) return 3; if (con <= 19) return 4;
+      if (con <= 21) return 5; if (con <= 23) return 6; if (con <= 25) return 7; if (con <= 27) return 8; if (con <= 29) return 9;
+      if (con <= 31) return 10; if (con <= 33) return 11; if (con <= 35) return 12; if (con <= 37) return 13; if (con <= 39) return 14;
+      return 15;
+    })();
+    const base = Math.max(1, Math.round((conBonus + 10) * multiplier));
     if (level <= 1) return base;
     const perLevel = isUnique ? (conBonus + 10) : (conBonus + 5);
     return base + perLevel * (level - 1);
+  }
+  function randIn(min: number, max: number) {
+    const lo = Math.min(min, max); const hi = Math.max(min, max);
+    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
   }
   function calcBeastXP(baseXP: number, level: number): number {
     return Math.round(baseXP * (1 + (level - 1) * 0.1));
@@ -797,7 +808,14 @@ export default function MapPage() {
     const min = Math.min(beastForm.level_min, beastForm.level_max);
     const max = Math.max(beastForm.level_min, beastForm.level_max);
     const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
-    const hp = calcBeastHP(monster.con, level, monster.is_unique);
+    const m: any = monster;
+    const rollStr = randIn(m.str_min ?? m.str, m.str_max ?? m.str);
+    const rollCon = randIn(m.con_min ?? m.con, m.con_max ?? m.con);
+    const rollDex = randIn(m.dex_min ?? m.dex, m.dex_max ?? m.dex);
+    const rollInt = randIn(m.int_min ?? m.int, m.int_max ?? m.int);
+    const rollCha = randIn(m.cha_min ?? m.cha, m.cha_max ?? m.cha);
+    const hpMul = m.hp_multiplier ?? 1.0;
+    const hp = calcBeastHP(rollCon, level, monster.is_unique, hpMul);
     const xpReward = calcBeastXP(monster.xp_reward, level);
     const shortCode = makeShortCode(monster.name);
     const battleId = crypto.randomUUID();
@@ -807,7 +825,8 @@ export default function MapPage() {
       user_id: user.id, monster_id: monster.id, battle_id: battleId,
       name: monster.name, image_url: monster.image_url || '',
       level, hp, current_hp: hp, xp_reward: xpReward,
-      con: monster.con,
+      str: rollStr, con: rollCon, dex: rollDex, int: rollInt, cha: rollCha,
+      mp: m.mp ?? 0, attack: m.attack ?? 0, defense: m.defense ?? 0, special: m.special ?? '',
     } as any);
 
     // 2. Insert into map_beasts
@@ -1860,18 +1879,24 @@ export default function MapPage() {
                   </div>
                   {/* Fog of war controls per map */}
                   <div className="flex items-center gap-3 pt-2 border-t border-border/50">
-                    <Switch checked={m.fog_enabled} onCheckedChange={(v) => toggleMapFog(m.id, v)} />
+                    {editFog ? (
+                      <Switch checked={m.fog_enabled} onCheckedChange={(v) => toggleMapFog(m.id, v)} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{m.fog_enabled ? '✅' : '❌'}</span>
+                    )}
                     <label className="text-xs">🌫️ Zatmavení mapy (Fog of War)</label>
                     {m.fog_enabled && (
                       <>
                         <span className="text-[10px] text-muted-foreground ml-auto">Výchozí dosvit: {m.default_reveal_radius}px</span>
-                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => clearFogForMap(m.id)}>
-                          <RotateCcw size={11} className="mr-1" /> Reset
-                        </Button>
+                        {editFog && (
+                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => clearFogForMap(m.id)}>
+                            <RotateCcw size={11} className="mr-1" /> Reset
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
-                  {m.fog_enabled && (
+                  {m.fog_enabled && editFog && (
                     <div className="px-1">
                       <Slider min={20} max={300} step={10} value={[m.default_reveal_radius]} onValueChange={v => setMaps(prev => prev.map(x => x.id === m.id ? { ...x, default_reveal_radius: v[0] } : x))} onValueCommit={v => setMapRevealRadius(m.id, v[0])} />
                     </div>

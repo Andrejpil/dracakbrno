@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
-  createHero, createMonster, calculateHP, calculateXP, getHeroLevel,
+  createHero, createMonster, calculateHP, calculateXP, getHeroLevel, randInRange,
 } from '@/lib/gameData';
 
 export function useGameState() {
@@ -42,6 +42,7 @@ export function useGameState() {
       id: h.id, name: h.name, race: h.race as Race, profession: h.profession,
       specialization: h.specialization, experience: h.experience,
       kills: h.kills, totalDamage: h.total_damage,
+      good_trait: h.good_trait ?? null, bad_trait: h.bad_trait ?? null,
     }));
     // Store initial levels (no notification on load)
     const levels: Record<string, number> = {};
@@ -54,6 +55,12 @@ export function useGameState() {
       int: m.int, cha: m.cha, hp: m.hp, mp: m.mp, attack: m.attack,
       defense: m.defense, xp_reward: m.xp_reward, special: m.special,
       is_unique: m.is_unique ?? false, image_url: m.image_url ?? '',
+      str_min: m.str_min ?? m.str, str_max: m.str_max ?? m.str,
+      con_min: m.con_min ?? m.con, con_max: m.con_max ?? m.con,
+      dex_min: m.dex_min ?? m.dex, dex_max: m.dex_max ?? m.dex,
+      int_min: m.int_min ?? m.int, int_max: m.int_max ?? m.int,
+      cha_min: m.cha_min ?? m.cha, cha_max: m.cha_max ?? m.cha,
+      hp_multiplier: m.hp_multiplier ?? 1.0,
     })));
 
     setBattleMonsters((bmRes.data || []).map((b: any) => ({
@@ -105,8 +112,10 @@ export function useGameState() {
       user_id: user.id, name: data.name, race: data.race,
       profession: data.profession, specialization: data.specialization,
       experience: data.experience,
-    }).select().single();
-    if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race as Race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage }]);
+      good_trait: data.good_trait ?? null,
+      bad_trait: data.bad_trait ?? null,
+    } as any).select().single();
+    if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race as Race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage, good_trait: (row as any).good_trait ?? null, bad_trait: (row as any).bad_trait ?? null }]);
   }, [user]);
 
   const editHero = useCallback(async (id: string, data: Partial<Hero>) => {
@@ -118,6 +127,8 @@ export function useGameState() {
     if (data.experience !== undefined) update.experience = data.experience;
     if (data.kills !== undefined) update.kills = data.kills;
     if (data.totalDamage !== undefined) update.total_damage = data.totalDamage;
+    if (data.good_trait !== undefined) update.good_trait = data.good_trait;
+    if (data.bad_trait !== undefined) update.bad_trait = data.bad_trait;
     await supabase.from('heroes').update(update).eq('id', id);
     setHeroes(prev => prev.map(h => h.id === id ? { ...h, ...data } : h));
   }, []);
@@ -130,16 +141,31 @@ export function useGameState() {
   }, []);
 
   // Monster CRUD
+  function monsterToDb(data: Partial<Monster>): any {
+    const out: any = { ...data };
+    return out;
+  }
+
   const addMonster = useCallback(async (data: Omit<Monster, 'id'>) => {
     if (!user) return;
     const { data: row } = await supabase.from('monsters').insert({
-      user_id: user.id, ...data,
+      user_id: user.id, ...monsterToDb(data),
     }).select().single();
-    if (row) setMonsters(prev => [...prev, { id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha, hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special, is_unique: (row as any).is_unique ?? false, image_url: (row as any).image_url ?? '' }]);
+    if (row) setMonsters(prev => [...prev, {
+      id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha,
+      hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special,
+      is_unique: (row as any).is_unique ?? false, image_url: (row as any).image_url ?? '',
+      str_min: (row as any).str_min ?? row.str, str_max: (row as any).str_max ?? row.str,
+      con_min: (row as any).con_min ?? row.con, con_max: (row as any).con_max ?? row.con,
+      dex_min: (row as any).dex_min ?? row.dex, dex_max: (row as any).dex_max ?? row.dex,
+      int_min: (row as any).int_min ?? row.int, int_max: (row as any).int_max ?? row.int,
+      cha_min: (row as any).cha_min ?? row.cha, cha_max: (row as any).cha_max ?? row.cha,
+      hp_multiplier: (row as any).hp_multiplier ?? 1.0,
+    }]);
   }, [user]);
 
   const editMonster = useCallback(async (id: string, data: Partial<Monster>) => {
-    await supabase.from('monsters').update(data).eq('id', id);
+    await supabase.from('monsters').update(monsterToDb(data)).eq('id', id);
     setMonsters(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
   }, []);
 
@@ -153,11 +179,17 @@ export function useGameState() {
     if (!user) return;
     const m = monsters.find(x => x.id === monsterId);
     if (!m) return;
-    const hp = calculateHP(m.con, level, m.is_unique);
+    // Roll attributes from min/max ranges (fallback to single value)
+    const rollStr = randInRange(m.str_min ?? m.str, m.str_max ?? m.str);
+    const rollCon = randInRange(m.con_min ?? m.con, m.con_max ?? m.con);
+    const rollDex = randInRange(m.dex_min ?? m.dex, m.dex_max ?? m.dex);
+    const rollInt = randInRange(m.int_min ?? m.int, m.int_max ?? m.int);
+    const rollCha = randInRange(m.cha_min ?? m.cha, m.cha_max ?? m.cha);
+    const hp = calculateHP(rollCon, level, m.is_unique, m.hp_multiplier ?? 1.0);
     const battleId = crypto.randomUUID();
     const { data: row } = await supabase.from('battle_monsters').insert({
       user_id: user.id, monster_id: monsterId, battle_id: battleId,
-      name: m.name, str: m.str, con: m.con, dex: m.dex, int: m.int, cha: m.cha,
+      name: m.name, str: rollStr, con: rollCon, dex: rollDex, int: rollInt, cha: rollCha,
       hp, mp: m.mp, attack: m.attack, defense: m.defense,
       xp_reward: m.xp_reward, special: m.special,
       current_hp: hp, current_mp: m.mp, level, image_url: m.image_url,
