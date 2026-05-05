@@ -816,6 +816,9 @@ export default function MapPage() {
     const rollCha = randIn(m.cha_min ?? m.cha, m.cha_max ?? m.cha);
     const hpMul = m.hp_multiplier ?? 1.0;
     const hp = calcBeastHP(rollCon, level, monster.is_unique, hpMul);
+    const xpReward = calcBeastXP(monster.xp_reward, level);
+    const shortCode = makeShortCode(monster.name);
+    const battleId = crypto.randomUUID();
 
     // 1. Insert into battle_monsters (auto add to BOJ tab)
     await supabase.from('battle_monsters').insert({
@@ -823,7 +826,7 @@ export default function MapPage() {
       name: monster.name, image_url: monster.image_url || '',
       level, hp, current_hp: hp, xp_reward: xpReward,
       str: rollStr, con: rollCon, dex: rollDex, int: rollInt, cha: rollCha,
-      mp: monster.mp, attack: monster.attack, defense: monster.defense, special: monster.special,
+      mp: m.mp ?? 0, attack: m.attack ?? 0, defense: m.defense ?? 0, special: m.special ?? '',
     } as any);
 
     // 2. Insert into map_beasts
