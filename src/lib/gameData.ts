@@ -59,6 +59,11 @@ export interface Monster {
   dex: number;
   int: number;
   cha: number;
+  str_min?: number; str_max?: number;
+  con_min?: number; con_max?: number;
+  dex_min?: number; dex_max?: number;
+  int_min?: number; int_max?: number;
+  cha_min?: number; cha_max?: number;
   hp: number;
   mp: number;
   attack: number;
@@ -67,6 +72,7 @@ export interface Monster {
   special: string;
   is_unique: boolean;
   image_url: string;
+  hp_multiplier?: number;
 }
 
 export function calculateHP(con: number, level: number, isUnique: boolean, hpMultiplier: number = 1.0): number {
