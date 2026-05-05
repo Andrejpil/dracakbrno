@@ -761,12 +761,23 @@ export default function MapPage() {
   }
 
   // ===== Beast CRUD =====
-  function calcBeastHP(con: number, level: number, isUnique: boolean): number {
-    const conBonus = Math.floor((con - 10) / 2);
-    const base = Math.round((conBonus + 10) * 1.5);
+  function calcBeastHP(con: number, level: number, isUnique: boolean, multiplier: number = 1.0): number {
+    // Use shared bonus table (matches gameData.getAttributeBonus)
+    const conBonus = (() => {
+      if (con <= 1) return -5; if (con <= 3) return -4; if (con <= 5) return -3; if (con <= 7) return -2; if (con <= 9) return -1;
+      if (con <= 11) return 0; if (con <= 13) return 1; if (con <= 15) return 2; if (con <= 17) return 3; if (con <= 19) return 4;
+      if (con <= 21) return 5; if (con <= 23) return 6; if (con <= 25) return 7; if (con <= 27) return 8; if (con <= 29) return 9;
+      if (con <= 31) return 10; if (con <= 33) return 11; if (con <= 35) return 12; if (con <= 37) return 13; if (con <= 39) return 14;
+      return 15;
+    })();
+    const base = Math.max(1, Math.round((conBonus + 10) * multiplier));
     if (level <= 1) return base;
     const perLevel = isUnique ? (conBonus + 10) : (conBonus + 5);
     return base + perLevel * (level - 1);
+  }
+  function randIn(min: number, max: number) {
+    const lo = Math.min(min, max); const hi = Math.max(min, max);
+    return Math.floor(Math.random() * (hi - lo + 1)) + lo;
   }
   function calcBeastXP(baseXP: number, level: number): number {
     return Math.round(baseXP * (1 + (level - 1) * 0.1));
