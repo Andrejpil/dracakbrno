@@ -158,7 +158,16 @@ export function getAttributeBonus(value: number): number {
   if (value <= 17) return 3;
   if (value <= 19) return 4;
   if (value <= 21) return 5;
-  return 6;
+  if (value <= 23) return 6;
+  if (value <= 25) return 7;
+  if (value <= 27) return 8;
+  if (value <= 29) return 9;
+  if (value <= 31) return 10;
+  if (value <= 33) return 11;
+  if (value <= 35) return 12;
+  if (value <= 37) return 13;
+  if (value <= 39) return 14;
+  return 15;
 }
 
 export function formatBonus(bonus: number): string {
