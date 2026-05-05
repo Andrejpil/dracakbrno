@@ -1860,18 +1860,24 @@ export default function MapPage() {
                   </div>
                   {/* Fog of war controls per map */}
                   <div className="flex items-center gap-3 pt-2 border-t border-border/50">
-                    <Switch checked={m.fog_enabled} onCheckedChange={(v) => toggleMapFog(m.id, v)} />
+                    {editFog ? (
+                      <Switch checked={m.fog_enabled} onCheckedChange={(v) => toggleMapFog(m.id, v)} />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{m.fog_enabled ? '✅' : '❌'}</span>
+                    )}
                     <label className="text-xs">🌫️ Zatmavení mapy (Fog of War)</label>
                     {m.fog_enabled && (
                       <>
                         <span className="text-[10px] text-muted-foreground ml-auto">Výchozí dosvit: {m.default_reveal_radius}px</span>
-                        <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => clearFogForMap(m.id)}>
-                          <RotateCcw size={11} className="mr-1" /> Reset
-                        </Button>
+                        {editFog && (
+                          <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => clearFogForMap(m.id)}>
+                            <RotateCcw size={11} className="mr-1" /> Reset
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
-                  {m.fog_enabled && (
+                  {m.fog_enabled && editFog && (
                     <div className="px-1">
                       <Slider min={20} max={300} step={10} value={[m.default_reveal_radius]} onValueChange={v => setMaps(prev => prev.map(x => x.id === m.id ? { ...x, default_reveal_radius: v[0] } : x))} onValueCommit={v => setMapRevealRadius(m.id, v[0])} />
                     </div>
