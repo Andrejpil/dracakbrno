@@ -808,17 +808,22 @@ export default function MapPage() {
     const min = Math.min(beastForm.level_min, beastForm.level_max);
     const max = Math.max(beastForm.level_min, beastForm.level_max);
     const level = min === max ? min : Math.floor(Math.random() * (max - min + 1)) + min;
-    const hp = calcBeastHP(monster.con, level, monster.is_unique);
-    const xpReward = calcBeastXP(monster.xp_reward, level);
-    const shortCode = makeShortCode(monster.name);
-    const battleId = crypto.randomUUID();
+    const m: any = monster;
+    const rollStr = randIn(m.str_min ?? m.str, m.str_max ?? m.str);
+    const rollCon = randIn(m.con_min ?? m.con, m.con_max ?? m.con);
+    const rollDex = randIn(m.dex_min ?? m.dex, m.dex_max ?? m.dex);
+    const rollInt = randIn(m.int_min ?? m.int, m.int_max ?? m.int);
+    const rollCha = randIn(m.cha_min ?? m.cha, m.cha_max ?? m.cha);
+    const hpMul = m.hp_multiplier ?? 1.0;
+    const hp = calcBeastHP(rollCon, level, monster.is_unique, hpMul);
 
     // 1. Insert into battle_monsters (auto add to BOJ tab)
     await supabase.from('battle_monsters').insert({
       user_id: user.id, monster_id: monster.id, battle_id: battleId,
       name: monster.name, image_url: monster.image_url || '',
       level, hp, current_hp: hp, xp_reward: xpReward,
-      con: monster.con,
+      str: rollStr, con: rollCon, dex: rollDex, int: rollInt, cha: rollCha,
+      mp: monster.mp, attack: monster.attack, defense: monster.defense, special: monster.special,
     } as any);
 
     // 2. Insert into map_beasts
