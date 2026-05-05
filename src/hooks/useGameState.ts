@@ -42,6 +42,7 @@ export function useGameState() {
       id: h.id, name: h.name, race: h.race as Race, profession: h.profession,
       specialization: h.specialization, experience: h.experience,
       kills: h.kills, totalDamage: h.total_damage,
+      good_trait: h.good_trait ?? null, bad_trait: h.bad_trait ?? null,
     }));
     // Store initial levels (no notification on load)
     const levels: Record<string, number> = {};
@@ -54,6 +55,12 @@ export function useGameState() {
       int: m.int, cha: m.cha, hp: m.hp, mp: m.mp, attack: m.attack,
       defense: m.defense, xp_reward: m.xp_reward, special: m.special,
       is_unique: m.is_unique ?? false, image_url: m.image_url ?? '',
+      str_min: m.str_min ?? m.str, str_max: m.str_max ?? m.str,
+      con_min: m.con_min ?? m.con, con_max: m.con_max ?? m.con,
+      dex_min: m.dex_min ?? m.dex, dex_max: m.dex_max ?? m.dex,
+      int_min: m.int_min ?? m.int, int_max: m.int_max ?? m.int,
+      cha_min: m.cha_min ?? m.cha, cha_max: m.cha_max ?? m.cha,
+      hp_multiplier: m.hp_multiplier ?? 1.0,
     })));
 
     setBattleMonsters((bmRes.data || []).map((b: any) => ({
