@@ -94,8 +94,8 @@ export interface Monster {
 
 export function calculateHP(con: number, level: number, isUnique: boolean, hpMultiplier: number = 1.0): number {
   const bonus = getAttributeBonus(con);
-  // Level 1 base: (bonus + 10) * hpMultiplier (multiplier is 0..1, default 1 = original)
-  const base = Math.round((bonus + 10) * hpMultiplier);
+  // Level 1: ceil((bonus + 10) * multiplier), multiplier is a number 1.0..50.0
+  const base = Math.ceil((bonus + 10) * hpMultiplier);
   if (level <= 1) return Math.max(1, base);
   const perLevel = isUnique ? (bonus + 10) : (bonus + 5);
   return Math.max(1, base + perLevel * (level - 1));
