@@ -896,10 +896,9 @@ export default function MapPage() {
   }
 
   function findBeastAt(mapX: number, mapY: number): string | null {
-    const hitRadius = 18 / scale;
     for (const b of visibleBeastsForUser) {
-      const dist = Math.sqrt((b.x - mapX) ** 2 + (b.y - mapY) ** 2);
-      if (dist <= hitRadius) return b.id;
+      const half = (b.token_size ?? 22);
+      if (mapX >= b.x - half && mapX <= b.x + half && mapY >= b.y - half && mapY <= b.y + half) return b.id;
     }
     return null;
   }
