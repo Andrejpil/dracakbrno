@@ -131,7 +131,7 @@ export default function BestiaryPage() {
               })}
               <p className="text-sm text-muted-foreground">
                 HP úr.1: <span className="text-foreground">{calculateHP(m.con_min ?? m.con, 1, m.is_unique, m.hp_multiplier ?? 1.0)}{(m.con_min ?? m.con) !== (m.con_max ?? m.con) ? `–${calculateHP(m.con_max ?? m.con, 1, m.is_unique, m.hp_multiplier ?? 1.0)}` : ''}</span>
-                <span className="ml-1 text-xs">(násob. {Math.round((m.hp_multiplier ?? 1.0) * 100)}%)</span>
+                <span className="ml-1 text-xs">(násob. ×{(m.hp_multiplier ?? 1.0).toFixed(1)})</span>
                 {' | '}MP: <span className="text-foreground">{m.mp}</span>
               </p>
               <p className="text-sm text-muted-foreground">Útok: <span className="text-foreground">{m.attack}</span> | Obrana: <span className="text-foreground">{m.defense}</span></p>
