@@ -177,6 +177,10 @@ export default function MapPage() {
   const [draggingBeast, setDraggingBeast] = useState<string | null>(null);
   const beastPressRef = useRef<{ id: string; timer: number } | null>(null);
   const [monstersList, setMonstersList] = useState<{ id: string; name: string; con: number; xp_reward: number; is_unique: boolean; image_url: string }[]>([]);
+  const monsterImageById = useCallback((id: string | null | undefined) => {
+    if (!id) return '';
+    return monstersList.find(m => m.id === id)?.image_url || '';
+  }, [monstersList]);
   // Add-beast form
   const [beastForm, setBeastForm] = useState<{ monster_id: string; level_min: number; level_max: number; stealth_mode: 'none'|'manual'|'auto'; reveal_radius: number; pendingPos: { x: number; y: number } | null }>({ monster_id: '', level_min: 1, level_max: 1, stealth_mode: 'none', reveal_radius: 80, pendingPos: null });
 
