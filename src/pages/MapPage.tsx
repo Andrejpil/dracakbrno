@@ -1315,23 +1315,38 @@ export default function MapPage() {
             {visibleBeastsForUser.map(b => {
               const isHidden = !b.revealed;
               const isDead = b.current_hp <= 0;
-              const size = 22 / scale;
-              const fillColor = isDead ? '#9ca3af' : '#ffffff';
+              const size = (b.token_size ?? 22) / scale;
               const borderColor = isDead ? '#6b7280' : '#dc2626';
-              const textColor = isDead ? '#4b5563' : '#000000';
+              const img = monsterImageById(b.monster_id);
+              const clipId = `beast-clip-${b.id}`;
               return (
                 <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'pointer' : 'pointer' }}
                   opacity={isHidden ? 0.5 : 1}>
                   {(isAdmin || isEditor) && (
                     <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={borderColor} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
                   )}
-                  {/* Square token: white bg, red border, black text */}
-                  <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
-                    fill={fillColor} stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
-                  <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
-                    fontSize={18 / scale} fill={textColor} fontWeight="bold" style={{ pointerEvents: 'none' }}>
-                    {b.short_code}
-                  </text>
+                  <defs>
+                    <clipPath id={clipId}>
+                      <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2} rx={2 / scale} />
+                    </clipPath>
+                  </defs>
+                  {img ? (
+                    <>
+                      <image href={img} x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                        preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clipId})`} opacity={isDead ? 0.5 : 1} />
+                      <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                        fill="none" stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
+                    </>
+                  ) : (
+                    <>
+                      <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                        fill={isDead ? '#9ca3af' : '#ffffff'} stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
+                      <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
+                        fontSize={18 / scale} fill={isDead ? '#4b5563' : '#000000'} fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                        {b.short_code}
+                      </text>
+                    </>
+                  )}
                   {isDead && (
                     <line x1={b.x - size} y1={b.y - size} x2={b.x + size} y2={b.y + size}
                       stroke="#374151" strokeWidth={2 / scale} style={{ pointerEvents: 'none' }} />
