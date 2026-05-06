@@ -1896,7 +1896,7 @@ export default function MapPage() {
                         const newName = prompt('Nový název mapy:', m.name);
                         if (newName !== null && newName.trim()) renameMap(m.id, newName.trim());
                       }}><Edit2 size={12} /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { if (confirm('Opravdu smazat tuto mapu?')) deleteMap(m.id); }}><Trash2 size={12} /></Button>
+                      {isAdmin && <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { if (confirm('Opravdu smazat tuto mapu?')) deleteMap(m.id); }}><Trash2 size={12} /></Button>}
                     </div>
                   </div>
                   {/* Fog of war controls per map */}
