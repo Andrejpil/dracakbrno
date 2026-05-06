@@ -772,7 +772,7 @@ export default function MapPage() {
       if (con <= 31) return 10; if (con <= 33) return 11; if (con <= 35) return 12; if (con <= 37) return 13; if (con <= 39) return 14;
       return 15;
     })();
-    const base = Math.max(1, Math.round((conBonus + 10) * multiplier));
+    const base = Math.max(1, Math.ceil((conBonus + 10) * multiplier));
     if (level <= 1) return base;
     const perLevel = isUnique ? (conBonus + 10) : (conBonus + 5);
     return base + perLevel * (level - 1);
