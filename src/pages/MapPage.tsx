@@ -100,6 +100,7 @@ interface MapBeast {
   revealed: boolean;
   stealth_mode: 'none' | 'manual' | 'auto';
   notes: string;
+  token_size: number;
 }
 
 const DEFAULT_SETTINGS: MapSettings = {
