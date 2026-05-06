@@ -1991,10 +1991,7 @@ export default function MapPage() {
                     <div><Label>HP nyní</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
-                <div><Label>Velikost tokenu</Label><Input type="number" min={8} max={120} value={editBeast.token_size ?? 22} onChange={e => setEditBeast({ ...editBeast, token_size: parseInt(e.target.value) || 22 })} /></div>
-              </div>
+                    <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
                     <div><Label>Velikost tokenu</Label><Input type="number" min={8} max={120} value={editBeast.token_size ?? 22} onChange={e => setEditBeast({ ...editBeast, token_size: parseInt(e.target.value) || 22 })} /></div>
                   </div>
                   <div>
