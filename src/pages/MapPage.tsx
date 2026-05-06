@@ -338,6 +338,7 @@ export default function MapPage() {
       x: r.x, y: r.y, reveal_radius: r.reveal_radius ?? 80,
       revealed: !!r.revealed, stealth_mode: (r.stealth_mode || 'none') as 'none'|'manual'|'auto',
       notes: r.notes || '',
+      token_size: r.token_size ?? 22,
     };
   }
 
