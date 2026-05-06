@@ -200,16 +200,16 @@ export default function BestiaryPage() {
               })}
             </div>
 
-            {/* HP multiplier slider */}
+            {/* HP multiplier (number 1.0 - 50.0) */}
             <div className="p-2 rounded-md border border-border bg-muted/20">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-bold text-muted-foreground">Násobitel HP (úr. 1)</span>
-                <span className="text-sm font-bold text-primary">{Math.round(form.hp_multiplier * 100)}%</span>
+                <span className="text-sm font-bold text-primary">×{form.hp_multiplier.toFixed(1)}</span>
               </div>
-              <Slider min={0} max={100} step={5}
-                value={[Math.round(form.hp_multiplier * 100)]}
-                onValueChange={(v) => setForm(f => ({ ...f, hp_multiplier: v[0] / 100 }))} />
-              <p className="text-xs text-muted-foreground mt-1">HP úr.1 = (bonus za odolnost + 10) × násobitel</p>
+              <Input type="number" min={1} max={50} step={0.1}
+                value={form.hp_multiplier}
+                onChange={e => setForm(f => ({ ...f, hp_multiplier: Math.max(1, Math.min(50, parseFloat(e.target.value) || 1)) }))} />
+              <p className="text-xs text-muted-foreground mt-1">HP úr.1 = ⌈(bonus za odolnost + 10) × násobitel⌉ (zaokr. nahoru). Rozsah 1,0 – 50,0.</p>
             </div>
 
             <div className="flex items-center gap-2">
