@@ -1675,7 +1675,7 @@ export default function MapPage() {
                       {!owner && ' • bez hráče'}
                     </p>
                   </div>
-                  {editable && (
+                  {editTokens && (
                     <>
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditToken(t)}><Edit2 size={12} /></Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => { if (confirm('Smazat postavu?')) deleteToken(t.id); }}><Trash2 size={12} /></Button>
