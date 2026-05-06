@@ -1,0 +1,1 @@
+ALTER TABLE public.map_beasts ADD COLUMN IF NOT EXISTS token_size double precision NOT NULL DEFAULT 22;
