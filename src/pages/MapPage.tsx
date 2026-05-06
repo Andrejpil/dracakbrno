@@ -1434,22 +1434,22 @@ export default function MapPage() {
               <Settings size={14} />
             </Button>
           )}
-          {fogEnabled && (
+          {fogEnabled && editFog && (
             <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setShowFog(!showFog)} title="Zobrazit/skrýt zatmavení">
               <Cloud size={14} /> {showFog ? 'Skrýt mlhu' : 'Zobrazit mlhu'}
             </Button>
           )}
-          {editable && activeRouteId && (
+          {editRoutes && activeRouteId && (
             <Button size="sm" variant={addingPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); setAddingToken(false); }}>
               <MapPin size={14} /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
             </Button>
           )}
-          {editable && (
+          {editSpecial && (
             <Button size="sm" variant={addingSpecialPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); setAddingToken(false); }}>
               <Star size={14} /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový ⭐'}
             </Button>
           )}
-          {editable && activeMapId && (
+          {editTokens && activeMapId && (
             <Button size="sm" variant={addingToken ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingToken(!addingToken); setAddingPoint(false); setAddingSpecialPoint(false); }}>
               <Users size={14} /> {addingToken ? 'Klikni na mapu...' : 'Přidat postavu'}
             </Button>
