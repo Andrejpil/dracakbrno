@@ -864,6 +864,7 @@ export default function MapPage() {
       reveal_radius: updated.reveal_radius, stealth_mode: updated.stealth_mode,
       revealed: updated.revealed, notes: updated.notes, color: updated.color,
       hp: newMax, current_hp: newCur, level: updated.level,
+      token_size: updated.token_size,
     }).eq('id', editBeast.id);
     // Sync to battle_monsters (BOJ tab)
     if (updated.battle_id) {
