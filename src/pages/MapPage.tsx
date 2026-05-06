@@ -796,7 +796,7 @@ export default function MapPage() {
     setEditBeast({
       id: '', map_id: activeMapId, monster_id: null, battle_id: null,
       short_code: '??', name: 'Bestie', level: 1, hp: 10, current_hp: 10,
-      color: '#dc2626', x, y, reveal_radius: 80, revealed: false, stealth_mode: 'none', notes: '',
+      color: '#dc2626', x, y, reveal_radius: 80, revealed: false, stealth_mode: 'none', notes: '', token_size: 22,
     });
   }
 
