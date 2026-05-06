@@ -160,6 +160,7 @@ export type Database = {
           revealed: boolean
           short_code: string
           stealth_mode: string
+          token_size: number
           x: number
           y: number
         }
@@ -180,6 +181,7 @@ export type Database = {
           revealed?: boolean
           short_code?: string
           stealth_mode?: string
+          token_size?: number
           x?: number
           y?: number
         }
@@ -200,6 +202,7 @@ export type Database = {
           revealed?: boolean
           short_code?: string
           stealth_mode?: string
+          token_size?: number
           x?: number
           y?: number
         }

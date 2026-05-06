@@ -100,6 +100,7 @@ interface MapBeast {
   revealed: boolean;
   stealth_mode: 'none' | 'manual' | 'auto';
   notes: string;
+  token_size: number;
 }
 
 const DEFAULT_SETTINGS: MapSettings = {
@@ -176,6 +177,10 @@ export default function MapPage() {
   const [draggingBeast, setDraggingBeast] = useState<string | null>(null);
   const beastPressRef = useRef<{ id: string; timer: number } | null>(null);
   const [monstersList, setMonstersList] = useState<{ id: string; name: string; con: number; xp_reward: number; is_unique: boolean; image_url: string }[]>([]);
+  const monsterImageById = useCallback((id: string | null | undefined) => {
+    if (!id) return '';
+    return monstersList.find(m => m.id === id)?.image_url || '';
+  }, [monstersList]);
   // Add-beast form
   const [beastForm, setBeastForm] = useState<{ monster_id: string; level_min: number; level_max: number; stealth_mode: 'none'|'manual'|'auto'; reveal_radius: number; pendingPos: { x: number; y: number } | null }>({ monster_id: '', level_min: 1, level_max: 1, stealth_mode: 'none', reveal_radius: 80, pendingPos: null });
 
@@ -337,6 +342,7 @@ export default function MapPage() {
       x: r.x, y: r.y, reveal_radius: r.reveal_radius ?? 80,
       revealed: !!r.revealed, stealth_mode: (r.stealth_mode || 'none') as 'none'|'manual'|'auto',
       notes: r.notes || '',
+      token_size: r.token_size ?? 22,
     };
   }
 
@@ -647,7 +653,7 @@ export default function MapPage() {
       }
     }
 
-    if (addingToken && editable && activeMapId) {
+    if (addingToken && editTokens && activeMapId) {
       addTokenAt(coords.x, coords.y);
       setAddingToken(false);
       return;
@@ -659,13 +665,14 @@ export default function MapPage() {
       return;
     }
 
-    if (addingSpecialPoint && editable) {
+    if (addingSpecialPoint && editSpecial) {
       addSpecialPoint(coords.x, coords.y);
       setAddingSpecialPoint(false);
       return;
     }
 
     if (!addingPoint || !activeRouteId || !imgRef.current) return;
+    if (!editRoutes) { setAddingPoint(false); return; }
     addPoint(activeRouteId, coords.x, coords.y);
     setAddingPoint(false);
   }
@@ -770,7 +777,7 @@ export default function MapPage() {
       if (con <= 31) return 10; if (con <= 33) return 11; if (con <= 35) return 12; if (con <= 37) return 13; if (con <= 39) return 14;
       return 15;
     })();
-    const base = Math.max(1, Math.round((conBonus + 10) * multiplier));
+    const base = Math.max(1, Math.ceil((conBonus + 10) * multiplier));
     if (level <= 1) return base;
     const perLevel = isUnique ? (conBonus + 10) : (conBonus + 5);
     return base + perLevel * (level - 1);
@@ -794,7 +801,7 @@ export default function MapPage() {
     setEditBeast({
       id: '', map_id: activeMapId, monster_id: null, battle_id: null,
       short_code: '??', name: 'Bestie', level: 1, hp: 10, current_hp: 10,
-      color: '#dc2626', x, y, reveal_radius: 80, revealed: false, stealth_mode: 'none', notes: '',
+      color: '#dc2626', x, y, reveal_radius: 80, revealed: false, stealth_mode: 'none', notes: '', token_size: 22,
     });
   }
 
@@ -858,6 +865,7 @@ export default function MapPage() {
       reveal_radius: updated.reveal_radius, stealth_mode: updated.stealth_mode,
       revealed: updated.revealed, notes: updated.notes, color: updated.color,
       hp: newMax, current_hp: newCur, level: updated.level,
+      token_size: updated.token_size,
     }).eq('id', editBeast.id);
     // Sync to battle_monsters (BOJ tab)
     if (updated.battle_id) {
@@ -890,10 +898,9 @@ export default function MapPage() {
   }
 
   function findBeastAt(mapX: number, mapY: number): string | null {
-    const hitRadius = 18 / scale;
     for (const b of visibleBeastsForUser) {
-      const dist = Math.sqrt((b.x - mapX) ** 2 + (b.y - mapY) ** 2);
-      if (dist <= hitRadius) return b.id;
+      const half = (b.token_size ?? 22);
+      if (mapX >= b.x - half && mapX <= b.x + half && mapY >= b.y - half && mapY <= b.y + half) return b.id;
     }
     return null;
   }
@@ -1309,23 +1316,38 @@ export default function MapPage() {
             {visibleBeastsForUser.map(b => {
               const isHidden = !b.revealed;
               const isDead = b.current_hp <= 0;
-              const size = 22 / scale;
-              const fillColor = isDead ? '#9ca3af' : '#ffffff';
+              const size = (b.token_size ?? 22) / scale;
               const borderColor = isDead ? '#6b7280' : '#dc2626';
-              const textColor = isDead ? '#4b5563' : '#000000';
+              const img = monsterImageById(b.monster_id);
+              const clipId = `beast-clip-${b.id}`;
               return (
                 <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'pointer' : 'pointer' }}
                   opacity={isHidden ? 0.5 : 1}>
                   {(isAdmin || isEditor) && (
                     <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={borderColor} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
                   )}
-                  {/* Square token: white bg, red border, black text */}
-                  <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
-                    fill={fillColor} stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
-                  <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
-                    fontSize={18 / scale} fill={textColor} fontWeight="bold" style={{ pointerEvents: 'none' }}>
-                    {b.short_code}
-                  </text>
+                  <defs>
+                    <clipPath id={clipId}>
+                      <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2} rx={2 / scale} />
+                    </clipPath>
+                  </defs>
+                  {img ? (
+                    <>
+                      <image href={img} x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                        preserveAspectRatio="xMidYMid slice" clipPath={`url(#${clipId})`} opacity={isDead ? 0.5 : 1} />
+                      <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                        fill="none" stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
+                    </>
+                  ) : (
+                    <>
+                      <rect x={b.x - size} y={b.y - size} width={size * 2} height={size * 2}
+                        fill={isDead ? '#9ca3af' : '#ffffff'} stroke={borderColor} strokeWidth={3 / scale} rx={2 / scale} />
+                      <text x={b.x} y={b.y} textAnchor="middle" dominantBaseline="central"
+                        fontSize={18 / scale} fill={isDead ? '#4b5563' : '#000000'} fontWeight="bold" style={{ pointerEvents: 'none' }}>
+                        {b.short_code}
+                      </text>
+                    </>
+                  )}
                   {isDead && (
                     <line x1={b.x - size} y1={b.y - size} x2={b.x + size} y2={b.y + size}
                       stroke="#374151" strokeWidth={2 / scale} style={{ pointerEvents: 'none' }} />
@@ -1413,22 +1435,22 @@ export default function MapPage() {
               <Settings size={14} />
             </Button>
           )}
-          {fogEnabled && (
+          {fogEnabled && editFog && (
             <Button size="sm" variant="secondary" className="h-8 shadow-md gap-1.5 text-xs" onClick={() => setShowFog(!showFog)} title="Zobrazit/skrýt zatmavení">
               <Cloud size={14} /> {showFog ? 'Skrýt mlhu' : 'Zobrazit mlhu'}
             </Button>
           )}
-          {editable && activeRouteId && (
+          {editRoutes && activeRouteId && (
             <Button size="sm" variant={addingPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingPoint(!addingPoint); setAddingSpecialPoint(false); setAddingToken(false); }}>
               <MapPin size={14} /> {addingPoint ? 'Klikni na mapu...' : 'Přidat bod'}
             </Button>
           )}
-          {editable && (
+          {editSpecial && (
             <Button size="sm" variant={addingSpecialPoint ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingSpecialPoint(!addingSpecialPoint); setAddingPoint(false); setAddingToken(false); }}>
               <Star size={14} /> {addingSpecialPoint ? 'Klikni na mapu...' : 'Nový ⭐'}
             </Button>
           )}
-          {editable && activeMapId && (
+          {editTokens && activeMapId && (
             <Button size="sm" variant={addingToken ? 'default' : 'secondary'} className="h-8 shadow-md gap-1.5 text-xs" onClick={() => { setAddingToken(!addingToken); setAddingPoint(false); setAddingSpecialPoint(false); }}>
               <Users size={14} /> {addingToken ? 'Klikni na mapu...' : 'Přidat postavu'}
             </Button>
@@ -1653,7 +1675,7 @@ export default function MapPage() {
                       {!owner && ' • bez hráče'}
                     </p>
                   </div>
-                  {editable && (
+                  {editTokens && (
                     <>
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditToken(t)}><Edit2 size={12} /></Button>
                       <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" onClick={() => { if (confirm('Smazat postavu?')) deleteToken(t.id); }}><Trash2 size={12} /></Button>
@@ -1874,7 +1896,7 @@ export default function MapPage() {
                         const newName = prompt('Nový název mapy:', m.name);
                         if (newName !== null && newName.trim()) renameMap(m.id, newName.trim());
                       }}><Edit2 size={12} /></Button>
-                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { if (confirm('Opravdu smazat tuto mapu?')) deleteMap(m.id); }}><Trash2 size={12} /></Button>
+                      {isAdmin && <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { if (confirm('Opravdu smazat tuto mapu?')) deleteMap(m.id); }}><Trash2 size={12} /></Button>}
                     </div>
                   </div>
                   {/* Fog of war controls per map */}
@@ -1969,7 +1991,10 @@ export default function MapPage() {
                     <div><Label>HP max</Label><Input type="number" min={1} value={editBeast.hp} onChange={e => setEditBeast({ ...editBeast, hp: parseInt(e.target.value) || 1 })} /></div>
                     <div><Label>HP nyní</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
                   </div>
-                  <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+                    <div><Label>Velikost tokenu</Label><Input type="number" min={8} max={120} value={editBeast.token_size ?? 22} onChange={e => setEditBeast({ ...editBeast, token_size: parseInt(e.target.value) || 22 })} /></div>
+                  </div>
                   <div>
                     <Label>Stealth</Label>
                     <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={editBeast.stealth_mode}
@@ -2008,7 +2033,10 @@ export default function MapPage() {
                 <div><Label>HP max</Label><Input type="number" min={1} value={editBeast.hp} onChange={e => setEditBeast({ ...editBeast, hp: parseInt(e.target.value) || 1 })} /></div>
                 <div><Label>HP nyní</Label><Input type="number" value={editBeast.current_hp} onChange={e => setEditBeast({ ...editBeast, current_hp: parseInt(e.target.value) || 0 })} /></div>
               </div>
-              <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+              <div className="grid grid-cols-2 gap-2">
+                <div><Label>Dosvit</Label><Input type="number" value={editBeast.reveal_radius} onChange={e => setEditBeast({ ...editBeast, reveal_radius: parseInt(e.target.value) || 80 })} /></div>
+                <div><Label>Velikost tokenu</Label><Input type="number" min={8} max={120} value={editBeast.token_size ?? 22} onChange={e => setEditBeast({ ...editBeast, token_size: parseInt(e.target.value) || 22 })} /></div>
+              </div>
               <div>
                 <Label>Stealth</Label>
                 <select className="w-full border rounded px-2 py-1.5 bg-background text-sm" value={editBeast.stealth_mode}
