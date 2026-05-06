@@ -653,7 +653,7 @@ export default function MapPage() {
       }
     }
 
-    if (addingToken && editable && activeMapId) {
+    if (addingToken && editTokens && activeMapId) {
       addTokenAt(coords.x, coords.y);
       setAddingToken(false);
       return;
@@ -665,13 +665,14 @@ export default function MapPage() {
       return;
     }
 
-    if (addingSpecialPoint && editable) {
+    if (addingSpecialPoint && editSpecial) {
       addSpecialPoint(coords.x, coords.y);
       setAddingSpecialPoint(false);
       return;
     }
 
     if (!addingPoint || !activeRouteId || !imgRef.current) return;
+    if (!editRoutes) { setAddingPoint(false); return; }
     addPoint(activeRouteId, coords.x, coords.y);
     setAddingPoint(false);
   }
