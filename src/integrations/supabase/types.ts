@@ -104,6 +104,7 @@ export type Database = {
           experience: number
           good_trait: number | null
           id: string
+          is_admin: boolean
           kills: number
           name: string
           profession: string
@@ -118,6 +119,7 @@ export type Database = {
           experience?: number
           good_trait?: number | null
           id?: string
+          is_admin?: boolean
           kills?: number
           name: string
           profession?: string
@@ -132,6 +134,7 @@ export type Database = {
           experience?: number
           good_trait?: number | null
           id?: string
+          is_admin?: boolean
           kills?: number
           name?: string
           profession?: string
@@ -139,6 +142,36 @@ export type Database = {
           specialization?: string
           total_damage?: number
           user_id?: string
+        }
+        Relationships: []
+      }
+      initiative_entries: {
+        Row: {
+          battle_monster_id: string | null
+          created_at: string
+          hero_id: string | null
+          id: string
+          name: string
+          source: string
+          value: number
+        }
+        Insert: {
+          battle_monster_id?: string | null
+          created_at?: string
+          hero_id?: string | null
+          id?: string
+          name: string
+          source?: string
+          value?: number
+        }
+        Update: {
+          battle_monster_id?: string | null
+          created_at?: string
+          hero_id?: string | null
+          id?: string
+          name?: string
+          source?: string
+          value?: number
         }
         Relationships: []
       }
