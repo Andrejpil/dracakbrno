@@ -207,6 +207,10 @@ export function useGameState() {
         is_unique: m.is_unique, level: (row as any).level ?? level, image_url: m.image_url,
       };
       setBattleMonsters(prev => [...prev, bm]);
+      // Create initiative entry for this beast
+      await supabase.from('initiative_entries').insert({
+        name: `${m.name} (úr.${level})`, value: 0, source: 'beast', battle_monster_id: row.id,
+      } as any);
     }
   }, [user, monsters]);
 
