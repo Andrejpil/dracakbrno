@@ -43,6 +43,7 @@ export function useGameState() {
       specialization: h.specialization, experience: h.experience,
       kills: h.kills, totalDamage: h.total_damage,
       good_trait: h.good_trait ?? null, bad_trait: h.bad_trait ?? null,
+      is_admin: !!h.is_admin,
     }));
     // Store initial levels (no notification on load)
     const levels: Record<string, number> = {};
