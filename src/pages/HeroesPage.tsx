@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 export default function HeroesPage() {
   const { heroes, addHero, editHero, deleteHero } = useGame();
@@ -17,15 +18,15 @@ export default function HeroesPage() {
   const editable = canEditPage('heroes');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', race: 'Barbar' as Race, profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0 });
+  const [form, setForm] = useState({ name: '', race: 'Barbar' as Race, profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0, is_admin: false });
   const [abilityOpen, setAbilityOpen] = useState<Race | null>(null);
   const [traitDetail, setTraitDetail] = useState<{ kind: 'good' | 'bad'; number: number } | null>(null);
   const [traitsEditorOpen, setTraitsEditorOpen] = useState(false);
   const [traitsTab, setTraitsTab] = useState<'good' | 'bad'>('good');
   const [traitEditValues, setTraitEditValues] = useState<Record<string, { name: string; description: string }>>({});
 
-  const openNew = () => { setEditId(null); setForm({ name: '', race: 'Barbar', profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0 }); setOpen(true); };
-  const openEdit = (h: Hero) => { setEditId(h.id); setForm({ name: h.name, race: h.race, profession: h.profession, specialization: h.specialization, experience: h.experience, good_trait: h.good_trait ?? 0, bad_trait: h.bad_trait ?? 0 }); setOpen(true); };
+  const openNew = () => { setEditId(null); setForm({ name: '', race: 'Barbar', profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0, is_admin: false }); setOpen(true); };
+  const openEdit = (h: Hero) => { setEditId(h.id); setForm({ name: h.name, race: h.race, profession: h.profession, specialization: h.specialization, experience: h.experience, good_trait: h.good_trait ?? 0, bad_trait: h.bad_trait ?? 0, is_admin: !!h.is_admin }); setOpen(true); };
 
   const handleSave = () => {
     if (!form.name || !form.profession) return;
