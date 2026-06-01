@@ -123,6 +123,13 @@ export default function HeroesPage() {
                 <p className="text-xs text-bonus-negative mt-1">{form.bad_trait ? findTrait('bad', form.bad_trait)?.name || '—' : ''}</p>
               </div>
             </div>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Typ: {form.is_admin ? 'Admin (DM)' : 'Hráč'}</p>
+                <p className="text-xs text-muted-foreground">Admin se nezapočítává do statistik</p>
+              </div>
+              <Switch checked={form.is_admin} onCheckedChange={v => setForm({ ...form, is_admin: v })} />
+            </div>
             <Button onClick={handleSave} className="w-full">{editId ? 'Uložit změny' : 'Přidat hrdinu'}</Button>
           </div>
         </DialogContent>
