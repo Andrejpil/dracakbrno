@@ -10,6 +10,7 @@ export interface Hero {
   totalDamage: number;
   good_trait?: number | null;
   bad_trait?: number | null;
+  is_admin?: boolean;
 }
 
 export interface Trait {
