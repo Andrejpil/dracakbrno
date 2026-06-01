@@ -60,9 +60,12 @@ export default function HeroesPage() {
           const goodT = findTrait('good', h.good_trait);
           const badT = findTrait('bad', h.bad_trait);
           return (
-            <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
+            <div key={h.id} className={`bg-card rounded-lg p-4 border ${h.is_admin ? 'border-primary/60' : 'border-border'}`}>
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-display text-lg text-foreground">{h.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg text-foreground">{h.name}</h3>
+                  {h.is_admin && <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/40">Admin</span>}
+                </div>
                 {editable && <div className="flex gap-1">
                   <button onClick={() => openEdit(h)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
                   <button onClick={() => deleteHero(h.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
