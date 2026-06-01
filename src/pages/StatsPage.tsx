@@ -24,7 +24,7 @@ export default function StatsPage() {
 
       <h3 className="font-display text-lg text-foreground mb-3">Hrdinové</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
-        {heroes.map(h => (
+        {playerHeroes.map(h => (
           <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
             <h4 className="font-display text-foreground mb-2">{h.name}</h4>
             <div className="flex items-center gap-3 text-sm flex-wrap">
