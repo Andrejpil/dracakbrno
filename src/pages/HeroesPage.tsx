@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 export default function HeroesPage() {
   const { heroes, addHero, editHero, deleteHero } = useGame();
@@ -17,15 +18,15 @@ export default function HeroesPage() {
   const editable = canEditPage('heroes');
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ name: '', race: 'Barbar' as Race, profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0 });
+  const [form, setForm] = useState({ name: '', race: 'Barbar' as Race, profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0, is_admin: false });
   const [abilityOpen, setAbilityOpen] = useState<Race | null>(null);
   const [traitDetail, setTraitDetail] = useState<{ kind: 'good' | 'bad'; number: number } | null>(null);
   const [traitsEditorOpen, setTraitsEditorOpen] = useState(false);
   const [traitsTab, setTraitsTab] = useState<'good' | 'bad'>('good');
   const [traitEditValues, setTraitEditValues] = useState<Record<string, { name: string; description: string }>>({});
 
-  const openNew = () => { setEditId(null); setForm({ name: '', race: 'Barbar', profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0 }); setOpen(true); };
-  const openEdit = (h: Hero) => { setEditId(h.id); setForm({ name: h.name, race: h.race, profession: h.profession, specialization: h.specialization, experience: h.experience, good_trait: h.good_trait ?? 0, bad_trait: h.bad_trait ?? 0 }); setOpen(true); };
+  const openNew = () => { setEditId(null); setForm({ name: '', race: 'Barbar', profession: '', specialization: '', experience: 0, good_trait: 0, bad_trait: 0, is_admin: false }); setOpen(true); };
+  const openEdit = (h: Hero) => { setEditId(h.id); setForm({ name: h.name, race: h.race, profession: h.profession, specialization: h.specialization, experience: h.experience, good_trait: h.good_trait ?? 0, bad_trait: h.bad_trait ?? 0, is_admin: !!h.is_admin }); setOpen(true); };
 
   const handleSave = () => {
     if (!form.name || !form.profession) return;
@@ -59,9 +60,12 @@ export default function HeroesPage() {
           const goodT = findTrait('good', h.good_trait);
           const badT = findTrait('bad', h.bad_trait);
           return (
-            <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
+            <div key={h.id} className={`bg-card rounded-lg p-4 border ${h.is_admin ? 'border-primary/60' : 'border-border'}`}>
               <div className="flex justify-between items-start mb-2">
-                <h3 className="font-display text-lg text-foreground">{h.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-display text-lg text-foreground">{h.name}</h3>
+                  {h.is_admin && <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-primary/20 text-primary border border-primary/40">Admin</span>}
+                </div>
                 {editable && <div className="flex gap-1">
                   <button onClick={() => openEdit(h)} className="p-1 text-muted-foreground hover:text-primary transition-colors"><Pencil size={14} /></button>
                   <button onClick={() => deleteHero(h.id)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>
@@ -118,6 +122,13 @@ export default function HeroesPage() {
                 <Input type="number" min={0} max={100} value={form.bad_trait} onChange={e => setForm({ ...form, bad_trait: parseInt(e.target.value) || 0 })} />
                 <p className="text-xs text-bonus-negative mt-1">{form.bad_trait ? findTrait('bad', form.bad_trait)?.name || '—' : ''}</p>
               </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Typ: {form.is_admin ? 'Admin (DM)' : 'Hráč'}</p>
+                <p className="text-xs text-muted-foreground">Admin se nezapočítává do statistik</p>
+              </div>
+              <Switch checked={form.is_admin} onCheckedChange={v => setForm({ ...form, is_admin: v })} />
             </div>
             <Button onClick={handleSave} className="w-full">{editId ? 'Uložit změny' : 'Přidat hrdinu'}</Button>
           </div>

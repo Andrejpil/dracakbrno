@@ -10,11 +10,12 @@ export default function StatsPage() {
   const { canEdit: canEditPage } = useUserRole();
   const editable = canEditPage('stats');
 
+  const playerHeroes = heroes.filter(h => !h.is_admin);
   const killEntries = Object.entries(monsterKills).sort((a, b) => b[1] - a[1]);
   const totalKills = Object.values(monsterKills).reduce((a, b) => a + b, 0);
 
-  const heroRanking = [...heroes].sort((a, b) => b.kills - a.kills).filter(h => h.kills > 0);
-  const damageRanking = [...heroes].sort((a, b) => b.totalDamage - a.totalDamage).filter(h => h.totalDamage > 0);
+  const heroRanking = [...playerHeroes].sort((a, b) => b.kills - a.kills).filter(h => h.kills > 0);
+  const damageRanking = [...playerHeroes].sort((a, b) => b.totalDamage - a.totalDamage).filter(h => h.totalDamage > 0);
 
   return (
     <div className="animate-fade-in">
@@ -23,7 +24,7 @@ export default function StatsPage() {
 
       <h3 className="font-display text-lg text-foreground mb-3">Hrdinové</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-8">
-        {heroes.map(h => (
+        {playerHeroes.map(h => (
           <div key={h.id} className="bg-card rounded-lg p-4 border border-border">
             <h4 className="font-display text-foreground mb-2">{h.name}</h4>
             <div className="flex items-center gap-3 text-sm flex-wrap">

@@ -994,9 +994,21 @@ export default function MapPage() {
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.97 : 1.03;
-    zoomBy(delta);
-  }, [zoomBy]);
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const factor = e.deltaY > 0 ? 0.92 : 1.08;
+    setScale(prev => {
+      const next = Math.min(5, Math.max(0.05, prev * factor));
+      const ratio = next / prev;
+      setOffset(o => ({
+        x: mx - (mx - o.x) * ratio,
+        y: my - (my - o.y) * ratio,
+      }));
+      return next;
+    });
+  }, []);
 
   function handleMouseDown(e: React.MouseEvent) {
     if (e.button !== 0) return;
