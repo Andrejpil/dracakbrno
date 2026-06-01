@@ -115,8 +115,9 @@ export function useGameState() {
       experience: data.experience,
       good_trait: data.good_trait ?? null,
       bad_trait: data.bad_trait ?? null,
+      is_admin: data.is_admin ?? false,
     } as any).select().single();
-    if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race as Race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage, good_trait: (row as any).good_trait ?? null, bad_trait: (row as any).bad_trait ?? null }]);
+    if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race as Race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage, good_trait: (row as any).good_trait ?? null, bad_trait: (row as any).bad_trait ?? null, is_admin: !!(row as any).is_admin }]);
   }, [user]);
 
   const editHero = useCallback(async (id: string, data: Partial<Hero>) => {
@@ -130,6 +131,7 @@ export function useGameState() {
     if (data.totalDamage !== undefined) update.total_damage = data.totalDamage;
     if (data.good_trait !== undefined) update.good_trait = data.good_trait;
     if (data.bad_trait !== undefined) update.bad_trait = data.bad_trait;
+    if (data.is_admin !== undefined) update.is_admin = data.is_admin;
     await supabase.from('heroes').update(update).eq('id', id);
     setHeroes(prev => prev.map(h => h.id === id ? { ...h, ...data } : h));
   }, []);
