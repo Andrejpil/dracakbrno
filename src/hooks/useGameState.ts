@@ -26,7 +26,36 @@ export function useGameState() {
       return;
     }
     loadAll();
+
+    // Realtime: keep battle_monsters in sync (so beasts added via Map appear in Boj instantly)
+    const ch = supabase
+      .channel('battle-monsters-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_monsters' }, payload => {
+        if (payload.eventType === 'INSERT') {
+          const b: any = payload.new;
+          setBattleMonsters(prev => prev.some(x => x.id === b.id) ? prev : [...prev, {
+            id: b.id, battleId: b.battle_id, name: b.name,
+            str: b.str, con: b.con, dex: b.dex, int: b.int, cha: b.cha,
+            hp: b.hp, mp: b.mp, attack: b.attack, defense: b.defense,
+            xp_reward: b.xp_reward, special: b.special,
+            currentHP: b.current_hp, currentMP: b.current_mp, killedBy: b.killed_by,
+            is_unique: b.is_unique ?? false, level: b.level ?? 1, image_url: b.image_url ?? '',
+          }]);
+        } else if (payload.eventType === 'UPDATE') {
+          const b: any = payload.new;
+          setBattleMonsters(prev => prev.map(x => x.id === b.id ? {
+            ...x, currentHP: b.current_hp, currentMP: b.current_mp,
+            hp: b.hp, killedBy: b.killed_by, name: b.name, level: b.level ?? x.level,
+          } : x));
+        } else if (payload.eventType === 'DELETE') {
+          const b: any = payload.old;
+          setBattleMonsters(prev => prev.filter(x => x.id !== b.id));
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, [user]);
+
 
   async function loadAll() {
     setLoading(true);
