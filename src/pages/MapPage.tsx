@@ -276,12 +276,15 @@ export default function MapPage() {
           setBeasts(prev => prev.some(b => b.id === r.id) ? prev : [...prev, beastFromRow(r)]);
         } else if (payload.eventType === 'UPDATE') {
           const r: any = payload.new;
-          setBeasts(prev => prev.map(b => b.id === r.id ? beastFromRow(r) : b));
+          setBeasts(prev => prev.some(b => b.id === r.id)
+            ? prev.map(b => b.id === r.id ? beastFromRow(r) : b)
+            : [...prev, beastFromRow(r)]); // beast became visible (revealed flipped true)
         } else if (payload.eventType === 'DELETE') {
           const r: any = payload.old;
           setBeasts(prev => prev.filter(b => b.id !== r.id));
         }
       })
+
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'battle_monsters' }, payload => {
         const r: any = payload.new;
         // Sync HP from battle to map beast
