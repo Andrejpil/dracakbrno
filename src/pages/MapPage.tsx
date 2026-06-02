@@ -464,16 +464,15 @@ export default function MapPage() {
 
   // Beasts visible to current user:
   // - Admin/editor see all
-  // - Players (viewers) only see beasts that are 'revealed' AND currently inside any token's vision radius
+  // - Viewers see beasts only if 'revealed' (covers all stealth_mode rules:
+  //   'none' = revealed=true at insert → always visible;
+  //   'auto' = revealed flips to true once a token enters its detection range;
+  //   'manual' (záloha) = admin controls revealed flag manually).
   const visibleBeastsForUser = activeMapBeasts.filter(b => {
     if (isAdmin || isEditor) return true;
-    if (!b.revealed) return false;
-    // Must be inside at least one player token's vision radius right now
-    return activeMapTokens.some(t => {
-      const d = Math.sqrt((t.x - b.x) ** 2 + (t.y - b.y) ** 2);
-      return d <= t.reveal_radius;
-    });
+    return b.revealed;
   });
+
 
   // Save settings (per-map)
   async function saveSettings() {
