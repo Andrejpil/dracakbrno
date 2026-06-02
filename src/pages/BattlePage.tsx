@@ -70,17 +70,8 @@ export default function BattlePage() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  // Auto-sync heroes into initiative (editors only)
-  useEffect(() => {
-    if (!editable) return;
-    const existingHeroIds = new Set(initEntries.filter(e => e.source === 'hero').map(e => e.hero_id));
-    const toAdd = heroes.filter(h => !existingHeroIds.has(h.id));
-    if (toAdd.length === 0) return;
-    (async () => {
-      const rows = toAdd.map(h => ({ name: h.name, value: 0, source: 'hero', hero_id: h.id }));
-      await supabase.from('initiative_entries').insert(rows as any);
-    })();
-  }, [heroes, initEntries, editable]);
+  // Initiative auto-sync is handled by DB triggers; client no longer inserts hero rows.
+
 
   const updateInit = async (id: string, value: number) => {
     const v = clampInit(value);
