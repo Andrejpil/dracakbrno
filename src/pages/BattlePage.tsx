@@ -70,17 +70,8 @@ export default function BattlePage() {
     return () => { supabase.removeChannel(ch); };
   }, []);
 
-  // Auto-sync heroes into initiative (editors only)
-  useEffect(() => {
-    if (!editable) return;
-    const existingHeroIds = new Set(initEntries.filter(e => e.source === 'hero').map(e => e.hero_id));
-    const toAdd = heroes.filter(h => !existingHeroIds.has(h.id));
-    if (toAdd.length === 0) return;
-    (async () => {
-      const rows = toAdd.map(h => ({ name: h.name, value: 0, source: 'hero', hero_id: h.id }));
-      await supabase.from('initiative_entries').insert(rows as any);
-    })();
-  }, [heroes, initEntries, editable]);
+  // Initiative auto-sync is handled by DB triggers; client no longer inserts hero rows.
+
 
   const updateInit = async (id: string, value: number) => {
     const v = clampInit(value);
@@ -187,57 +178,57 @@ export default function BattlePage() {
         </aside>
 
         {/* Battle monster cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2">
         {battleMonsters.map(m => {
           const state = getDmgState(m.battleId);
           const scaledXP = calculateXP(m.xp_reward, m.level);
           const isDead = m.currentHP <= 0;
           return (
-            <div key={m.battleId} className={`bg-card rounded-lg p-3 border border-border transition-opacity ${isDead ? 'opacity-60' : ''}`}>
-              <div className="flex justify-between items-start mb-2 gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Avatar className={`h-[110px] w-[110px] rounded-md shrink-0 ${isDead ? 'grayscale' : ''}`}>
+            <div key={m.battleId} className={`bg-card rounded-md p-2 border border-border transition-opacity ${isDead ? 'opacity-60' : ''}`}>
+              <div className="flex justify-between items-start mb-1.5 gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <Avatar className={`h-12 w-12 rounded-md shrink-0 ${isDead ? 'grayscale' : ''}`}>
                     {m.image_url ? <AvatarImage src={m.image_url} alt={m.name} className="object-cover" /> : null}
-                    <AvatarFallback className="rounded-md text-sm">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="rounded-md text-xs">{m.name.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <h3 className={`font-display text-base truncate ${isDead ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{m.name}{isDead ? ' ☠' : ''}</h3>
-                    <p className="text-xs text-muted-foreground flex items-center gap-1">
-                      Úr. {m.level} {m.is_unique && <Star size={10} className="text-primary fill-primary" />}
+                    <h3 className={`font-display text-sm truncate ${isDead ? 'text-muted-foreground line-through' : 'text-foreground'}`}>{m.name}{isDead ? ' ☠' : ''}</h3>
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      Úr. {m.level} {m.is_unique && <Star size={9} className="text-primary fill-primary" />}
                     </p>
                   </div>
                 </div>
-                {editable && <button onClick={() => removeFromBattle(m.battleId)} className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={14} /></button>}
+                {editable && <button onClick={() => removeFromBattle(m.battleId)} className="p-0.5 text-muted-foreground hover:text-destructive transition-colors"><Trash2 size={12} /></button>}
               </div>
-              <div className="space-y-1.5 text-xs">
-                <div><span className="text-muted-foreground">HP: </span><HPBar current={m.currentHP} max={m.hp} /></div>
-                <div className="flex items-center gap-2">
+              <div className="space-y-1 text-[11px]">
+                <div><HPBar current={m.currentHP} max={m.hp} /></div>
+                <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">MP:</span>
-                  <Input type="number" className="w-16 h-6 text-xs" value={m.currentMP} min={0} max={m.mp}
+                  <Input type="number" className="w-12 h-5 text-[10px] px-1" value={m.currentMP} min={0} max={m.mp}
                     onChange={e => updateBattleMP(m.battleId, parseInt(e.target.value) || 0)} />
                   <span className="text-muted-foreground">/ {m.mp}</span>
                 </div>
-                <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                <div className="flex flex-wrap gap-x-1 gap-y-0.5">
                   <BonusBadge label="SÍL" value={m.str} />
                   <BonusBadge label="ODO" value={m.con} />
                   <BonusBadge label="OBR" value={m.dex} />
                   <BonusBadge label="INT" value={m.int} />
                   <BonusBadge label="CHA" value={m.cha} />
                 </div>
-                <p className="text-muted-foreground">Útok: <span className="text-foreground">{m.attack}</span> | Obrana: <span className="text-foreground">{m.defense}</span> | XP: <span className="text-primary">{scaledXP}</span></p>
-                {m.special && <p className="text-muted-foreground italic">{m.special}</p>}
+                <p className="text-muted-foreground text-[10px]">Ú: <span className="text-foreground">{m.attack}</span> | O: <span className="text-foreground">{m.defense}</span> | XP: <span className="text-primary">{scaledXP}</span></p>
+                {m.special && <p className="text-muted-foreground italic text-[10px] truncate" title={m.special}>{m.special}</p>}
 
-                {editable && <div className="pt-2 border-t border-border space-y-1.5">
+                {editable && !isDead && <div className="pt-1.5 border-t border-border space-y-1">
                   <Select value={state.heroId} onValueChange={v => setDmgState(m.battleId, { heroId: v })}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Vyber hrdinu" /></SelectTrigger>
+                    <SelectTrigger className="h-6 text-[10px]"><SelectValue placeholder="Hrdina" /></SelectTrigger>
                     <SelectContent>{heroes.map(h => <SelectItem key={h.id} value={h.id}>{h.name}{h.is_admin ? ' (admin)' : ''}</SelectItem>)}</SelectContent>
                   </Select>
                   <div className="flex gap-1">
-                    <Input type="number" placeholder="Poškození" className="h-7 text-xs" value={state.amount || ''}
+                    <Input type="number" placeholder="Pošk." className="h-6 text-[10px] px-1" value={state.amount || ''}
                       onChange={e => setDmgState(m.battleId, { amount: parseInt(e.target.value) || 0 })} />
-                    <Button size="sm" variant="destructive" className="h-7 text-xs"
+                    <Button size="sm" variant="destructive" className="h-6 text-[10px] px-2"
                       onClick={() => { dealDamage(m.battleId, state.heroId, state.amount); setDmgState(m.battleId, { amount: 0 }); }}
-                      disabled={!state.heroId || state.amount <= 0 || m.currentHP <= 0}
+                      disabled={!state.heroId || state.amount <= 0}
                     >Útok</Button>
                   </div>
                 </div>}
@@ -246,6 +237,7 @@ export default function BattlePage() {
           );
         })}
         </div>
+
       </div>
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>

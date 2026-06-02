@@ -464,16 +464,15 @@ export default function MapPage() {
 
   // Beasts visible to current user:
   // - Admin/editor see all
-  // - Players (viewers) only see beasts that are 'revealed' AND currently inside any token's vision radius
+  // - Viewers see beasts only if 'revealed' (covers all stealth_mode rules:
+  //   'none' = revealed=true at insert → always visible;
+  //   'auto' = revealed flips to true once a token enters its detection range;
+  //   'manual' (záloha) = admin controls revealed flag manually).
   const visibleBeastsForUser = activeMapBeasts.filter(b => {
     if (isAdmin || isEditor) return true;
-    if (!b.revealed) return false;
-    // Must be inside at least one player token's vision radius right now
-    return activeMapTokens.some(t => {
-      const d = Math.sqrt((t.x - b.x) ** 2 + (t.y - b.y) ** 2);
-      return d <= t.reveal_radius;
-    });
+    return b.revealed;
   });
+
 
   // Save settings (per-map)
   async function saveSettings() {
@@ -906,16 +905,17 @@ export default function MapPage() {
   }
   function canMoveBeast(): boolean { return editBeasts; }
 
-  // Auto-reveal: any 'auto'-stealth beast that comes within any token's vision range gets revealed
+  // Auto-reveal: any 'auto'-stealth beast that comes within its own detection radius of any token gets revealed
   useEffect(() => {
     if (!editBeasts) return; // only admin/editor pushes the reveal
     const toReveal = activeMapBeasts.filter(b => !b.revealed && b.stealth_mode === 'auto' && activeMapTokens.some(t => {
       const d = Math.sqrt((t.x - b.x) ** 2 + (t.y - b.y) ** 2);
-      return d <= t.reveal_radius;
+      return d <= (b.reveal_radius ?? 80);
     }));
     toReveal.forEach(b => toggleBeastReveal(b.id, true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMapTokens, activeMapBeasts, editBeasts]);
+
 
   // Switch active route when active map changes (pick first matching)
   useEffect(() => {
