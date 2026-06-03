@@ -906,6 +906,9 @@ export default function MapPage() {
       }).eq('battle_id', updated.battle_id);
     }
     setBeasts(prev => prev.map(b => b.id === editBeast.id ? updated : b));
+    if (!updated.revealed && visibilityChRef.current) {
+      visibilityChRef.current.send({ type: 'broadcast', event: 'hide', payload: { id: updated.id } });
+    }
     setEditBeast(null);
     toast({ title: 'Bestie uložena' });
   }
