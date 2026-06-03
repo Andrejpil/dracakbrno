@@ -4,7 +4,7 @@ import { calculateHP, calculateXP } from '@/lib/gameData';
 import { supabase } from '@/integrations/supabase/client';
 import HPBar from '@/components/HPBar';
 import BonusBadge from '@/components/BonusBadge';
-import { Plus, Trash2, Star, ChevronUp, ChevronDown, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Star, ChevronUp, ChevronDown, UserPlus, SkipBack, SkipForward, Play } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export default function BattlePage() {
   const [initEntries, setInitEntries] = useState<InitiativeEntry[]>([]);
   const [npcName, setNpcName] = useState('');
   const [npcValue, setNpcValue] = useState(0);
+  const [activeInitId, setActiveInitId] = useState<string | null>(null);
 
   const loadInitiative = useCallback(async () => {
     const { data } = await supabase.from('initiative_entries').select('*');
@@ -88,9 +89,58 @@ export default function BattlePage() {
   };
   const resetInit = async () => {
     await supabase.from('initiative_entries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('battle_state' as any).update({ active_initiative_id: null, active_battle_id: null, active_hero_id: null }).eq('id', true);
   };
 
   const sortedInit = [...initEntries].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+
+  // Subscribe to shared active-initiative state
+  useEffect(() => {
+    let cancelled = false;
+    (supabase.from('battle_state' as any).select('active_initiative_id').eq('id', true).maybeSingle() as any)
+      .then(({ data }: any) => { if (!cancelled) setActiveInitId(data?.active_initiative_id ?? null); });
+    const ch = supabase.channel('battle-state-battle-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_state' }, (payload: any) => {
+        const r = payload.new || payload.old;
+        setActiveInitId(r?.active_initiative_id ?? null);
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, []);
+
+  // Map initiative entry → battle_id (for highlighting matching battle card / map token)
+  const battleIdForEntry = useCallback((e: InitiativeEntry): string | null => {
+    if (!e.battle_monster_id) return null;
+    const bm = battleMonsters.find(x => x.id === e.battle_monster_id);
+    return bm?.battleId ?? null;
+  }, [battleMonsters]);
+
+  const setActiveByEntry = useCallback(async (entry: InitiativeEntry | null) => {
+    const battleId = entry ? battleIdForEntry(entry) : null;
+    const heroId = entry?.source === 'hero' ? entry.hero_id : null;
+    setActiveInitId(entry?.id ?? null);
+    await supabase.from('battle_state' as any).update({
+      active_initiative_id: entry?.id ?? null,
+      active_battle_id: battleId,
+      active_hero_id: heroId,
+    }).eq('id', true);
+  }, [battleIdForEntry]);
+
+  const stepActive = useCallback((dir: 1 | -1) => {
+    if (sortedInit.length === 0) return;
+    const idx = sortedInit.findIndex(e => e.id === activeInitId);
+    let next: number;
+    if (idx === -1) next = dir === 1 ? 0 : sortedInit.length - 1;
+    else next = (idx + dir + sortedInit.length) % sortedInit.length;
+    setActiveByEntry(sortedInit[next]);
+  }, [sortedInit, activeInitId, setActiveByEntry]);
+
+  // Active battle_monster (for green highlight on cards)
+  const activeBattleMonsterId = (() => {
+    const entry = initEntries.find(e => e.id === activeInitId);
+    if (!entry) return null;
+    return battleIdForEntry(entry);
+  })();
 
   const selectedM = monsters.find(m => m.id === selectedMonster);
   const conLo = selectedM ? (selectedM.con_min ?? selectedM.con) : 0;
@@ -135,35 +185,52 @@ export default function BattlePage() {
         <aside className="bg-card rounded-lg p-3 border border-border self-start sticky top-2 max-h-[calc(100vh-6rem)] overflow-auto">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-display text-base text-primary">Iniciativa</h3>
-            {editable && <button onClick={resetInit} title="Resetovat" className="text-xs text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>}
+            <div className="flex items-center gap-1">
+              {editable && sortedInit.length > 0 && (
+                <>
+                  <button onClick={() => stepActive(-1)} title="Předchozí" className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-muted"><SkipBack size={14} /></button>
+                  <button onClick={() => stepActive(1)} title="Další" className="p-1 rounded text-primary hover:bg-primary/10"><SkipForward size={14} /></button>
+                </>
+              )}
+              {editable && <button onClick={resetInit} title="Resetovat" className="text-xs text-muted-foreground hover:text-destructive p-1"><Trash2 size={12} /></button>}
+            </div>
           </div>
           <div className="space-y-1 mb-3">
             {sortedInit.length === 0 && <p className="text-xs text-muted-foreground">Žádné záznamy.</p>}
-            {sortedInit.map(e => (
-              <div key={e.id} className="flex items-center gap-1 bg-muted/30 rounded px-1.5 py-1 border border-border">
+            {sortedInit.map(e => {
+              const isActive = e.id === activeInitId;
+              return (
+              <div key={e.id}
+                className={`flex items-center gap-1 rounded px-1.5 py-1 border transition-colors ${isActive ? 'bg-green-500/20 border-green-500 ring-1 ring-green-500' : 'bg-muted/30 border-border'}`}
+                onClick={editable ? () => setActiveByEntry(e) : undefined}
+                style={editable ? { cursor: 'pointer' } : undefined}
+              >
                 <span className={`text-sm font-bold w-9 text-center ${e.value > 0 ? 'text-bonus-positive' : e.value < 0 ? 'text-bonus-negative' : 'text-foreground'}`}>
                   {e.value > 0 ? `+${e.value}` : e.value}
                 </span>
-                <span className={`flex-1 text-xs truncate ${sourceColor(e.source)}`} title={e.name}>{e.name}</span>
+                {isActive && <Play size={10} className="text-green-500 shrink-0" />}
+                <span className={`flex-1 text-xs truncate ${isActive ? 'text-green-500 font-bold' : sourceColor(e.source)}`} title={e.name}>{e.name}</span>
                 {editable && (
                   <>
-                    <button onClick={() => updateInit(e.id, e.value + 1)} disabled={e.value >= INIT_MAX} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp size={12} /></button>
-                    <button onClick={() => updateInit(e.id, e.value - 1)} disabled={e.value <= INIT_MIN} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown size={12} /></button>
+                    <button onClick={ev => { ev.stopPropagation(); updateInit(e.id, e.value + 1); }} disabled={e.value >= INIT_MAX} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp size={12} /></button>
+                    <button onClick={ev => { ev.stopPropagation(); updateInit(e.id, e.value - 1); }} disabled={e.value <= INIT_MIN} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown size={12} /></button>
                     <Input
                       type="number"
                       min={INIT_MIN}
                       max={INIT_MAX}
                       className="h-6 w-12 text-xs px-1"
                       value={e.value}
+                      onClick={ev => ev.stopPropagation()}
                       onChange={ev => updateInit(e.id, parseInt(ev.target.value) || 0)}
                     />
                     {e.source !== 'hero' && (
-                      <button onClick={() => deleteInit(e.id)} className="p-0.5 text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>
+                      <button onClick={ev => { ev.stopPropagation(); deleteInit(e.id); }} className="p-0.5 text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>
                     )}
                   </>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
           {editable && (
             <div className="border-t border-border pt-2 space-y-1">
@@ -183,8 +250,9 @@ export default function BattlePage() {
           const state = getDmgState(m.battleId);
           const scaledXP = calculateXP(m.xp_reward, m.level);
           const isDead = m.currentHP <= 0;
+          const isActive = m.battleId === activeBattleMonsterId;
           return (
-            <div key={m.battleId} className={`bg-card rounded-md p-2 border border-border transition-opacity ${isDead ? 'opacity-60' : ''}`}>
+            <div key={m.battleId} className={`rounded-md p-2 border transition-all ${isActive ? 'bg-green-500/10 border-green-500 ring-2 ring-green-500' : 'bg-card border-border'} ${isDead ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-start mb-1.5 gap-1.5">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Avatar className={`h-12 w-12 rounded-md shrink-0 ${isDead ? 'grayscale' : ''}`}>

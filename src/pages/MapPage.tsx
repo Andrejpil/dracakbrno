@@ -208,6 +208,10 @@ export default function MapPage() {
     lastPosWriteRef.current[key] = now;
     return true;
   }
+  // Active initiative target (for green highlight on map)
+  const [activeBattleId, setActiveBattleId] = useState<string | null>(null);
+  // Channel ref for visibility broadcasts (admin → viewers when beast is hidden again)
+  const visibilityChRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Temp settings form
   const [tempSettings, setTempSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
@@ -336,6 +340,32 @@ export default function MapPage() {
       });
     return () => { supabase.removeChannel(channel); };
   }, [user, activeMapId]);
+
+  // Broadcast channel: when admin hides a beast (revealed: true→false), viewers can't receive
+  // the postgres UPDATE because RLS hides the row from them. Push a broadcast so they remove it.
+  useEffect(() => {
+    const ch = supabase.channel('beast-visibility-bcast', { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'hide' }, ({ payload }: any) => {
+        setBeasts(prev => prev.filter(b => b.id !== payload.id));
+      });
+    ch.subscribe();
+    visibilityChRef.current = ch;
+    return () => { supabase.removeChannel(ch); visibilityChRef.current = null; };
+  }, []);
+
+  // Subscribe to shared battle_state (active initiative target for highlighting)
+  useEffect(() => {
+    let cancelled = false;
+    (supabase.from('battle_state' as any).select('active_battle_id').eq('id', true).maybeSingle() as any)
+      .then(({ data }: any) => { if (!cancelled) setActiveBattleId(data?.active_battle_id ?? null); });
+    const ch = supabase.channel('battle-state-map-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_state' }, (payload: any) => {
+        const r = payload.new || payload.old;
+        setActiveBattleId(r?.active_battle_id ?? null);
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, []);
 
   function beastFromRow(r: any): MapBeast {
     return {
@@ -876,6 +906,9 @@ export default function MapPage() {
       }).eq('battle_id', updated.battle_id);
     }
     setBeasts(prev => prev.map(b => b.id === editBeast.id ? updated : b));
+    if (!updated.revealed && visibilityChRef.current) {
+      visibilityChRef.current.send({ type: 'broadcast', event: 'hide', payload: { id: updated.id } });
+    }
     setEditBeast(null);
     toast({ title: 'Bestie uložena' });
   }
@@ -897,6 +930,10 @@ export default function MapPage() {
   async function toggleBeastReveal(id: string, revealed: boolean) {
     await supabase.from('map_beasts').update({ revealed }).eq('id', id);
     setBeasts(prev => prev.map(b => b.id === id ? { ...b, revealed } : b));
+    if (!revealed && visibilityChRef.current) {
+      // Notify viewers (they can't see the postgres UPDATE because RLS now hides the row)
+      visibilityChRef.current.send({ type: 'broadcast', event: 'hide', payload: { id } });
+    }
   }
 
   function findBeastAt(mapX: number, mapY: number): string | null {
@@ -1332,12 +1369,16 @@ export default function MapPage() {
               const isHidden = !b.revealed;
               const isDead = b.current_hp <= 0;
               const size = (b.token_size ?? 22) / scale;
-              const borderColor = isDead ? '#6b7280' : '#dc2626';
+              const isActive = !!b.battle_id && b.battle_id === activeBattleId;
+              const borderColor = isActive ? '#22c55e' : (isDead ? '#6b7280' : '#dc2626');
               const img = monsterImageById(b.monster_id);
               const clipId = `beast-clip-${b.id}`;
               return (
                 <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'pointer' : 'pointer' }}
                   opacity={isHidden ? 0.5 : 1}>
+                  {isActive && (
+                    <circle cx={b.x} cy={b.y} r={size + 6 / scale} fill="none" stroke="#22c55e" strokeWidth={3 / scale} opacity={0.9} />
+                  )}
                   {(isAdmin || isEditor) && (
                     <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={borderColor} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
                   )}
