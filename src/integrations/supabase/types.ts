@@ -99,16 +99,22 @@ export type Database = {
       }
       battle_state: {
         Row: {
+          active_battle_id: string | null
+          active_hero_id: string | null
           active_initiative_id: string | null
           id: boolean
           updated_at: string
         }
         Insert: {
+          active_battle_id?: string | null
+          active_hero_id?: string | null
           active_initiative_id?: string | null
           id?: boolean
           updated_at?: string
         }
         Update: {
+          active_battle_id?: string | null
+          active_hero_id?: string | null
           active_initiative_id?: string | null
           id?: boolean
           updated_at?: string
