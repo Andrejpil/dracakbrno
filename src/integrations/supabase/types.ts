@@ -97,6 +97,24 @@ export type Database = {
           },
         ]
       }
+      battle_state: {
+        Row: {
+          active_initiative_id: string | null
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          active_initiative_id?: string | null
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          active_initiative_id?: string | null
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       heroes: {
         Row: {
           bad_trait: number | null
