@@ -89,9 +89,58 @@ export default function BattlePage() {
   };
   const resetInit = async () => {
     await supabase.from('initiative_entries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('battle_state' as any).update({ active_initiative_id: null, active_battle_id: null, active_hero_id: null }).eq('id', true);
   };
 
   const sortedInit = [...initEntries].sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+
+  // Subscribe to shared active-initiative state
+  useEffect(() => {
+    let cancelled = false;
+    (supabase.from('battle_state' as any).select('active_initiative_id').eq('id', true).maybeSingle() as any)
+      .then(({ data }: any) => { if (!cancelled) setActiveInitId(data?.active_initiative_id ?? null); });
+    const ch = supabase.channel('battle-state-battle-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_state' }, (payload: any) => {
+        const r = payload.new || payload.old;
+        setActiveInitId(r?.active_initiative_id ?? null);
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, []);
+
+  // Map initiative entry → battle_id (for highlighting matching battle card / map token)
+  const battleIdForEntry = useCallback((e: InitiativeEntry): string | null => {
+    if (!e.battle_monster_id) return null;
+    const bm = battleMonsters.find(x => x.id === e.battle_monster_id);
+    return bm?.battleId ?? null;
+  }, [battleMonsters]);
+
+  const setActiveByEntry = useCallback(async (entry: InitiativeEntry | null) => {
+    const battleId = entry ? battleIdForEntry(entry) : null;
+    const heroId = entry?.source === 'hero' ? entry.hero_id : null;
+    setActiveInitId(entry?.id ?? null);
+    await supabase.from('battle_state' as any).update({
+      active_initiative_id: entry?.id ?? null,
+      active_battle_id: battleId,
+      active_hero_id: heroId,
+    }).eq('id', true);
+  }, [battleIdForEntry]);
+
+  const stepActive = useCallback((dir: 1 | -1) => {
+    if (sortedInit.length === 0) return;
+    const idx = sortedInit.findIndex(e => e.id === activeInitId);
+    let next: number;
+    if (idx === -1) next = dir === 1 ? 0 : sortedInit.length - 1;
+    else next = (idx + dir + sortedInit.length) % sortedInit.length;
+    setActiveByEntry(sortedInit[next]);
+  }, [sortedInit, activeInitId, setActiveByEntry]);
+
+  // Active battle_monster (for green highlight on cards)
+  const activeBattleMonsterId = (() => {
+    const entry = initEntries.find(e => e.id === activeInitId);
+    if (!entry) return null;
+    return battleIdForEntry(entry);
+  })();
 
   const selectedM = monsters.find(m => m.id === selectedMonster);
   const conLo = selectedM ? (selectedM.con_min ?? selectedM.con) : 0;
