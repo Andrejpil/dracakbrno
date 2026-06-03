@@ -208,6 +208,10 @@ export default function MapPage() {
     lastPosWriteRef.current[key] = now;
     return true;
   }
+  // Active initiative target (for green highlight on map)
+  const [activeBattleId, setActiveBattleId] = useState<string | null>(null);
+  // Channel ref for visibility broadcasts (admin → viewers when beast is hidden again)
+  const visibilityChRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   // Temp settings form
   const [tempSettings, setTempSettings] = useState<MapSettings>(DEFAULT_SETTINGS);
