@@ -40,6 +40,7 @@ export default function BattlePage() {
   const [initEntries, setInitEntries] = useState<InitiativeEntry[]>([]);
   const [npcName, setNpcName] = useState('');
   const [npcValue, setNpcValue] = useState(0);
+  const [activeInitId, setActiveInitId] = useState<string | null>(null);
 
   const loadInitiative = useCallback(async () => {
     const { data } = await supabase.from('initiative_entries').select('*');
