@@ -4,7 +4,7 @@ import { calculateHP, calculateXP } from '@/lib/gameData';
 import { supabase } from '@/integrations/supabase/client';
 import HPBar from '@/components/HPBar';
 import BonusBadge from '@/components/BonusBadge';
-import { Plus, Trash2, Star, ChevronUp, ChevronDown, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Star, ChevronUp, ChevronDown, UserPlus, SkipBack, SkipForward, Play } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
