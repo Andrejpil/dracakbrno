@@ -250,8 +250,9 @@ export default function BattlePage() {
           const state = getDmgState(m.battleId);
           const scaledXP = calculateXP(m.xp_reward, m.level);
           const isDead = m.currentHP <= 0;
+          const isActive = m.battleId === activeBattleMonsterId;
           return (
-            <div key={m.battleId} className={`bg-card rounded-md p-2 border border-border transition-opacity ${isDead ? 'opacity-60' : ''}`}>
+            <div key={m.battleId} className={`rounded-md p-2 border transition-all ${isActive ? 'bg-green-500/10 border-green-500 ring-2 ring-green-500' : 'bg-card border-border'} ${isDead ? 'opacity-60' : ''}`}>
               <div className="flex justify-between items-start mb-1.5 gap-1.5">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Avatar className={`h-12 w-12 rounded-md shrink-0 ${isDead ? 'grayscale' : ''}`}>
