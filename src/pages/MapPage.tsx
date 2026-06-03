@@ -341,6 +341,32 @@ export default function MapPage() {
     return () => { supabase.removeChannel(channel); };
   }, [user, activeMapId]);
 
+  // Broadcast channel: when admin hides a beast (revealed: true→false), viewers can't receive
+  // the postgres UPDATE because RLS hides the row from them. Push a broadcast so they remove it.
+  useEffect(() => {
+    const ch = supabase.channel('beast-visibility-bcast', { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'hide' }, ({ payload }: any) => {
+        setBeasts(prev => prev.filter(b => b.id !== payload.id));
+      });
+    ch.subscribe();
+    visibilityChRef.current = ch;
+    return () => { supabase.removeChannel(ch); visibilityChRef.current = null; };
+  }, []);
+
+  // Subscribe to shared battle_state (active initiative target for highlighting)
+  useEffect(() => {
+    let cancelled = false;
+    (supabase.from('battle_state' as any).select('active_battle_id').eq('id', true).maybeSingle() as any)
+      .then(({ data }: any) => { if (!cancelled) setActiveBattleId(data?.active_battle_id ?? null); });
+    const ch = supabase.channel('battle-state-map-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_state' }, (payload: any) => {
+        const r = payload.new || payload.old;
+        setActiveBattleId(r?.active_battle_id ?? null);
+      })
+      .subscribe();
+    return () => { cancelled = true; supabase.removeChannel(ch); };
+  }, []);
+
   function beastFromRow(r: any): MapBeast {
     return {
       id: r.id, map_id: r.map_id, monster_id: r.monster_id, battle_id: r.battle_id,
