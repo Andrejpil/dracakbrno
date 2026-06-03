@@ -927,6 +927,10 @@ export default function MapPage() {
   async function toggleBeastReveal(id: string, revealed: boolean) {
     await supabase.from('map_beasts').update({ revealed }).eq('id', id);
     setBeasts(prev => prev.map(b => b.id === id ? { ...b, revealed } : b));
+    if (!revealed && visibilityChRef.current) {
+      // Notify viewers (they can't see the postgres UPDATE because RLS now hides the row)
+      visibilityChRef.current.send({ type: 'broadcast', event: 'hide', payload: { id } });
+    }
   }
 
   function findBeastAt(mapX: number, mapY: number): string | null {
