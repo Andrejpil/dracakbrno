@@ -1369,12 +1369,16 @@ export default function MapPage() {
               const isHidden = !b.revealed;
               const isDead = b.current_hp <= 0;
               const size = (b.token_size ?? 22) / scale;
-              const borderColor = isDead ? '#6b7280' : '#dc2626';
+              const isActive = !!b.battle_id && b.battle_id === activeBattleId;
+              const borderColor = isActive ? '#22c55e' : (isDead ? '#6b7280' : '#dc2626');
               const img = monsterImageById(b.monster_id);
               const clipId = `beast-clip-${b.id}`;
               return (
                 <g key={b.id} style={{ pointerEvents: 'auto', cursor: editBeasts ? 'pointer' : 'pointer' }}
                   opacity={isHidden ? 0.5 : 1}>
+                  {isActive && (
+                    <circle cx={b.x} cy={b.y} r={size + 6 / scale} fill="none" stroke="#22c55e" strokeWidth={3 / scale} opacity={0.9} />
+                  )}
                   {(isAdmin || isEditor) && (
                     <circle cx={b.x} cy={b.y} r={b.reveal_radius} fill="none" stroke={borderColor} strokeWidth={1 / scale} strokeDasharray={`${3 / scale} ${5 / scale}`} opacity={0.3} />
                   )}
