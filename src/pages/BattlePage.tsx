@@ -185,35 +185,52 @@ export default function BattlePage() {
         <aside className="bg-card rounded-lg p-3 border border-border self-start sticky top-2 max-h-[calc(100vh-6rem)] overflow-auto">
           <div className="flex items-center justify-between mb-2">
             <h3 className="font-display text-base text-primary">Iniciativa</h3>
-            {editable && <button onClick={resetInit} title="Resetovat" className="text-xs text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>}
+            <div className="flex items-center gap-1">
+              {editable && sortedInit.length > 0 && (
+                <>
+                  <button onClick={() => stepActive(-1)} title="Předchozí" className="p-1 rounded text-muted-foreground hover:text-primary hover:bg-muted"><SkipBack size={14} /></button>
+                  <button onClick={() => stepActive(1)} title="Další" className="p-1 rounded text-primary hover:bg-primary/10"><SkipForward size={14} /></button>
+                </>
+              )}
+              {editable && <button onClick={resetInit} title="Resetovat" className="text-xs text-muted-foreground hover:text-destructive p-1"><Trash2 size={12} /></button>}
+            </div>
           </div>
           <div className="space-y-1 mb-3">
             {sortedInit.length === 0 && <p className="text-xs text-muted-foreground">Žádné záznamy.</p>}
-            {sortedInit.map(e => (
-              <div key={e.id} className="flex items-center gap-1 bg-muted/30 rounded px-1.5 py-1 border border-border">
+            {sortedInit.map(e => {
+              const isActive = e.id === activeInitId;
+              return (
+              <div key={e.id}
+                className={`flex items-center gap-1 rounded px-1.5 py-1 border transition-colors ${isActive ? 'bg-green-500/20 border-green-500 ring-1 ring-green-500' : 'bg-muted/30 border-border'}`}
+                onClick={editable ? () => setActiveByEntry(e) : undefined}
+                style={editable ? { cursor: 'pointer' } : undefined}
+              >
                 <span className={`text-sm font-bold w-9 text-center ${e.value > 0 ? 'text-bonus-positive' : e.value < 0 ? 'text-bonus-negative' : 'text-foreground'}`}>
                   {e.value > 0 ? `+${e.value}` : e.value}
                 </span>
-                <span className={`flex-1 text-xs truncate ${sourceColor(e.source)}`} title={e.name}>{e.name}</span>
+                {isActive && <Play size={10} className="text-green-500 shrink-0" />}
+                <span className={`flex-1 text-xs truncate ${isActive ? 'text-green-500 font-bold' : sourceColor(e.source)}`} title={e.name}>{e.name}</span>
                 {editable && (
                   <>
-                    <button onClick={() => updateInit(e.id, e.value + 1)} disabled={e.value >= INIT_MAX} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp size={12} /></button>
-                    <button onClick={() => updateInit(e.id, e.value - 1)} disabled={e.value <= INIT_MIN} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown size={12} /></button>
+                    <button onClick={ev => { ev.stopPropagation(); updateInit(e.id, e.value + 1); }} disabled={e.value >= INIT_MAX} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronUp size={12} /></button>
+                    <button onClick={ev => { ev.stopPropagation(); updateInit(e.id, e.value - 1); }} disabled={e.value <= INIT_MIN} className="p-0.5 text-muted-foreground hover:text-primary disabled:opacity-30"><ChevronDown size={12} /></button>
                     <Input
                       type="number"
                       min={INIT_MIN}
                       max={INIT_MAX}
                       className="h-6 w-12 text-xs px-1"
                       value={e.value}
+                      onClick={ev => ev.stopPropagation()}
                       onChange={ev => updateInit(e.id, parseInt(ev.target.value) || 0)}
                     />
                     {e.source !== 'hero' && (
-                      <button onClick={() => deleteInit(e.id)} className="p-0.5 text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>
+                      <button onClick={ev => { ev.stopPropagation(); deleteInit(e.id); }} className="p-0.5 text-muted-foreground hover:text-destructive"><Trash2 size={11} /></button>
                     )}
                   </>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
           {editable && (
             <div className="border-t border-border pt-2 space-y-1">
