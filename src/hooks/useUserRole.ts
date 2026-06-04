@@ -37,9 +37,13 @@ export function useUserRole() {
       { onConflict: 'id' }
     );
 
-    // Use server-side function for safe role assignment
-    const { data: assignedRole } = await supabase.rpc('assign_default_role', { p_user_id: user.id });
-    const currentRole = (assignedRole as AppRole) || 'viewer';
+    // Role is assigned automatically by the backend when the profile is created.
+    const { data: roleRow } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const currentRole = ((roleRow as any)?.role as AppRole) || 'viewer';
     setRole(currentRole);
 
     // Load permissions for this role
