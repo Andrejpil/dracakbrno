@@ -176,7 +176,13 @@ export default function MapPage() {
   const [editBeast, setEditBeast] = useState<MapBeast | null>(null);
   const [draggingBeast, setDraggingBeast] = useState<string | null>(null);
   const beastPressRef = useRef<{ id: string; timer: number } | null>(null);
-  const [monstersList, setMonstersList] = useState<{ id: string; name: string; con: number; xp_reward: number; is_unique: boolean; image_url: string }[]>([]);
+  const [monstersList, setMonstersList] = useState<{
+    id: string; name: string; str: number; con: number; dex: number; int: number; cha: number;
+    str_min?: number; str_max?: number; con_min?: number; con_max?: number; dex_min?: number; dex_max?: number;
+    int_min?: number; int_max?: number; cha_min?: number; cha_max?: number;
+    mp: number; attack: number; defense: number; xp_reward: number; special: string;
+    is_unique: boolean; image_url: string; hp_multiplier?: number;
+  }[]>([]);
   const monsterImageById = useCallback((id: string | null | undefined) => {
     if (!id) return '';
     return monstersList.find(m => m.id === id)?.image_url || '';
@@ -426,10 +432,19 @@ export default function MapPage() {
       supabase.from('map_fog_reveals').select('*'),
       supabase.from('profiles').select('id,email'),
       supabase.from('map_beasts').select('*').order('created_at'),
-      supabase.from('monsters').select('id,name,con,xp_reward,is_unique,image_url').order('name'),
+      supabase.from('monsters').select('id,name,str,con,dex,int,cha,str_min,str_max,con_min,con_max,dex_min,dex_max,int_min,int_max,cha_min,cha_max,mp,attack,defense,xp_reward,special,is_unique,image_url,hp_multiplier').order('name'),
     ]);
     setBeasts((bRes.data || []).map((b: any) => beastFromRow(b)));
-    setMonstersList((mnRes.data || []).map((m: any) => ({ id: m.id, name: m.name, con: m.con, xp_reward: m.xp_reward, is_unique: m.is_unique, image_url: m.image_url || '' })));
+    setMonstersList((mnRes.data || []).map((m: any) => ({
+      id: m.id, name: m.name, str: m.str ?? 10, con: m.con ?? 10, dex: m.dex ?? 10, int: m.int ?? 10, cha: m.cha ?? 10,
+      str_min: m.str_min ?? m.str ?? 10, str_max: m.str_max ?? m.str ?? 10,
+      con_min: m.con_min ?? m.con ?? 10, con_max: m.con_max ?? m.con ?? 10,
+      dex_min: m.dex_min ?? m.dex ?? 10, dex_max: m.dex_max ?? m.dex ?? 10,
+      int_min: m.int_min ?? m.int ?? 10, int_max: m.int_max ?? m.int ?? 10,
+      cha_min: m.cha_min ?? m.cha ?? 10, cha_max: m.cha_max ?? m.cha ?? 10,
+      mp: m.mp ?? 0, attack: m.attack ?? 0, defense: m.defense ?? 0, xp_reward: m.xp_reward ?? 0,
+      special: m.special ?? '', is_unique: m.is_unique ?? false, image_url: m.image_url || '', hp_multiplier: m.hp_multiplier ?? 1.0,
+    })));
 
     const pointsByRoute: Record<string, MapPoint[]> = {};
     (pRes.data || []).forEach((p: any) => {
