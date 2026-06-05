@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save } from 'lucide-react';
+import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save, BookOpen } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NPC_RACES, generateRandomName, type NPCRace, type NPCGender } from '@/lib/npcNames';
+import NPCNameEditor from '@/components/NPCNameEditor';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
