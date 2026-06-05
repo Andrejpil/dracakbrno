@@ -47,6 +47,7 @@ export default function NPCPage() {
   const [genGender, setGenGender] = useState<NPCGender>('random');
   const [genName, setGenName] = useState('');
   const [genForm, setGenForm] = useState({ location: '', description: '', relationship: '' });
+  const [nameEditorOpen, setNameEditorOpen] = useState(false);
 
   useEffect(() => {
     if (user) loadNpcs();
