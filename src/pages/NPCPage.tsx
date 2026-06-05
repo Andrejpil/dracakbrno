@@ -179,6 +179,9 @@ export default function NPCPage() {
         <h2 className="text-2xl font-display text-primary">NPC postavy</h2>
         {editable && (
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setNameEditorOpen(true)}>
+              <BookOpen size={16} className="mr-1" /> Editor jmen
+            </Button>
             <Button size="sm" variant="outline" onClick={openGenerator}>
               <Wand2 size={16} className="mr-1" /> Generátor NPC
             </Button>
