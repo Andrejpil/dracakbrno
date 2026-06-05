@@ -376,6 +376,8 @@ export default function NPCPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <NPCNameEditor open={nameEditorOpen} onOpenChange={setNameEditorOpen} />
     </div>
   );
 }
