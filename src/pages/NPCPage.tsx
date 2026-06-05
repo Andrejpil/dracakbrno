@@ -129,26 +129,26 @@ export default function NPCPage() {
   }
 
   // Generator functions
-  function openGenerator() {
+  async function openGenerator() {
     setGenRace('Člověk');
     setGenGender('random');
-    setGenName(generateRandomName('Člověk', 'random'));
+    setGenName(await generateRandomName('Člověk', 'random'));
     setGenForm({ location: '', description: '', relationship: '' });
     setGeneratorOpen(true);
   }
 
-  function rerollName() {
-    setGenName(generateRandomName(genRace, genGender));
+  async function rerollName() {
+    setGenName(await generateRandomName(genRace, genGender));
   }
 
-  function handleRaceChange(race: string) {
+  async function handleRaceChange(race: string) {
     setGenRace(race as NPCRace);
-    setGenName(generateRandomName(race as NPCRace, genGender));
+    setGenName(await generateRandomName(race as NPCRace, genGender));
   }
 
-  function handleGenderChange(gender: string) {
+  async function handleGenderChange(gender: string) {
     setGenGender(gender as NPCGender);
-    setGenName(generateRandomName(genRace, gender as NPCGender));
+    setGenName(await generateRandomName(genRace, gender as NPCGender));
   }
 
   async function handleSaveGenerated() {
