@@ -644,6 +644,33 @@ export type Database = {
         }
         Relationships: []
       }
+      npc_name_parts: {
+        Row: {
+          created_at: string
+          gender: string
+          id: string
+          part: string
+          race: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          gender: string
+          id?: string
+          part: string
+          race: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          gender?: string
+          id?: string
+          part?: string
+          race?: string
+          value?: string
+        }
+        Relationships: []
+      }
       npcs: {
         Row: {
           created_at: string

@@ -1,217 +1,54 @@
-const NAME_POOLS: Record<string, { male: string[]; female: string[] }> = {
-  Člověk: {
-    male: [
-      'Radek', 'Jan', 'Petr', 'Karel', 'Marek', 'Tomáš', 'Lukáš', 'David', 'Jakub', 'Martin',
-      'Ondřej', 'Pavel', 'Michal', 'Filip', 'Dominik', 'Adam', 'Daniel', 'Vojtěch', 'Patrik', 'Roman',
-      'Štěpán', 'Zdeněk', 'Bedřich', 'Arnošt', 'Havel', 'Bořek', 'Ctibor', 'Dobroslav', 'Jaromír', 'Vladimír',
-      'Jaroslav', 'Miloslav', 'Svatopluk', 'Rostislav', 'Boleslav', 'Přemysl', 'Vratislav', 'Oldřich', 'Břetislav', 'Soběslav',
-      'Dalibor', 'Miloš', 'Vilém', 'Jindřich', 'Leopold', 'Viktor', 'Hugo', 'Bruno', 'Oskar', 'Tobiáš',
-      'Vít', 'Šimon', 'Matěj', 'Kryštof', 'Václav', 'Aleš', 'Jiří', 'Ivan', 'Milan', 'Stanislav',
-      'Bohumil', 'Čestmír', 'Dušan', 'Eduard', 'František', 'Gustav', 'Hynek', 'Igor', 'Josef', 'Kamil',
-      'Libor', 'Mojmír', 'Norbert', 'Otakar', 'Pravoslav', 'Radovan', 'Slavomír', 'Tibor', 'Urban', 'Vincenc',
-      'Wolfgang', 'Xaver', 'Zbyněk', 'Antonín', 'Blažej', 'Ctirad', 'Dobromil', 'Emil', 'Felix', 'Gracián',
-      'Herbert', 'Ivo', 'Jáchym', 'Konrád', 'Ladislav', 'Marian', 'Nikolas', 'Oldřich', 'Prokop', 'René',
-    ],
-    female: [
-      'Anna', 'Lucie', 'Petra', 'Jana', 'Eva', 'Tereza', 'Veronika', 'Kateřina', 'Barbora', 'Kristýna',
-      'Nikola', 'Eliška', 'Karolína', 'Simona', 'Lenka', 'Monika', 'Hana', 'Iveta', 'Alena', 'Klára',
-      'Božena', 'Dagmar', 'Helena', 'Ivana', 'Jitka', 'Ludmila', 'Markéta', 'Nela', 'Olga', 'Pavla',
-      'Růžena', 'Sylvie', 'Vendula', 'Zora', 'Milada', 'Doubravka', 'Vlasta', 'Libuše', 'Blanka', 'Anežka',
-      'Drahomíra', 'Gabriela', 'Hedvika', 'Irena', 'Jolana', 'Květa', 'Lada', 'Miroslava', 'Naděžda', 'Otýlie',
-      'Patricie', 'Radka', 'Soňa', 'Taťána', 'Uršula', 'Věra', 'Zdena', 'Adéla', 'Berenika', 'Cecílie',
-      'Dana', 'Emílie', 'Filomena', 'Gertruda', 'Hermína', 'Inka', 'Jaroslava', 'Kornélie', 'Leontýna', 'Magdaléna',
-      'Natálie', 'Oldřiška', 'Přemyslava', 'Renáta', 'Stanislava', 'Terezie', 'Viola', 'Xenie', 'Zuzana', 'Albína',
-      'Bronislava', 'Ctislava', 'Dorota', 'Elvíra', 'Františka', 'Gita', 'Herta', 'Ilona', 'Josefa', 'Kamila',
-      'Liboslava', 'Marta', 'Nina', 'Otilie', 'Pia', 'Regina', 'Sára', 'Tamara', 'Viktorie', 'Zdenka',
-    ],
-  },
-  Elf: {
-    male: [
-      'Elalis', 'Faelar', 'Aelar', 'Therion', 'Sylvar', 'Lorion', 'Eryndor', 'Calen', 'Vaelis', 'Thalion',
-      'Arannis', 'Lethariel', 'Myrion', 'Kaelith', 'Fenrion', 'Elyndar', 'Raelis', 'Tarian', 'Saelorn', 'Nytherion',
-      'Aerindel', 'Belathon', 'Caelindor', 'Daerion', 'Elathor', 'Firendir', 'Gaelorn', 'Haelar', 'Isilorn', 'Jorelith',
-      'Kaelorin', 'Lithrandil', 'Mirethil', 'Nelarion', 'Orendil', 'Pharion', 'Quelindor', 'Rilanthir', 'Saelorin', 'Tyranthel',
-      'Ulindor', 'Vaelindor', 'Wyndarion', 'Xaltheris', 'Yllarion', 'Zephyriel', 'Aelindor', 'Baelorin', 'Celathir', 'Dylarion',
-      'Elathien', 'Faelindor', 'Gyltheris', 'Hylarion', 'Ilverion', 'Jaelorn', 'Kylarion', 'Lythrandel', 'Maelindor', 'Nylarion',
-      'Olyndor', 'Pylarion', 'Quelathir', 'Rylarion', 'Sylarion', 'Thylarion', 'Ularion', 'Vylarion', 'Wylarion', 'Xylarion',
-      'Ylarion', 'Zylarion', 'Aethirion', 'Belyndor', 'Caelathir', 'Draelion', 'Ethirion', 'Fylarion', 'Galyndor', 'Hyrathiel',
-      'Ithlarion', 'Jylarion', 'Kyrelion', 'Lyrelion', 'Myrelion', 'Nyrelion', 'Orelion', 'Pyrelion', 'Qyrelion', 'Ryrelion',
-      'Syrelion', 'Tyrelion', 'Urelion', 'Vyrelion', 'Wyrelion', 'Xyrelion', 'Yyrelion', 'Zyrelion', 'Aerelion', 'Berelion',
-    ],
-    female: [
-      'Liawen', 'Sylvara', 'Naivara', 'Aelene', 'Elowen', 'Faelivrin', 'Myrielle', 'Vaelora', 'Thalira', 'Arwenis',
-      'Lethiel', 'Nymeria', 'Serelis', 'Elaria', 'Calithra', 'Saelene', 'Yllara', 'Fenria', 'Raelith', 'Althaea',
-      'Aerindla', 'Belathiel', 'Caelindra', 'Daeriel', 'Elathora', 'Firendiel', 'Gaelorna', 'Haelara', 'Isilorna', 'Jorelitha',
-      'Kaeloria', 'Lithrandia', 'Mirethiel', 'Nelaria', 'Orendia', 'Phariel', 'Quelindra', 'Rilanthiel', 'Saeloria', 'Tyranthiel',
-      'Ulindra', 'Vaelindra', 'Wyndaria', 'Xaltheria', 'Yllaria', 'Zephyria', 'Aelindra', 'Baeloria', 'Celathiel', 'Dylaria',
-      'Elathiena', 'Faelindra', 'Gyltheria', 'Hylaria', 'Ilveria', 'Jaelorna', 'Kylaria', 'Lythrandia', 'Maelindra', 'Nylaria',
-      'Olyndra', 'Pylaria', 'Quelathiel', 'Rylaria', 'Sylaria', 'Thylaria', 'Ularia', 'Vylaria', 'Wylaria', 'Xylaria',
-      'Ylaria', 'Zylaria', 'Aethiria', 'Belyndra', 'Caelathiel', 'Draelia', 'Ethiria', 'Fylaria', 'Galyndra', 'Hyrathiel',
-      'Ithlaria', 'Jylaria', 'Kyrelia', 'Lyrelia', 'Myrelia', 'Nyrelia', 'Orelia', 'Pyrelia', 'Qyrelia', 'Ryrelia',
-      'Syrelia', 'Tyrelia', 'Urelia', 'Vyrelia', 'Wyrelia', 'Xyrelia', 'Yyrelia', 'Zyrelia', 'Aerelia', 'Berelia',
-    ],
-  },
-  Trpaslík: {
-    male: [
-      'Bolgur Kamenotepec', 'Daldur Dlouhovous', 'Thrain Železoruký', 'Grom Skalníštít', 'Brokk Zlatokop',
-      'Kargun Kladivoruký', 'Dorin Hlubinář', 'Barag Runotep', 'Thorin Ocelovous', 'Fundin Kamennáhlava',
-      'Orik Kamenotepec', 'Harbek Dlouhovous', 'Kazmur Železoruký', 'Rangrim Skalníštít', 'Dolgar Zlatokop',
-      'Grimnar Kladivoruký', 'Baldrik Hlubinář', 'Thorgar Runotep', 'Keldor Ocelovous', 'Morgran Kamennáhlava',
-      'Bruenor Kamenotepec', 'Dagnir Dlouhovous', 'Thorgrim Železoruký', 'Guldur Skalníštít', 'Borak Zlatokop',
-      'Kramlin Kladivoruký', 'Dargun Hlubinář', 'Belgar Runotep', 'Tordek Ocelovous', 'Fargrim Kamennáhlava',
-      'Oskar Kamenotepec', 'Hegrim Dlouhovous', 'Korgar Železoruký', 'Rurik Skalníštít', 'Duergar Zlatokop',
-      'Glorin Kladivoruký', 'Barak Hlubinář', 'Thargrim Runotep', 'Kragnar Ocelovous', 'Modgan Kamennáhlava',
-      'Brogar Kamenotepec', 'Dalrim Dlouhovous', 'Thurmin Železoruký', 'Grolin Skalníštít', 'Bardin Zlatokop',
-      'Kelgar Kladivoruký', 'Dorgin Hlubinář', 'Belgrim Runotep', 'Torgar Ocelovous', 'Falgar Kamennáhlava',
-      'Olvir Kamenotepec', 'Hurgar Dlouhovous', 'Kolrim Železoruký', 'Rognar Skalníštít', 'Dulgar Zlatokop',
-      'Galmin Kladivoruký', 'Bordin Hlubinář', 'Thargor Runotep', 'Krognar Ocelovous', 'Margrim Kamennáhlava',
-      'Brumgar Kamenotepec', 'Dorgrim Dlouhovous', 'Thuldin Železoruký', 'Grumbar Skalníštít', 'Bolgar Zlatokop',
-      'Kargrim Kladivoruký', 'Durgin Hlubinář', 'Belgran Runotep', 'Tormin Ocelovous', 'Faldur Kamennáhlava',
-      'Ondrik Kamenotepec', 'Hogrim Dlouhovous', 'Koldur Železoruký', 'Ragrim Skalníštít', 'Dolgrim Zlatokop',
-      'Grudnar Kladivoruký', 'Barduk Hlubinář', 'Thorgal Runotep', 'Krimgar Ocelovous', 'Moldrin Kamennáhlava',
-      'Bragar Kamenotepec', 'Dalgrim Dlouhovous', 'Thurgar Železoruký', 'Groldin Skalníštít', 'Borgrim Zlatokop',
-      'Keldrim Kladivoruký', 'Dorgal Hlubinář', 'Belgor Runotep', 'Torgrim Ocelovous', 'Falrim Kamennáhlava',
-      'Olgrim Kamenotepec', 'Huldrik Dlouhovous', 'Kolgar Železoruký', 'Rogrim Skalníštít', 'Dulgrim Zlatokop',
-      'Galdur Kladivoruký', 'Bormak Hlubinář', 'Tharmin Runotep', 'Krogrim Ocelovous', 'Margal Kamennáhlava',
-    ],
-    female: [
-      'Helga Kamenotepka', 'Bruni Dlouhovouska', 'Dagna Železoruká', 'Hilda Skalníštítka', 'Torbera Zlatokopka',
-      'Vistra Kladivoruká', 'Katra Hlubinářka', 'Orla Runotepka', 'Brynja Ocelovouska', 'Sigrid Kamennáhlavka',
-      'Dorga Kamenotepka', 'Thora Dlouhovouska', 'Grima Železoruká', 'Eldra Skalníštítka', 'Borna Zlatokopka',
-      'Frida Kladivoruká', 'Ragna Hlubinářka', 'Gudrun Ocelovouska', 'Hlinna Kamennáhlavka', 'Astrid Runotepka',
-      'Balda Kamenotepka', 'Dagny Dlouhovouska', 'Gerda Železoruká', 'Hulda Skalníštítka', 'Torga Zlatokopka',
-      'Valda Kladivoruká', 'Kelda Hlubinářka', 'Olda Runotepka', 'Brigda Ocelovouska', 'Svala Kamennáhlavka',
-      'Durga Kamenotepka', 'Thurga Dlouhovouska', 'Grunda Železoruká', 'Elga Skalníštítka', 'Bolda Zlatokopka',
-      'Frigga Kladivoruká', 'Rinda Hlubinářka', 'Gunna Ocelovouska', 'Herta Kamennáhlavka', 'Asta Runotepka',
-      'Berta Kamenotepka', 'Disa Dlouhovouska', 'Gerta Železoruká', 'Herda Skalníštítka', 'Tilda Zlatokopka',
-      'Velda Kladivoruká', 'Kilda Hlubinářka', 'Orna Runotepka', 'Brita Ocelovouska', 'Solda Kamennáhlavka',
-      'Dalga Kamenotepka', 'Thilda Dlouhovouska', 'Grimda Železoruká', 'Elda Skalníštítka', 'Borga Zlatokopka',
-      'Froda Kladivoruká', 'Ragna Hlubinářka', 'Gulda Ocelovouska', 'Hildra Kamennáhlavka', 'Asla Runotepka',
-      'Belga Kamenotepka', 'Dirga Dlouhovouska', 'Gorla Železoruká', 'Hurda Skalníštítka', 'Tolda Zlatokopka',
-      'Vilda Kladivoruká', 'Kolda Hlubinářka', 'Odla Runotepka', 'Brunhild Ocelovouska', 'Skulda Kamennáhlavka',
-      'Dagra Kamenotepka', 'Thorla Dlouhovouska', 'Grilda Železoruká', 'Elsa Skalníštítka', 'Brolda Zlatokopka',
-      'Fulda Kladivoruká', 'Rolda Hlubinářka', 'Gurla Ocelovouska', 'Halda Kamennáhlavka', 'Arka Runotepka',
-      'Berga Kamenotepka', 'Dolga Dlouhovouska', 'Galda Železoruká', 'Helda Skalníštítka', 'Tirga Zlatokopka',
-      'Volda Kladivoruká', 'Karga Hlubinářka', 'Orgla Runotepka', 'Broga Ocelovouska', 'Salda Kamennáhlavka',
-      'Derga Kamenotepka', 'Tulda Dlouhovouska', 'Greda Železoruká', 'Erga Skalníštítka', 'Burda Zlatokopka',
-      'Fyrda Kladivoruká', 'Rurda Hlubinářka', 'Galga Ocelovouska', 'Hirda Kamennáhlavka', 'Arda Runotepka',
-    ],
-  },
-  Barbar: {
-    male: [
-      'Bor', 'Grud', 'Thok', 'Ragnar', 'Ulf', 'Bjorn', 'Karg', 'Draven', 'Skar', 'Hrodgar',
-      'Varg', 'Sten', 'Orm', 'Halvar', 'Tor', 'Brand', 'Ivar', 'Leif', 'Arngrim', 'Rurik',
-      'Gromm', 'Thorg', 'Ulfgar', 'Korak', 'Brak', 'Dragan', 'Sven', 'Hrothgar', 'Wulfric', 'Gorath',
-      'Tormund', 'Kargoth', 'Volkar', 'Grimjaw', 'Boran', 'Grudak', 'Thoran', 'Ragnok', 'Ulfric', 'Bjornir',
-      'Kargan', 'Dravok', 'Skarn', 'Hrodgrim', 'Vargan', 'Stengar', 'Ormak', 'Halvir', 'Toran', 'Brandan',
-      'Ivark', 'Leifar', 'Arngar', 'Rugan', 'Gromak', 'Thorgrim', 'Ulfgard', 'Korag', 'Brakkar', 'Dragun',
-      'Svenir', 'Hrothgrim', 'Wulfgar', 'Gorathak', 'Tormak', 'Kargon', 'Volkir', 'Grimgor', 'Borak', 'Grudgar',
-      'Thorak', 'Raggan', 'Ulfor', 'Bjornak', 'Kargir', 'Dravar', 'Skargor', 'Hrodgrak', 'Vargor', 'Stengor',
-      'Ormgar', 'Halgor', 'Torgar', 'Brandor', 'Ivargor', 'Leifgor', 'Arngor', 'Ruggar', 'Gromgor', 'Thorgor',
-      'Ulfgor', 'Korgor', 'Brakgor', 'Dragor', 'Svengor', 'Hrothgor', 'Wulgor', 'Goragor', 'Torgor', 'Kargor',
-    ],
-    female: [
-      'Hilda', 'Brakka', 'Ugra', 'Freya', 'Astrid', 'Sigrun', 'Ylva', 'Brynhild', 'Kara', 'Runa',
-      'Thora', 'Lagertha', 'Eira', 'Gunnhild', 'Skadi', 'Vigdis', 'Helga', 'Ragna', 'Tove', 'Alva',
-      'Brunhilda', 'Sigrid', 'Thyra', 'Svanhild', 'Yrsa', 'Freyja', 'Hildra', 'Brakna', 'Ugrida', 'Frejya',
-      'Astrida', 'Sigruna', 'Ylvara', 'Brynda', 'Karana', 'Runhild', 'Thorhild', 'Lagerta', 'Eirna', 'Gunna',
-      'Skadira', 'Vigda', 'Helgana', 'Ragnhild', 'Tovild', 'Alvara', 'Brunna', 'Sigrida', 'Thyrana', 'Svana',
-      'Yrsana', 'Freydis', 'Hildruna', 'Brakara', 'Ugruna', 'Freyara', 'Astrana', 'Sigrila', 'Ylvana', 'Brynara',
-      'Karana', 'Runara', 'Thorana', 'Lagara', 'Eirhild', 'Gunnara', 'Skadana', 'Vigara', 'Helgara', 'Ragara',
-      'Tovara', 'Alvana', 'Brunara', 'Sigrana', 'Thyrhild', 'Svanhilda', 'Yrsara', 'Freydara', 'Hildana', 'Brakuna',
-      'Ugrala', 'Freyala', 'Astrana', 'Sigrala', 'Ylvala', 'Brynala', 'Karala', 'Runala', 'Thorala', 'Lagala',
-      'Eirala', 'Gunnala', 'Skadala', 'Vigala', 'Helgala', 'Ragala', 'Tovana', 'Alvala', 'Brunala', 'Sigala',
-    ],
-  },
-  Gnóm: {
-    male: [
-      'Nib', 'Zook', 'Bimble', 'Tink', 'Fizz', 'Wizzle', 'Nackle', 'Pock', 'Rindle', 'Zindle',
-      'Marnix', 'Boddynock', 'Dimble', 'Fizzle', 'Gimwick', 'Jebeddo', 'Wobble', 'Nix', 'Tumble', 'Zarn',
-      'Bink', 'Crick', 'Dink', 'Flink', 'Grick', 'Hink', 'Jink', 'Krick', 'Link', 'Mink',
-      'Nink', 'Orick', 'Pink', 'Qrick', 'Rink', 'Slink', 'Trick', 'Vink', 'Wink', 'Xink',
-      'Yink', 'Zink', 'Bibble', 'Cibble', 'Dibble', 'Fibble', 'Gibble', 'Hibble', 'Jibble', 'Kibble',
-      'Libble', 'Mibble', 'Nibble', 'Oibble', 'Pibble', 'Ribble', 'Sibble', 'Tibble', 'Vibble', 'Wibble',
-      'Bobbin', 'Cobbin', 'Dobbin', 'Fobbin', 'Gobbin', 'Hobbin', 'Jobbin', 'Kobbin', 'Lobbin', 'Mobbin',
-      'Nobbin', 'Pobbin', 'Robbin', 'Sobbin', 'Tobbin', 'Vobbin', 'Wobbin', 'Xobbin', 'Yobbin', 'Zobbin',
-      'Bicket', 'Cicket', 'Dicket', 'Ficket', 'Gicket', 'Hicket', 'Jicket', 'Kicket', 'Licket', 'Micket',
-      'Nicket', 'Picket', 'Ricket', 'Sicket', 'Ticket', 'Vicket', 'Wicket', 'Xicket', 'Yicket', 'Zicket',
-    ],
-    female: [
-      'Nissa', 'Tilli', 'Bimsy', 'Wren', 'Fira', 'Nackletta', 'Pippa', 'Zinna', 'Miri', 'Lilli',
-      'Fizzlea', 'Tocka', 'Nimblea', 'Wella', 'Zarla', 'Dindra', 'Bossa', 'Rinna', 'Faeza', 'Tinka',
-      'Binka', 'Cricka', 'Dinka', 'Flinka', 'Gricka', 'Hinka', 'Jinka', 'Kricka', 'Linka', 'Minka',
-      'Ninka', 'Oricka', 'Pinka', 'Qricka', 'Rinka', 'Slinka', 'Tricka', 'Vinka', 'Winka', 'Xinka',
-      'Yinka', 'Zinka', 'Bibbla', 'Cibbla', 'Dibbla', 'Fibbla', 'Gibbla', 'Hibbla', 'Jibbla', 'Kibbla',
-      'Libbla', 'Mibbla', 'Nibbla', 'Oibbla', 'Pibbla', 'Ribbla', 'Sibbla', 'Tibbla', 'Vibbla', 'Wibbla',
-      'Bobbina', 'Cobbina', 'Dobbina', 'Fobbina', 'Gobbina', 'Hobbina', 'Jobbina', 'Kobbina', 'Lobbina', 'Mobbina',
-      'Nobbina', 'Pobbina', 'Robbina', 'Sobbina', 'Tobbina', 'Vobbina', 'Wobbina', 'Xobbina', 'Yobbina', 'Zobbina',
-      'Bicketa', 'Cicketa', 'Dicketa', 'Ficketa', 'Gicketa', 'Hicketa', 'Jicketa', 'Kicketa', 'Licketa', 'Micketa',
-      'Nicketa', 'Picketa', 'Ricketa', 'Sicketa', 'Ticketa', 'Vicketa', 'Wicketa', 'Xicketa', 'Yicketa', 'Zicketa',
-    ],
-  },
-  Hobit: {
-    male: [
-      'Bilbo', 'Frodo', 'Samwise', 'Meriadoc', 'Peregrin', 'Tobold', 'Hamfast', 'Odo', 'Roscoe', 'Milo',
-      'Largo', 'Bungo', 'Folco', 'Hildigrim', 'Gorbadoc', 'Hobson', 'Wilibald', 'Hugo', 'Teddo', 'Posco',
-      'Adalbert', 'Bandobras', 'Cerdic', 'Dudo', 'Everard', 'Fastolph', 'Griffo', 'Holman', 'Isembard', 'Jolly',
-      'Kenton', 'Longo', 'Mosco', 'Nob', 'Otho', 'Polo', 'Rufus', 'Saradoc', 'Tolman', 'Wilcome',
-      'Aldric', 'Bodo', 'Cosmo', 'Drogo', 'Erling', 'Fosco', 'Gorbin', 'Halfred', 'Isengar', 'Jago',
-      'Kaldo', 'Lotho', 'Marcho', 'Naldo', 'Orgulas', 'Ponto', 'Robin', 'Sadoc', 'Togo', 'Waldo',
-      'Andwise', 'Balbo', 'Calbert', 'Dinodas', 'Elfstan', 'Ferumbras', 'Gerontius', 'Hamson', 'Ilbert', 'Jasper',
-      'Kendal', 'Ludo', 'Milo', 'Nibs', 'Olo', 'Paladin', 'Rollo', 'Sancho', 'Tibo', 'Wiseman',
-      'Anson', 'Bingo', 'Corin', 'Doderic', 'Erimond', 'Flambard', 'Gorhendad', 'Hob', 'Ingo', 'Jotho',
-      'Keldo', 'Lindor', 'Marmadoc', 'Naldo', 'Oddo', 'Pervinca', 'Rolo', 'Samlad', 'Tosto', 'Willo',
-    ],
-    female: [
-      'Rosie', 'Lobelia', 'Esmeralda', 'Primula', 'Daisy', 'Ruby', 'Marigold', 'Pansy', 'Myrtle', 'Lavender',
-      'Cora', 'Nora', 'Bella', 'Della', 'Flora', 'Hilda', 'Lila', 'Tansy', 'Vina', 'Zinnia',
-      'Amaranth', 'Beryl', 'Camellia', 'Dahlia', 'Eglantine', 'Fern', 'Golda', 'Heather', 'Iris', 'Jasmine',
-      'Lily', 'Magnolia', 'Nettle', 'Olive', 'Petunia', 'Rowan', 'Sage', 'Tulip', 'Violet', 'Willow',
-      'Angelica', 'Belinda', 'Clover', 'Daffodil', 'Estella', 'Felicity', 'Gilly', 'Holly', 'Ivy', 'Juniper',
-      'Laurel', 'Myrna', 'Nellie', 'Opal', 'Poppy', 'Rosa', 'Saffron', 'Thyme', 'Vera', 'Wisteria',
-      'Azalea', 'Blossom', 'Chrysanthemum', 'Daphne', 'Elm', 'Foxglove', 'Gardenia', 'Hazel', 'Indigo', 'Joy',
-      'Kira', 'Linnea', 'Meadow', 'Nutmeg', 'Orchid', 'Primrose', 'Rain', 'Stella', 'Terra', 'Uma',
-      'Valerian', 'Wren', 'Xylia', 'Yarrow', 'Zephyr', 'Ada', 'Bree', 'Cedar', 'Dora', 'Echo',
-      'Fawn', 'Grace', 'Hope', 'Isla', 'Jade', 'Kale', 'Luna', 'Maple', 'Nell', 'Oona',
-    ],
-  },
-  Obr: {
-    male: [
-      'Grum', 'Thok', 'Bragg', 'Mog', 'Drog', 'Ugmar', 'Krug', 'Gorn', 'Blarg', 'Thrag',
-      'Ugg', 'Vorg', 'Druk', 'Mogar', 'Ruk', 'Thrum', 'Grog', 'Bruk', 'Zog', 'Krar',
-      'Grumak', 'Thokkar', 'Bragor', 'Mogul', 'Drogar', 'Ugrak', 'Krugar', 'Gornak', 'Blargor', 'Thragor',
-      'Uggor', 'Vorgar', 'Drukar', 'Mogruk', 'Rukar', 'Thrumak', 'Grogar', 'Brukar', 'Zogar', 'Kragor',
-      'Grumbar', 'Thokgrim', 'Bragmor', 'Mograth', 'Drogmak', 'Ugmork', 'Krugmak', 'Gornak', 'Blargmok', 'Thragmor',
-      'Uggmok', 'Vorgmak', 'Drukmor', 'Mogrimak', 'Rukmor', 'Thrumgor', 'Grogmak', 'Brukmor', 'Zogmak', 'Krarmor',
-      'Gash', 'Thud', 'Brag', 'Mok', 'Drak', 'Ugh', 'Krak', 'Gork', 'Blak', 'Thrak',
-      'Uk', 'Vok', 'Dak', 'Mak', 'Rak', 'Trak', 'Grak', 'Bak', 'Zak', 'Kak',
-      'Grumok', 'Thokak', 'Bragak', 'Mogok', 'Drogok', 'Ugmak', 'Krugok', 'Gornak', 'Blargok', 'Thragok',
-      'Uggok', 'Vorgok', 'Drukok', 'Mogrok', 'Rukok', 'Thrumok', 'Grogok', 'Brukok', 'Zogok', 'Krarok',
-    ],
-    female: [
-      'Gruma', 'Thoka', 'Braga', 'Moga', 'Droga', 'Ugma', 'Kruga', 'Gorna', 'Blarga', 'Thraga',
-      'Uggra', 'Vorga', 'Druka', 'Mogara', 'Ruka', 'Thruma', 'Groga', 'Bruka', 'Zoga', 'Krara',
-      'Grumaka', 'Thokkara', 'Bragora', 'Mogula', 'Drogara', 'Ugraka', 'Krugara', 'Gornaka', 'Blargora', 'Thragora',
-      'Uggora', 'Vorgara', 'Drukara', 'Mogruka', 'Rukara', 'Thrumaka', 'Grogara', 'Brukara', 'Zogara', 'Kragora',
-      'Grumbara', 'Thokgrima', 'Bragmora', 'Mogratha', 'Drogmaka', 'Ugmorka', 'Krugmaka', 'Gornaka', 'Blargmoka', 'Thragmora',
-      'Uggmoka', 'Vorgmaka', 'Drukmora', 'Mogrimaka', 'Rukmora', 'Thrumgora', 'Grogmaka', 'Brukmora', 'Zogmaka', 'Krarmora',
-      'Gasha', 'Thuda', 'Braga', 'Moka', 'Draka', 'Ugha', 'Kraka', 'Gorka', 'Blaka', 'Thraka',
-      'Uka', 'Voka', 'Daka', 'Maka', 'Raka', 'Traka', 'Graka', 'Baka', 'Zaka', 'Kaka',
-      'Grumoka', 'Thokaka', 'Bragaka', 'Mogoka', 'Drogoka', 'Ugmaka', 'Krugoka', 'Gornaka', 'Blargoka', 'Thragoka',
-      'Uggoka', 'Vorgoka', 'Drukoka', 'Mogroka', 'Rukoka', 'Thrumoka', 'Grogoka', 'Brukoka', 'Zogoka', 'Kraroka',
-    ],
-  },
-};
+import { supabase } from '@/integrations/supabase/client';
 
-export type NPCRace = keyof typeof NAME_POOLS;
-
-export const NPC_RACES = Object.keys(NAME_POOLS) as NPCRace[];
-
+export const NPC_RACES = ['Člověk', 'Elf', 'Trpaslík', 'Barbar', 'Gnóm', 'Hobit', 'Obr'] as const;
+export type NPCRace = typeof NPC_RACES[number];
 export type NPCGender = 'male' | 'female' | 'random';
+export type NamePart = 'first' | 'last';
 
-export function generateRandomName(race: NPCRace, gender: NPCGender = 'random'): string {
-  const pool = NAME_POOLS[race];
-  const g = gender === 'random' ? (Math.random() < 0.5 ? 'male' : 'female') : gender;
-  const names = pool[g];
-  return names[Math.floor(Math.random() * names.length)];
+export interface NamePartRow {
+  id: string;
+  race: string;
+  gender: 'male' | 'female';
+  part: NamePart;
+  value: string;
+}
+
+let cache: NamePartRow[] | null = null;
+let cachePromise: Promise<NamePartRow[]> | null = null;
+
+export async function loadNameParts(force = false): Promise<NamePartRow[]> {
+  if (!force && cache) return cache;
+  if (!force && cachePromise) return cachePromise;
+  cachePromise = (async () => {
+    const { data } = await supabase.from('npc_name_parts').select('*').order('value');
+    cache = (data || []) as NamePartRow[];
+    cachePromise = null;
+    return cache;
+  })();
+  return cachePromise;
+}
+
+export function invalidateNameCache() {
+  cache = null;
+  cachePromise = null;
+}
+
+function pick<T>(arr: T[]): T | undefined {
+  if (!arr.length) return undefined;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+export async function generateRandomName(race: NPCRace, gender: NPCGender = 'random'): Promise<string> {
+  const all = await loadNameParts();
+  const g: 'male' | 'female' = gender === 'random' ? (Math.random() < 0.5 ? 'male' : 'female') : gender;
+  const firsts = all.filter(r => r.race === race && r.gender === g && r.part === 'first');
+  const lasts = all.filter(r => r.race === race && r.part === 'last' && (r.gender === g || true));
+  // last name: prefer same gender if exists, otherwise any
+  const sameGenderLasts = lasts.filter(r => r.gender === g);
+  const lastsPool = sameGenderLasts.length ? sameGenderLasts : lasts;
+
+  const first = pick(firsts)?.value;
+  if (!first) return '???';
+  const last = pick(lastsPool)?.value;
+  return last ? `${first} ${last}` : first;
 }

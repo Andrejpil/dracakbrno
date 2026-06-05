@@ -9,9 +9,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save } from 'lucide-react';
+import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save, BookOpen } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { NPC_RACES, generateRandomName, type NPCRace, type NPCGender } from '@/lib/npcNames';
+import NPCNameEditor from '@/components/NPCNameEditor';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
@@ -46,6 +47,7 @@ export default function NPCPage() {
   const [genGender, setGenGender] = useState<NPCGender>('random');
   const [genName, setGenName] = useState('');
   const [genForm, setGenForm] = useState({ location: '', description: '', relationship: '' });
+  const [nameEditorOpen, setNameEditorOpen] = useState(false);
 
   useEffect(() => {
     if (user) loadNpcs();
@@ -129,26 +131,26 @@ export default function NPCPage() {
   }
 
   // Generator functions
-  function openGenerator() {
+  async function openGenerator() {
     setGenRace('Člověk');
     setGenGender('random');
-    setGenName(generateRandomName('Člověk', 'random'));
+    setGenName(await generateRandomName('Člověk', 'random'));
     setGenForm({ location: '', description: '', relationship: '' });
     setGeneratorOpen(true);
   }
 
-  function rerollName() {
-    setGenName(generateRandomName(genRace, genGender));
+  async function rerollName() {
+    setGenName(await generateRandomName(genRace, genGender));
   }
 
-  function handleRaceChange(race: string) {
+  async function handleRaceChange(race: string) {
     setGenRace(race as NPCRace);
-    setGenName(generateRandomName(race as NPCRace, genGender));
+    setGenName(await generateRandomName(race as NPCRace, genGender));
   }
 
-  function handleGenderChange(gender: string) {
+  async function handleGenderChange(gender: string) {
     setGenGender(gender as NPCGender);
-    setGenName(generateRandomName(genRace, gender as NPCGender));
+    setGenName(await generateRandomName(genRace, gender as NPCGender));
   }
 
   async function handleSaveGenerated() {
@@ -177,6 +179,9 @@ export default function NPCPage() {
         <h2 className="text-2xl font-display text-primary">NPC postavy</h2>
         {editable && (
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setNameEditorOpen(true)}>
+              <BookOpen size={16} className="mr-1" /> Editor jmen
+            </Button>
             <Button size="sm" variant="outline" onClick={openGenerator}>
               <Wand2 size={16} className="mr-1" /> Generátor NPC
             </Button>
@@ -371,6 +376,8 @@ export default function NPCPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <NPCNameEditor open={nameEditorOpen} onOpenChange={setNameEditorOpen} />
     </div>
   );
 }
