@@ -19,15 +19,12 @@ let cachePromise: Promise<NamePartRow[]> | null = null;
 export async function loadNameParts(force = false): Promise<NamePartRow[]> {
   if (!force && cache) return cache;
   if (!force && cachePromise) return cachePromise;
-  cachePromise = supabase
-    .from('npc_name_parts')
-    .select('*')
-    .order('value')
-    .then(({ data }) => {
-      cache = (data || []) as NamePartRow[];
-      cachePromise = null;
-      return cache;
-    });
+  cachePromise = (async () => {
+    const { data } = await supabase.from('npc_name_parts').select('*').order('value');
+    cache = (data || []) as NamePartRow[];
+    cachePromise = null;
+    return cache;
+  })();
   return cachePromise;
 }
 
