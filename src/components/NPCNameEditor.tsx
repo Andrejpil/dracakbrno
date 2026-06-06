@@ -94,9 +94,21 @@ export default function NPCNameEditor({ open, onOpenChange }: Props) {
         nameId = ins.id;
       }
 
-      // link races (ignore conflicts)
+      // link races — use insert with ignoreDuplicates (link table has no UPDATE policy)
       const links = Array.from(newRaceIds).map(race_id => ({ name_id: nameId!, race_id }));
-      await supabase.from('npc_name_races').upsert(links, { onConflict: 'name_id,race_id' });
+      const { error: linkErr } = await supabase
+        .from('npc_name_races')
+        .insert(links, { count: 'exact' } as any);
+      if (linkErr && !linkErr.message.includes('duplicate')) {
+        // try one-by-one fallback to skip duplicates
+        for (const l of links) {
+          await supabase.from('npc_name_races').insert(l).then(({ error }) => {
+            if (error && !error.message.includes('duplicate')) {
+              toast({ title: 'Chyba propojení rasy', description: error.message, variant: 'destructive' });
+            }
+          });
+        }
+      }
     }
 
     setNewValue('');
@@ -107,7 +119,7 @@ export default function NPCNameEditor({ open, onOpenChange }: Props) {
   async function handleDelete(id: string) {
     const { error } = await supabase.from('npc_names').delete().eq('id', id);
     if (error) {
-      toast({ title: 'Chyba při mazání', variant: 'destructive' });
+      toast({ title: 'Chyba při mazání', description: error.message, variant: 'destructive' });
       return;
     }
     setNames(prev => prev.filter(n => n.id !== id));
@@ -115,21 +127,38 @@ export default function NPCNameEditor({ open, onOpenChange }: Props) {
   }
 
   async function toggleRaceForName(name: NameRow, raceId: string) {
-    if (name.race_ids.includes(raceId)) {
-      await supabase
-        .from('npc_name_races')
-        .delete()
-        .eq('name_id', name.id)
-        .eq('race_id', raceId);
-    } else {
-      await supabase
-        .from('npc_name_races')
-        .insert({ name_id: name.id, race_id: raceId });
+    const has = name.race_ids.includes(raceId);
+    // Optimistic UI update
+    setNames(prev => prev.map(n => n.id === name.id
+      ? { ...n, race_ids: has ? n.race_ids.filter(r => r !== raceId) : [...n.race_ids, raceId] }
+      : n
+    ));
+    const { error } = has
+      ? await supabase.from('npc_name_races').delete().eq('name_id', name.id).eq('race_id', raceId)
+      : await supabase.from('npc_name_races').insert({ name_id: name.id, race_id: raceId });
+    if (error) {
+      toast({ title: 'Chyba při ukládání', description: error.message, variant: 'destructive' });
+      // rollback
+      setNames(prev => prev.map(n => n.id === name.id
+        ? { ...n, race_ids: has ? [...n.race_ids, raceId] : n.race_ids.filter(r => r !== raceId) }
+        : n
+      ));
+      return;
     }
     invalidateNameCache();
-    const updated = await loadNames(true);
-    setNames(updated);
   }
+
+  async function changeGender(name: NameRow, gender: NameGender) {
+    setNames(prev => prev.map(n => n.id === name.id ? { ...n, gender } : n));
+    const { error } = await supabase.from('npc_names').update({ gender }).eq('id', name.id);
+    if (error) {
+      toast({ title: 'Chyba změny pohlaví', description: error.message, variant: 'destructive' });
+      setNames(prev => prev.map(n => n.id === name.id ? { ...n, gender: name.gender } : n));
+      return;
+    }
+    invalidateNameCache();
+  }
+
 
   function labelFor(id: string) {
     return races.find(r => r.id === id)?.label ?? '?';
