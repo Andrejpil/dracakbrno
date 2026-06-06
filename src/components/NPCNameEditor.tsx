@@ -276,11 +276,17 @@ export default function NPCNameEditor({ open, onOpenChange }: Props) {
               {filtered.map(n => (
                 <div key={n.id} className="p-2 flex items-center gap-3 hover:bg-muted/40">
                   <div className="w-40 shrink-0">
-                    <div className="font-medium text-sm">{n.value}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {n.gender === 'male' ? 'muž' : n.gender === 'female' ? 'žena' : 'unisex'}
-                    </div>
+                    <div className="font-medium text-sm truncate">{n.value}</div>
+                    <Select value={n.gender} onValueChange={(v) => changeGender(n, v as NameGender)}>
+                      <SelectTrigger className="h-6 text-xs px-2 py-0 mt-0.5"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">muž</SelectItem>
+                        <SelectItem value="female">žena</SelectItem>
+                        <SelectItem value="unisex">unisex</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
+
                   <div className="flex-1 flex flex-wrap gap-2">
                     {races.map(r => (
                       <label key={r.id} className="flex items-center gap-1 text-xs cursor-pointer">
