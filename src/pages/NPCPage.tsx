@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Plus, Trash2, Edit2, Search, Wand2, RefreshCw, Save, BookOpen } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { NPC_RACES, generateRandomName, type NPCRace, type NPCGender } from '@/lib/npcNames';
+import { Checkbox } from '@/components/ui/checkbox';
+import { generateRandomName, loadRaces, type RaceRow, type NPCGender } from '@/lib/npcNames';
 import NPCNameEditor from '@/components/NPCNameEditor';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel,
@@ -43,8 +44,10 @@ export default function NPCPage() {
 
   // Generator state
   const [generatorOpen, setGeneratorOpen] = useState(false);
-  const [genRace, setGenRace] = useState<NPCRace>('Člověk');
+  const [races, setRaces] = useState<RaceRow[]>([]);
+  const [genRace, setGenRace] = useState<string>('Člověk');
   const [genGender, setGenGender] = useState<NPCGender>('random');
+  const [genUseSurname, setGenUseSurname] = useState(false);
   const [genName, setGenName] = useState('');
   const [genForm, setGenForm] = useState({ location: '', description: '', relationship: '' });
   const [nameEditorOpen, setNameEditorOpen] = useState(false);
@@ -52,6 +55,10 @@ export default function NPCPage() {
   useEffect(() => {
     if (user) loadNpcs();
   }, [user]);
+
+  useEffect(() => {
+    loadRaces().then(setRaces);
+  }, []);
 
   async function loadNpcs() {
     setLoading(true);
@@ -132,25 +139,34 @@ export default function NPCPage() {
 
   // Generator functions
   async function openGenerator() {
-    setGenRace('Člověk');
+    const rs = await loadRaces();
+    setRaces(rs);
+    const first = rs[0]?.code ?? 'Člověk';
+    setGenRace(first);
     setGenGender('random');
-    setGenName(await generateRandomName('Člověk', 'random'));
+    setGenUseSurname(false);
+    setGenName(await generateRandomName({ raceCode: first, gender: 'random', useSurname: false }));
     setGenForm({ location: '', description: '', relationship: '' });
     setGeneratorOpen(true);
   }
 
   async function rerollName() {
-    setGenName(await generateRandomName(genRace, genGender));
+    setGenName(await generateRandomName({ raceCode: genRace, gender: genGender, useSurname: genUseSurname }));
   }
 
   async function handleRaceChange(race: string) {
-    setGenRace(race as NPCRace);
-    setGenName(await generateRandomName(race as NPCRace, genGender));
+    setGenRace(race);
+    setGenName(await generateRandomName({ raceCode: race, gender: genGender, useSurname: genUseSurname }));
   }
 
   async function handleGenderChange(gender: string) {
     setGenGender(gender as NPCGender);
-    setGenName(await generateRandomName(genRace, gender as NPCGender));
+    setGenName(await generateRandomName({ raceCode: genRace, gender: gender as NPCGender, useSurname: genUseSurname }));
+  }
+
+  async function handleSurnameToggle(checked: boolean) {
+    setGenUseSurname(checked);
+    setGenName(await generateRandomName({ raceCode: genRace, gender: genGender, useSurname: checked }));
   }
 
   async function handleSaveGenerated() {
@@ -321,8 +337,8 @@ export default function NPCPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {NPC_RACES.map(race => (
-                      <SelectItem key={race} value={race}>{race}</SelectItem>
+                    {races.map(r => (
+                      <SelectItem key={r.id} value={r.code}>{r.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -341,6 +357,15 @@ export default function NPCPage() {
                 </Select>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={genUseSurname}
+                onCheckedChange={(v) => handleSurnameToggle(!!v)}
+              />
+              Používat příjmení
+            </label>
+
 
             <div>
               <label className="text-sm text-foreground font-medium">Vygenerované jméno</label>

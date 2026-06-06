@@ -644,13 +644,42 @@ export type Database = {
         }
         Relationships: []
       }
-      npc_name_parts: {
+      npc_name_races: {
+        Row: {
+          name_id: string
+          race_id: string
+        }
+        Insert: {
+          name_id: string
+          race_id: string
+        }
+        Update: {
+          name_id?: string
+          race_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "npc_name_races_name_id_fkey"
+            columns: ["name_id"]
+            isOneToOne: false
+            referencedRelation: "npc_names"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_name_races_race_id_fkey"
+            columns: ["race_id"]
+            isOneToOne: false
+            referencedRelation: "npc_races"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      npc_names: {
         Row: {
           created_at: string
           gender: string
           id: string
           part: string
-          race: string
           value: string
         }
         Insert: {
@@ -658,7 +687,6 @@ export type Database = {
           gender: string
           id?: string
           part: string
-          race: string
           value: string
         }
         Update: {
@@ -666,8 +694,31 @@ export type Database = {
           gender?: string
           id?: string
           part?: string
-          race?: string
           value?: string
+        }
+        Relationships: []
+      }
+      npc_races: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
         }
         Relationships: []
       }
