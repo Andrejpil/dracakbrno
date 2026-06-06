@@ -337,8 +337,8 @@ export default function NPCPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {NPC_RACES.map(race => (
-                      <SelectItem key={race} value={race}>{race}</SelectItem>
+                    {races.map(r => (
+                      <SelectItem key={r.id} value={r.code}>{r.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -357,6 +357,15 @@ export default function NPCPage() {
                 </Select>
               </div>
             </div>
+
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={genUseSurname}
+                onCheckedChange={(v) => handleSurnameToggle(!!v)}
+              />
+              Používat příjmení
+            </label>
+
 
             <div>
               <label className="text-sm text-foreground font-medium">Vygenerované jméno</label>
