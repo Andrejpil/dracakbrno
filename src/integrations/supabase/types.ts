@@ -121,6 +121,114 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_special_days: {
+        Row: {
+          color: string | null
+          created_at: string
+          description: string | null
+          end_day: number
+          end_month: number
+          id: string
+          name: string
+          recurring: boolean
+          start_day: number
+          start_month: number
+          year: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          end_day: number
+          end_month: number
+          id?: string
+          name: string
+          recurring?: boolean
+          start_day: number
+          start_month: number
+          year?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          end_day?: number
+          end_month?: number
+          id?: string
+          name?: string
+          recurring?: boolean
+          start_day?: number
+          start_month?: number
+          year?: number | null
+        }
+        Relationships: []
+      }
+      chronicle_entries: {
+        Row: {
+          author_name: string | null
+          content: string
+          created_at: string
+          entry_day: number
+          entry_month: number
+          entry_year: number
+          id: string
+          updated_at: string
+          user_id: string
+          visibility: Database["public"]["Enums"]["chronicle_visibility"]
+        }
+        Insert: {
+          author_name?: string | null
+          content: string
+          created_at?: string
+          entry_day: number
+          entry_month: number
+          entry_year: number
+          id?: string
+          updated_at?: string
+          user_id: string
+          visibility?: Database["public"]["Enums"]["chronicle_visibility"]
+        }
+        Update: {
+          author_name?: string | null
+          content?: string
+          created_at?: string
+          entry_day?: number
+          entry_month?: number
+          entry_year?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+          visibility?: Database["public"]["Enums"]["chronicle_visibility"]
+        }
+        Relationships: []
+      }
+      game_calendar: {
+        Row: {
+          current_day: number
+          current_month: number
+          current_year: number
+          era_name: string
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          current_day?: number
+          current_month?: number
+          current_year?: number
+          era_name?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          current_day?: number
+          current_month?: number
+          current_year?: number
+          era_name?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       heroes: {
         Row: {
           bad_trait: number | null
@@ -941,6 +1049,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
+      chronicle_visibility: "all" | "staff_only"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1069,6 +1178,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
+      chronicle_visibility: ["all", "staff_only"],
     },
   },
 } as const
