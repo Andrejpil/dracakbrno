@@ -5,37 +5,27 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
+  :root, .dark {
     --background: 220 15% 10%;
     --foreground: 40 20% 90%;
-
     --card: 220 15% 14%;
     --card-foreground: 40 20% 90%;
-
     --popover: 220 15% 12%;
     --popover-foreground: 40 20% 90%;
-
     --primary: 35 80% 50%;
     --primary-foreground: 220 15% 8%;
-
     --secondary: 220 15% 18%;
     --secondary-foreground: 40 15% 75%;
-
     --muted: 220 12% 16%;
     --muted-foreground: 220 10% 55%;
-
     --accent: 0 65% 45%;
     --accent-foreground: 40 20% 95%;
-
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
-
     --border: 220 12% 20%;
     --input: 220 12% 18%;
     --ring: 35 80% 50%;
-
     --radius: 0.5rem;
-
     --sidebar-background: 220 15% 8%;
     --sidebar-foreground: 40 15% 75%;
     --sidebar-primary: 35 80% 50%;
@@ -44,15 +34,49 @@
     --sidebar-accent-foreground: 40 20% 90%;
     --sidebar-border: 220 12% 16%;
     --sidebar-ring: 35 80% 50%;
-
     --hp-healthy: 120 50% 40%;
     --hp-warning: 35 90% 55%;
     --hp-dead: 0 70% 50%;
     --bonus-positive: 120 50% 45%;
     --bonus-negative: 0 65% 50%;
     --bonus-neutral: 220 10% 55%;
-
     font-family: 'Inter', sans-serif;
+  }
+
+  .light {
+    --background: 40 30% 96%;
+    --foreground: 220 20% 15%;
+    --card: 40 30% 99%;
+    --card-foreground: 220 20% 15%;
+    --popover: 40 30% 99%;
+    --popover-foreground: 220 20% 15%;
+    --primary: 35 85% 45%;
+    --primary-foreground: 40 30% 99%;
+    --secondary: 40 20% 90%;
+    --secondary-foreground: 220 20% 20%;
+    --muted: 40 20% 92%;
+    --muted-foreground: 220 10% 40%;
+    --accent: 0 60% 45%;
+    --accent-foreground: 40 30% 99%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 15% 82%;
+    --input: 40 15% 85%;
+    --ring: 35 85% 45%;
+    --sidebar-background: 40 25% 92%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 35 85% 45%;
+    --sidebar-primary-foreground: 40 30% 99%;
+    --sidebar-accent: 40 20% 86%;
+    --sidebar-accent-foreground: 220 20% 15%;
+    --sidebar-border: 40 15% 78%;
+    --sidebar-ring: 35 85% 45%;
+    --hp-healthy: 120 50% 35%;
+    --hp-warning: 35 90% 45%;
+    --hp-dead: 0 70% 45%;
+    --bonus-positive: 120 50% 35%;
+    --bonus-negative: 0 65% 45%;
+    --bonus-neutral: 220 10% 45%;
   }
 }
 
