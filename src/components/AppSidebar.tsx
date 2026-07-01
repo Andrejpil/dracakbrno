@@ -1,7 +1,9 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, ScrollText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import CalendarWidget from '@/components/CalendarWidget';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const allLinks = [
   { to: '/', label: 'Hrdinové', icon: Sword, page: 'heroes' },
@@ -11,6 +13,7 @@ const allLinks = [
   { to: '/zkusenosti', label: 'Zkušenosti', icon: Star, page: 'xp' },
   { to: '/statistika', label: 'Statistika', icon: BarChart3, page: 'stats' },
   { to: '/npc', label: 'NPC', icon: UserCircle, page: 'npc' },
+  { to: '/kronika', label: 'Kronika', icon: ScrollText, page: 'heroes' },
   { to: '/export', label: 'Export / Import', icon: Download, page: 'export' },
   { to: '/mapa', label: 'Mapa', icon: Map, page: 'map' },
 ];
@@ -26,10 +29,11 @@ export default function AppSidebar() {
     : visibleLinks;
 
   return (
-    <aside className="w-48 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">
-      <h1 className="font-display text-lg text-primary mb-8 px-2 leading-tight">
+    <aside className="w-52 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">
+      <h1 className="font-display text-lg text-primary mb-4 px-2 leading-tight">
         Dračí Doupě
       </h1>
+      <CalendarWidget />
       <nav className="flex flex-col gap-1 flex-1">
         {finalLinks.map(({ to, label, icon: Icon }) => {
           const active = location.pathname === to;
@@ -49,8 +53,9 @@ export default function AppSidebar() {
           );
         })}
       </nav>
-      <div className="mt-auto pt-4 border-t border-sidebar-border">
-        <p className="text-xs text-muted-foreground px-2 mb-2 truncate">{user?.email}</p>
+      <div className="mt-auto pt-4 border-t border-sidebar-border space-y-1">
+        <ThemeToggle />
+        <p className="text-xs text-muted-foreground px-2 mb-2 mt-2 truncate">{user?.email}</p>
         <button
           onClick={signOut}
           className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-destructive transition-colors w-full"
