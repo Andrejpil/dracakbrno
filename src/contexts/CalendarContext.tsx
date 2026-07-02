@@ -63,20 +63,23 @@ export function CalendarProvider({ children }: { children: ReactNode }) {
   const shift = async (delta: number) => {
     if (!calendar) return;
     const next = shiftDate(calendar.current_day, calendar.current_month, calendar.current_year, delta);
-    await supabase.from('game_calendar' as any).update({
-      current_day: next.day, current_month: next.month, current_year: next.year,
-    }).eq('id', true);
+    const patch = { current_day: next.day, current_month: next.month, current_year: next.year };
+    setCalendar({ ...calendar, ...patch }); // optimistic
+    await supabase.from('game_calendar' as any).update(patch).eq('id', true);
   };
 
   const update = async (patch: Partial<GameCalendar>) => {
+    if (calendar) setCalendar({ ...calendar, ...patch });
     await supabase.from('game_calendar' as any).update(patch).eq('id', true);
   };
 
   const addSpecialDay = async (sd: Omit<SpecialDay, 'id'>) => {
-    await supabase.from('calendar_special_days' as any).insert(sd);
+    const { data, error } = await supabase.from('calendar_special_days' as any).insert(sd).select().single();
+    if (!error && data) setSpecialDays(prev => [...prev, data as any]);
   };
 
   const deleteSpecialDay = async (id: string) => {
+    setSpecialDays(prev => prev.filter(s => s.id !== id));
     await supabase.from('calendar_special_days' as any).delete().eq('id', id);
   };
 
