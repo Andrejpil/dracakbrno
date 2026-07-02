@@ -24,17 +24,30 @@ export default function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
   const { isAdmin, canView } = useUserRole();
+  const { worlds, activeWorldId, setActiveWorldId } = useWorld();
 
   const visibleLinks = allLinks.filter(l => canView(l.page));
+  const withWorlds = [...visibleLinks, { to: '/svety', label: 'Světy', icon: Globe, page: 'worlds' }];
   const finalLinks = isAdmin
-    ? [...visibleLinks, { to: '/admin', label: 'Uživatelé', icon: Users, page: 'admin' }]
-    : visibleLinks;
+    ? [...withWorlds, { to: '/admin', label: 'Uživatelé', icon: Users, page: 'admin' }]
+    : withWorlds;
 
   return (
     <aside className="w-52 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">
       <h1 className="font-display text-lg text-primary mb-4 px-2 leading-tight">
         Dračí Doupě
       </h1>
+      {worlds.length > 0 && activeWorldId && (
+        <div className="mb-3">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground px-1">Svět</span>
+          <Select value={activeWorldId} onValueChange={setActiveWorldId}>
+            <SelectTrigger className="h-8 text-xs mt-1"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {worlds.map(w => (<SelectItem key={w.id} value={w.id} className="text-xs">{w.name}</SelectItem>))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <CalendarWidget />
       <nav className="flex flex-col gap-1 flex-1">
         {finalLinks.map(({ to, label, icon: Icon }) => {
