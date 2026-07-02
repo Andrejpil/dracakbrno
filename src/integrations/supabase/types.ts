@@ -37,6 +37,7 @@ export type Database = {
           special: string
           str: number
           user_id: string
+          world_id: string
           xp_reward: number
         }
         Insert: {
@@ -61,6 +62,7 @@ export type Database = {
           special?: string
           str?: number
           user_id: string
+          world_id?: string
           xp_reward?: number
         }
         Update: {
@@ -85,6 +87,7 @@ export type Database = {
           special?: string
           str?: number
           user_id?: string
+          world_id?: string
           xp_reward?: number
         }
         Relationships: [
@@ -93,6 +96,13 @@ export type Database = {
             columns: ["monster_id"]
             isOneToOne: false
             referencedRelation: "monsters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_monsters_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -104,6 +114,7 @@ export type Database = {
           active_initiative_id: string | null
           id: boolean
           updated_at: string
+          world_id: string
         }
         Insert: {
           active_battle_id?: string | null
@@ -111,6 +122,7 @@ export type Database = {
           active_initiative_id?: string | null
           id?: boolean
           updated_at?: string
+          world_id?: string
         }
         Update: {
           active_battle_id?: string | null
@@ -118,8 +130,17 @@ export type Database = {
           active_initiative_id?: string | null
           id?: boolean
           updated_at?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "battle_state_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       calendar_special_days: {
         Row: {
@@ -133,6 +154,7 @@ export type Database = {
           recurring: boolean
           start_day: number
           start_month: number
+          world_id: string
           year: number | null
         }
         Insert: {
@@ -146,6 +168,7 @@ export type Database = {
           recurring?: boolean
           start_day: number
           start_month: number
+          world_id?: string
           year?: number | null
         }
         Update: {
@@ -159,9 +182,18 @@ export type Database = {
           recurring?: boolean
           start_day?: number
           start_month?: number
+          world_id?: string
           year?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "calendar_special_days_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chronicle_entries: {
         Row: {
@@ -175,6 +207,7 @@ export type Database = {
           updated_at: string
           user_id: string
           visibility: Database["public"]["Enums"]["chronicle_visibility"]
+          world_id: string
         }
         Insert: {
           author_name?: string | null
@@ -187,6 +220,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           visibility?: Database["public"]["Enums"]["chronicle_visibility"]
+          world_id?: string
         }
         Update: {
           author_name?: string | null
@@ -199,8 +233,17 @@ export type Database = {
           updated_at?: string
           user_id?: string
           visibility?: Database["public"]["Enums"]["chronicle_visibility"]
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chronicle_entries_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       game_calendar: {
         Row: {
@@ -210,6 +253,7 @@ export type Database = {
           era_name: string
           id: boolean
           updated_at: string
+          world_id: string
         }
         Insert: {
           current_day?: number
@@ -218,6 +262,7 @@ export type Database = {
           era_name?: string
           id?: boolean
           updated_at?: string
+          world_id?: string
         }
         Update: {
           current_day?: number
@@ -226,8 +271,17 @@ export type Database = {
           era_name?: string
           id?: boolean
           updated_at?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "game_calendar_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       heroes: {
         Row: {
@@ -244,6 +298,7 @@ export type Database = {
           specialization: string
           total_damage: number
           user_id: string
+          world_id: string
         }
         Insert: {
           bad_trait?: number | null
@@ -259,6 +314,7 @@ export type Database = {
           specialization?: string
           total_damage?: number
           user_id: string
+          world_id?: string
         }
         Update: {
           bad_trait?: number | null
@@ -274,8 +330,17 @@ export type Database = {
           specialization?: string
           total_damage?: number
           user_id?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "heroes_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       initiative_entries: {
         Row: {
@@ -286,6 +351,7 @@ export type Database = {
           name: string
           source: string
           value: number
+          world_id: string
         }
         Insert: {
           battle_monster_id?: string | null
@@ -295,6 +361,7 @@ export type Database = {
           name: string
           source?: string
           value?: number
+          world_id?: string
         }
         Update: {
           battle_monster_id?: string | null
@@ -304,8 +371,17 @@ export type Database = {
           name?: string
           source?: string
           value?: number
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "initiative_entries_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       map_beasts: {
         Row: {
@@ -326,6 +402,7 @@ export type Database = {
           short_code: string
           stealth_mode: string
           token_size: number
+          world_id: string
           x: number
           y: number
         }
@@ -347,6 +424,7 @@ export type Database = {
           short_code?: string
           stealth_mode?: string
           token_size?: number
+          world_id?: string
           x?: number
           y?: number
         }
@@ -368,6 +446,7 @@ export type Database = {
           short_code?: string
           stealth_mode?: string
           token_size?: number
+          world_id?: string
           x?: number
           y?: number
         }
@@ -386,6 +465,13 @@ export type Database = {
             referencedRelation: "monsters"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "map_beasts_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
         ]
       }
       map_fog_reveals: {
@@ -395,6 +481,7 @@ export type Database = {
           map_id: string
           radius: number
           user_id: string
+          world_id: string
           x: number
           y: number
         }
@@ -404,6 +491,7 @@ export type Database = {
           map_id: string
           radius?: number
           user_id: string
+          world_id?: string
           x: number
           y: number
         }
@@ -413,6 +501,7 @@ export type Database = {
           map_id?: string
           radius?: number
           user_id?: string
+          world_id?: string
           x?: number
           y?: number
         }
@@ -422,6 +511,13 @@ export type Database = {
             columns: ["map_id"]
             isOneToOne: false
             referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_fog_reveals_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -436,6 +532,7 @@ export type Database = {
           route_id: string
           sort_order: number
           user_id: string
+          world_id: string
           x: number
           y: number
         }
@@ -448,6 +545,7 @@ export type Database = {
           route_id: string
           sort_order?: number
           user_id: string
+          world_id?: string
           x: number
           y: number
         }
@@ -460,6 +558,7 @@ export type Database = {
           route_id?: string
           sort_order?: number
           user_id?: string
+          world_id?: string
           x?: number
           y?: number
         }
@@ -469,6 +568,13 @@ export type Database = {
             columns: ["route_id"]
             isOneToOne: false
             referencedRelation: "map_routes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_points_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -481,6 +587,7 @@ export type Database = {
           map_id: string | null
           name: string
           user_id: string
+          world_id: string
         }
         Insert: {
           color?: string
@@ -489,6 +596,7 @@ export type Database = {
           map_id?: string | null
           name?: string
           user_id: string
+          world_id?: string
         }
         Update: {
           color?: string
@@ -497,6 +605,7 @@ export type Database = {
           map_id?: string | null
           name?: string
           user_id?: string
+          world_id?: string
         }
         Relationships: [
           {
@@ -504,6 +613,13 @@ export type Database = {
             columns: ["map_id"]
             isOneToOne: false
             referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_routes_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -518,6 +634,7 @@ export type Database = {
           speed_horse: number
           speed_walk: number
           user_id: string
+          world_id: string
         }
         Insert: {
           created_at?: string
@@ -528,6 +645,7 @@ export type Database = {
           speed_horse?: number
           speed_walk?: number
           user_id: string
+          world_id?: string
         }
         Update: {
           created_at?: string
@@ -538,6 +656,7 @@ export type Database = {
           speed_horse?: number
           speed_walk?: number
           user_id?: string
+          world_id?: string
         }
         Relationships: [
           {
@@ -545,6 +664,13 @@ export type Database = {
             columns: ["map_id"]
             isOneToOne: false
             referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_settings_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -562,6 +688,7 @@ export type Database = {
           notes: string
           owner_user_id: string | null
           reveal_radius: number
+          world_id: string
           x: number
           y: number
         }
@@ -577,6 +704,7 @@ export type Database = {
           notes?: string
           owner_user_id?: string | null
           reveal_radius?: number
+          world_id?: string
           x?: number
           y?: number
         }
@@ -592,6 +720,7 @@ export type Database = {
           notes?: string
           owner_user_id?: string | null
           reveal_radius?: number
+          world_id?: string
           x?: number
           y?: number
         }
@@ -601,6 +730,13 @@ export type Database = {
             columns: ["map_id"]
             isOneToOne: false
             referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "map_tokens_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -615,6 +751,7 @@ export type Database = {
           is_active: boolean
           name: string
           user_id: string
+          world_id: string
         }
         Insert: {
           created_at?: string
@@ -625,6 +762,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           user_id: string
+          world_id?: string
         }
         Update: {
           created_at?: string
@@ -635,8 +773,17 @@ export type Database = {
           is_active?: boolean
           name?: string
           user_id?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "maps_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monster_kills: {
         Row: {
@@ -644,20 +791,31 @@ export type Database = {
           id: string
           monster_name: string
           user_id: string
+          world_id: string
         }
         Insert: {
           count?: number
           id?: string
           monster_name: string
           user_id: string
+          world_id?: string
         }
         Update: {
           count?: number
           id?: string
           monster_name?: string
           user_id?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "monster_kills_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       monsters: {
         Row: {
@@ -688,6 +846,7 @@ export type Database = {
           str_max: number
           str_min: number
           user_id: string
+          world_id: string
           xp_reward: number
         }
         Insert: {
@@ -718,6 +877,7 @@ export type Database = {
           str_max?: number
           str_min?: number
           user_id: string
+          world_id?: string
           xp_reward?: number
         }
         Update: {
@@ -748,9 +908,18 @@ export type Database = {
           str_max?: number
           str_min?: number
           user_id?: string
+          world_id?: string
           xp_reward?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "monsters_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       npc_name_races: {
         Row: {
@@ -789,6 +958,7 @@ export type Database = {
           id: string
           part: string
           value: string
+          world_id: string
         }
         Insert: {
           created_at?: string
@@ -796,6 +966,7 @@ export type Database = {
           id?: string
           part: string
           value: string
+          world_id?: string
         }
         Update: {
           created_at?: string
@@ -803,8 +974,17 @@ export type Database = {
           id?: string
           part?: string
           value?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "npc_names_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       npc_races: {
         Row: {
@@ -813,6 +993,7 @@ export type Database = {
           id: string
           label: string
           sort_order: number
+          world_id: string
         }
         Insert: {
           code: string
@@ -820,6 +1001,7 @@ export type Database = {
           id?: string
           label: string
           sort_order?: number
+          world_id?: string
         }
         Update: {
           code?: string
@@ -827,8 +1009,17 @@ export type Database = {
           id?: string
           label?: string
           sort_order?: number
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "npc_races_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       npcs: {
         Row: {
@@ -840,6 +1031,7 @@ export type Database = {
           name: string
           relationship: string
           user_id: string
+          world_id: string
         }
         Insert: {
           created_at?: string
@@ -850,6 +1042,7 @@ export type Database = {
           name: string
           relationship?: string
           user_id: string
+          world_id?: string
         }
         Update: {
           created_at?: string
@@ -860,8 +1053,17 @@ export type Database = {
           name?: string
           relationship?: string
           user_id?: string
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "npcs_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -914,6 +1116,7 @@ export type Database = {
           name: string
           user_id: string
           visible_to_viewers: boolean
+          world_id: string
           x: number
           y: number
         }
@@ -925,6 +1128,7 @@ export type Database = {
           name?: string
           user_id: string
           visible_to_viewers?: boolean
+          world_id?: string
           x: number
           y: number
         }
@@ -936,6 +1140,7 @@ export type Database = {
           name?: string
           user_id?: string
           visible_to_viewers?: boolean
+          world_id?: string
           x?: number
           y?: number
         }
@@ -945,6 +1150,13 @@ export type Database = {
             columns: ["map_id"]
             isOneToOne: false
             referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "special_map_points_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -957,6 +1169,7 @@ export type Database = {
           kind: string
           name: string
           number: number
+          world_id: string
         }
         Insert: {
           created_at?: string
@@ -965,6 +1178,7 @@ export type Database = {
           kind: string
           name?: string
           number: number
+          world_id?: string
         }
         Update: {
           created_at?: string
@@ -973,8 +1187,17 @@ export type Database = {
           kind?: string
           name?: string
           number?: number
+          world_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "traits_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -994,6 +1217,62 @@ export type Database = {
         }
         Relationships: []
       }
+      world_members: {
+        Row: {
+          created_at: string
+          member_role: string
+          user_id: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          member_role?: string
+          user_id: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          member_role?: string
+          user_id?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_members_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      worlds: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       xp_archive: {
         Row: {
           amount: number
@@ -1002,6 +1281,7 @@ export type Database = {
           id: string
           note: string
           user_id: string
+          world_id: string
         }
         Insert: {
           amount: number
@@ -1010,6 +1290,7 @@ export type Database = {
           id?: string
           note?: string
           user_id: string
+          world_id?: string
         }
         Update: {
           amount?: number
@@ -1018,6 +1299,7 @@ export type Database = {
           id?: string
           note?: string
           user_id?: string
+          world_id?: string
         }
         Relationships: [
           {
@@ -1025,6 +1307,13 @@ export type Database = {
             columns: ["hero_id"]
             isOneToOne: false
             referencedRelation: "heroes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "xp_archive_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -1044,6 +1333,18 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_world_editor: {
+        Args: { _user_id: string; _world_id: string }
+        Returns: boolean
+      }
+      is_world_member: {
+        Args: { _user_id: string; _world_id: string }
+        Returns: boolean
+      }
+      is_world_owner: {
+        Args: { _user_id: string; _world_id: string }
         Returns: boolean
       }
     }

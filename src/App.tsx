@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { GameProvider } from "@/contexts/GameContext";
 import { CalendarProvider } from "@/contexts/CalendarContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WorldProvider } from "@/contexts/WorldContext";
 import AppSidebar from "@/components/AppSidebar";
 import HeroesPage from "@/pages/HeroesPage";
 import BestiaryPage from "@/pages/BestiaryPage";
@@ -19,6 +20,7 @@ import MapPage from "@/pages/MapPage";
 import NPCPage from "@/pages/NPCPage";
 import EncounterPage from "@/pages/EncounterPage";
 import ChroniclePage from "@/pages/ChroniclePage";
+import WorldsPage from "@/pages/WorldsPage";
 
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
@@ -42,28 +44,31 @@ function AppContent() {
 
   return (
     <GameProvider>
-      <CalendarProvider>
-        <div className="flex min-h-screen">
-          <AppSidebar />
-          <main className="flex-1 p-6 overflow-auto">
-            <Routes>
-              <Route path="/" element={<HeroesPage />} />
-              <Route path="/bestiar" element={<BestiaryPage />} />
-              <Route path="/boj" element={<BattlePage />} />
-              <Route path="/setkani" element={<EncounterPage />} />
-              <Route path="/zkusenosti" element={<XPPage />} />
-              <Route path="/statistika" element={<StatsPage />} />
-              <Route path="/zabiti" element={<StatsPage />} />
-              <Route path="/npc" element={<NPCPage />} />
-              <Route path="/kronika" element={<ChroniclePage />} />
-              <Route path="/export" element={<ExportPage />} />
-              <Route path="/mapa" element={<MapPage />} />
-              <Route path="/admin" element={<AdminPage />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-        </div>
-      </CalendarProvider>
+      <WorldProvider>
+        <CalendarProvider>
+          <div className="flex min-h-screen">
+            <AppSidebar />
+            <main className="flex-1 p-6 overflow-auto">
+              <Routes>
+                <Route path="/" element={<HeroesPage />} />
+                <Route path="/bestiar" element={<BestiaryPage />} />
+                <Route path="/boj" element={<BattlePage />} />
+                <Route path="/setkani" element={<EncounterPage />} />
+                <Route path="/zkusenosti" element={<XPPage />} />
+                <Route path="/statistika" element={<StatsPage />} />
+                <Route path="/zabiti" element={<StatsPage />} />
+                <Route path="/npc" element={<NPCPage />} />
+                <Route path="/kronika" element={<ChroniclePage />} />
+                <Route path="/export" element={<ExportPage />} />
+                <Route path="/mapa" element={<MapPage />} />
+                <Route path="/svety" element={<WorldsPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </main>
+          </div>
+        </CalendarProvider>
+      </WorldProvider>
     </GameProvider>
   );
 }
