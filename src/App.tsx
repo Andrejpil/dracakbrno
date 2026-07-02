@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { GameProvider } from "@/contexts/GameContext";
 import { CalendarProvider } from "@/contexts/CalendarContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WorldProvider } from "@/contexts/WorldContext";
 import AppSidebar from "@/components/AppSidebar";
 import HeroesPage from "@/pages/HeroesPage";
 import BestiaryPage from "@/pages/BestiaryPage";
@@ -19,6 +20,7 @@ import MapPage from "@/pages/MapPage";
 import NPCPage from "@/pages/NPCPage";
 import EncounterPage from "@/pages/EncounterPage";
 import ChroniclePage from "@/pages/ChroniclePage";
+import WorldsPage from "@/pages/WorldsPage";
 
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
