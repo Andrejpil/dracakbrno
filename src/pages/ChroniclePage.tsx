@@ -32,6 +32,7 @@ export default function ChroniclePage() {
   const { user } = useAuth();
   const { isEditor } = useUserRole();
   const { calendar } = useCalendar();
+  const { activeWorldId } = useWorld();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'staff_only'>('all');
