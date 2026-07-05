@@ -10,7 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Trash2, Sparkles, EyeOff, Pencil, Check, X, Search, FileDown, FileText } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Trash2, Sparkles, EyeOff, Pencil, Check, X, Search, FileDown, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useWorld } from '@/contexts/WorldContext';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 
