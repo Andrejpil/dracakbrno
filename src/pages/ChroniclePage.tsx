@@ -59,11 +59,13 @@ export default function ChroniclePage() {
     }
   }, [calendar]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [activeWorldId]);
 
   async function load() {
+    if (!activeWorldId) { setEntries([]); return; }
     const { data } = await supabase.from('chronicle_entries' as any)
       .select('*')
+      .eq('world_id', activeWorldId)
       .order('entry_year', { ascending: false })
       .order('entry_month', { ascending: false })
       .order('entry_day', { ascending: false })
@@ -72,9 +74,10 @@ export default function ChroniclePage() {
   }
 
   async function addEntry() {
-    if (!user || !content.trim() || !entryDate) return;
+    if (!user || !content.trim() || !entryDate || !activeWorldId) return;
     const { error } = await supabase.from('chronicle_entries' as any).insert({
       user_id: user.id,
+      world_id: activeWorldId,
       author_name: authorName || user.email?.split('@')[0] || 'Neznámý',
       entry_year: entryDate.y, entry_month: entryDate.m, entry_day: entryDate.d,
       content: content.trim(),
