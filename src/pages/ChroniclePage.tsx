@@ -10,7 +10,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Trash2, Sparkles, EyeOff, Pencil, Check, X, Search, FileDown, FileText } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Trash2, Sparkles, EyeOff, Pencil, Check, X, Search, FileDown, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useWorld } from '@/contexts/WorldContext';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 
@@ -30,6 +32,7 @@ export default function ChroniclePage() {
   const { user } = useAuth();
   const { isEditor } = useUserRole();
   const { calendar } = useCalendar();
+  const { activeWorldId } = useWorld();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'staff_only'>('all');
@@ -56,11 +59,13 @@ export default function ChroniclePage() {
     }
   }, [calendar]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [activeWorldId]);
 
   async function load() {
+    if (!activeWorldId) { setEntries([]); return; }
     const { data } = await supabase.from('chronicle_entries' as any)
       .select('*')
+      .eq('world_id', activeWorldId)
       .order('entry_year', { ascending: false })
       .order('entry_month', { ascending: false })
       .order('entry_day', { ascending: false })
@@ -69,9 +74,10 @@ export default function ChroniclePage() {
   }
 
   async function addEntry() {
-    if (!user || !content.trim() || !entryDate) return;
+    if (!user || !content.trim() || !entryDate || !activeWorldId) return;
     const { error } = await supabase.from('chronicle_entries' as any).insert({
       user_id: user.id,
+      world_id: activeWorldId,
       author_name: authorName || user.email?.split('@')[0] || 'Neznámý',
       entry_year: entryDate.y, entry_month: entryDate.m, entry_day: entryDate.d,
       content: content.trim(),
@@ -245,87 +251,142 @@ export default function ChroniclePage() {
         )}
       </Card>
 
-      <div className="space-y-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <h2 className="font-display text-xl">Zápisky ({filteredEntries.length}{search && ` / ${entries.length}`})</h2>
-          <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
-            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              className="pl-7"
-              placeholder="Hledat v textu nebo autorovi…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
+      <ChronicleBook
+        grouped={grouped}
+        totalEntries={filteredEntries.length}
+        totalAll={entries.length}
+        search={search}
+        setSearch={setSearch}
+        eraName={calendar?.era_name || ''}
+        user={user}
+        isEditor={isEditor}
+        editingId={editingId}
+        editContent={editContent}
+        setEditContent={setEditContent}
+        editVisibility={editVisibility}
+        setEditVisibility={setEditVisibility}
+        editDate={editDate}
+        setEditDate={setEditDate}
+        startEdit={startEdit}
+        saveEdit={saveEdit}
+        cancelEdit={() => setEditingId(null)}
+        deleteEntry={deleteEntry}
+      />
+    </div>
+  );
+}
 
-        {grouped.map(([key, group]) => {
-          const [y, m, d] = key.split('-').map(Number);
-          return (
-            <Card key={key} className="p-4">
-              <div className="font-display text-primary mb-2">
-                {formatGameDate(d, m, y, calendar?.era_name || '')}
-              </div>
-              <div className="space-y-3">
-                {group.map(e => {
-                  const canEdit = user?.id === e.user_id || isEditor;
-                  const isEditing = editingId === e.id;
-                  return (
-                    <div key={e.id} className="border-l-2 border-primary/40 pl-3">
-                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                        <span className="flex items-center gap-2">
-                          <strong className="text-foreground">{e.author_name}</strong>
-                          {e.visibility === 'staff_only' && (
-                            <span className="flex items-center gap-1 text-accent"><EyeOff size={11} />staff</span>
-                          )}
-                        </span>
-                        {canEdit && !isEditing && (
-                          <span className="flex items-center gap-2">
-                            <button onClick={() => startEdit(e)} className="text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
-                            <button onClick={() => deleteEntry(e.id)} className="text-destructive hover:opacity-70"><Trash2 size={12} /></button>
-                          </span>
-                        )}
-                        {isEditing && (
-                          <span className="flex items-center gap-2">
-                            <button onClick={() => saveEdit(e.id)} className="text-primary hover:opacity-70"><Check size={14} /></button>
-                            <button onClick={() => setEditingId(null)} className="text-muted-foreground hover:opacity-70"><X size={14} /></button>
-                          </span>
-                        )}
-                      </div>
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-3 gap-1">
-                            <Input type="number" min={1} max={31} value={editDate.d} onChange={ev => setEditDate(p => ({ ...p, d: +ev.target.value }))} />
-                            <Input type="number" min={1} max={12} value={editDate.m} onChange={ev => setEditDate(p => ({ ...p, m: +ev.target.value }))} />
-                            <Input type="number" value={editDate.y} onChange={ev => setEditDate(p => ({ ...p, y: +ev.target.value }))} />
+function ChronicleBook({
+  grouped, totalEntries, totalAll, search, setSearch, eraName,
+  user, isEditor, editingId, editContent, setEditContent,
+  editVisibility, setEditVisibility, editDate, setEditDate,
+  startEdit, saveEdit, cancelEdit, deleteEntry,
+}: any) {
+  const [page, setPage] = useState(0);
+  const perPage = 1; // one day per page = book-like
+  const pageCount = Math.max(1, Math.ceil(grouped.length / perPage));
+  useEffect(() => { setPage(0); }, [search, grouped.length]);
+  const current = grouped.slice(page * perPage, page * perPage + perPage);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 flex-wrap">
+        <h2 className="font-display text-xl">Zápisky ({totalEntries}{search && ` / ${totalAll}`})</h2>
+        <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
+          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="pl-7"
+            placeholder="Hledat v textu nebo autorovi…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <Card className="p-0 overflow-hidden border-primary/30 shadow-lg">
+        <ScrollArea className="h-[600px]">
+          <div className="p-6 space-y-4">
+            {current.length === 0 && (
+              <p className="text-muted-foreground text-sm text-center py-12">
+                {search ? 'Nic nenalezeno.' : 'Zatím žádné zápisky.'}
+              </p>
+            )}
+            {current.map(([key, group]: any) => {
+              const [y, m, d] = key.split('-').map(Number);
+              return (
+                <div key={key}>
+                  <div className="font-display text-primary text-lg mb-3 border-b border-primary/20 pb-2">
+                    {formatGameDate(d, m, y, eraName)}
+                  </div>
+                  <div className="space-y-3">
+                    {group.map((e: Entry) => {
+                      const canEdit = user?.id === e.user_id || isEditor;
+                      const isEditing = editingId === e.id;
+                      return (
+                        <div key={e.id} className="border-l-2 border-primary/40 pl-3">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                            <span className="flex items-center gap-2">
+                              <strong className="text-foreground">{e.author_name}</strong>
+                              {e.visibility === 'staff_only' && (
+                                <span className="flex items-center gap-1 text-accent"><EyeOff size={11} />staff</span>
+                              )}
+                            </span>
+                            {canEdit && !isEditing && (
+                              <span className="flex items-center gap-2">
+                                <button onClick={() => startEdit(e)} className="text-muted-foreground hover:text-primary"><Pencil size={12} /></button>
+                                <button onClick={() => deleteEntry(e.id)} className="text-destructive hover:opacity-70"><Trash2 size={12} /></button>
+                              </span>
+                            )}
+                            {isEditing && (
+                              <span className="flex items-center gap-2">
+                                <button onClick={() => saveEdit(e.id)} className="text-primary hover:opacity-70"><Check size={14} /></button>
+                                <button onClick={cancelEdit} className="text-muted-foreground hover:opacity-70"><X size={14} /></button>
+                              </span>
+                            )}
                           </div>
-                          <Textarea rows={4} value={editContent} onChange={ev => setEditContent(ev.target.value)} />
-                          {isEditor && (
-                            <Select value={editVisibility} onValueChange={(v: any) => setEditVisibility(v)}>
-                              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="all">Všichni hráči</SelectItem>
-                                <SelectItem value="staff_only">Jen admin/editor</SelectItem>
-                              </SelectContent>
-                            </Select>
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-3 gap-1">
+                                <Input type="number" min={1} max={31} value={editDate.d} onChange={ev => setEditDate((p: any) => ({ ...p, d: +ev.target.value }))} />
+                                <Input type="number" min={1} max={12} value={editDate.m} onChange={ev => setEditDate((p: any) => ({ ...p, m: +ev.target.value }))} />
+                                <Input type="number" value={editDate.y} onChange={ev => setEditDate((p: any) => ({ ...p, y: +ev.target.value }))} />
+                              </div>
+                              <Textarea rows={4} value={editContent} onChange={ev => setEditContent(ev.target.value)} />
+                              {isEditor && (
+                                <Select value={editVisibility} onValueChange={(v: any) => setEditVisibility(v)}>
+                                  <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="all">Všichni hráči</SelectItem>
+                                    <SelectItem value="staff_only">Jen admin/editor</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{e.content}</div>
                           )}
                         </div>
-                      ) : (
-                        <div className="text-sm whitespace-pre-wrap">{e.content}</div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </Card>
-          );
-        })}
-        {filteredEntries.length === 0 && (
-          <p className="text-muted-foreground text-sm">
-            {search ? 'Nic nenalezeno.' : 'Zatím žádné zápisky.'}
-          </p>
-        )}
-      </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </ScrollArea>
+
+        <div className="flex items-center justify-between p-3 border-t bg-muted/40">
+          <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}>
+            <ChevronLeft size={16} className="mr-1" />Předchozí
+          </Button>
+          <span className="text-xs font-display text-muted-foreground">
+            Strana {page + 1} / {pageCount}
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1}>
+            Další<ChevronRight size={16} className="ml-1" />
+          </Button>
+        </div>
+      </Card>
     </div>
   );
 }
