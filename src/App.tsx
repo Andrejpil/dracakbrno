@@ -52,8 +52,9 @@ function AppLoadingSkeleton() {
 
 function WorldGate() {
   const { worlds, loading: worldsLoading } = useWorld();
+  const path = typeof window !== 'undefined' ? window.location.pathname : '/';
   if (worldsLoading) return <AppLoadingSkeleton />;
-  if (worlds.length === 0) return <EmptyWorldsState />;
+  if (worlds.length === 0 && path !== '/svety') return <EmptyWorldsState />;
   return (
     <CalendarProvider>
       <div className="flex min-h-screen">
