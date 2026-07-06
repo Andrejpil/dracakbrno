@@ -13,8 +13,20 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, Sparkles, EyeOff, Pencil, Check, X, Search, FileDown, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useWorld } from '@/contexts/WorldContext';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { useRef } from 'react';
 import jsPDF from 'jspdf';
+
+function escapeRegExp(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function highlight(text: string, query: string) {
+  if (!query.trim()) return text;
+  const re = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+  const parts = text.split(re);
+  return parts.map((p, i) =>
+    re.test(p) ? <mark key={i} className="bg-primary/30 text-foreground rounded px-0.5">{p}</mark> : <span key={i}>{p}</span>
+  );
+}
 
 interface Entry {
   id: string;
