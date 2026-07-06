@@ -79,7 +79,7 @@ export default function ChroniclePage() {
   useEffect(() => { load(); }, [activeWorldId]);
 
   async function load() {
-    if (!activeWorldId) { setEntries([]); return; }
+    if (!activeWorldId) { setEntries([]); setLoaded(true); return; }
     const { data } = await supabase.from('chronicle_entries' as any)
       .select('*')
       .eq('world_id', activeWorldId)
@@ -88,6 +88,7 @@ export default function ChroniclePage() {
       .order('entry_day', { ascending: false })
       .order('created_at', { ascending: false });
     setEntries((data as any) || []);
+    setLoaded(true);
   }
 
   async function addEntry() {
