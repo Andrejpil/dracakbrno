@@ -378,7 +378,7 @@ function ChronicleBook({
                         <div key={e.id} className="border-l-2 border-primary/40 pl-3">
                           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                             <span className="flex items-center gap-2">
-                              <strong className="text-foreground">{e.author_name}</strong>
+                              <strong className="text-foreground">{highlight(e.author_name || '', search)}</strong>
                               {e.visibility === 'staff_only' && (
                                 <span className="flex items-center gap-1 text-accent"><EyeOff size={11} />staff</span>
                               )}
@@ -415,7 +415,7 @@ function ChronicleBook({
                               )}
                             </div>
                           ) : (
-                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{e.content}</div>
+                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{highlight(e.content, search)}</div>
                           )}
                         </div>
                       );
@@ -439,6 +439,11 @@ function ChronicleBook({
           </Button>
         </div>
       </Card>
+        </div>
+      </Card>
+      <p className="text-[11px] text-muted-foreground text-center">
+        ← → listování · / hledání · Esc vyčistit
+      </p>
     </div>
   );
 }
