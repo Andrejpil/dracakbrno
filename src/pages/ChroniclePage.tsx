@@ -296,7 +296,7 @@ export default function ChroniclePage() {
 }
 
 function ChronicleBook({
-  grouped, totalEntries, totalAll, search, setSearch, eraName,
+  loaded, grouped, totalEntries, totalAll, search, setSearch, eraName,
   user, isEditor, editingId, editContent, setEditContent,
   editVisibility, setEditVisibility, editDate, setEditDate,
   startEdit, saveEdit, cancelEdit, deleteEntry,
@@ -304,8 +304,31 @@ function ChronicleBook({
   const [page, setPage] = useState(0);
   const perPage = 1; // one day per page = book-like
   const pageCount = Math.max(1, Math.ceil(grouped.length / perPage));
+  const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => { setPage(0); }, [search, grouped.length]);
   const current = grouped.slice(page * perPage, page * perPage + perPage);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = document.activeElement as HTMLElement | null;
+      const inField = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as any).isContentEditable);
+      if (e.key === '/' && !inField) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (e.key === 'Escape' && el === searchRef.current) {
+        setSearch('');
+        searchRef.current?.blur();
+        return;
+      }
+      if (inField) return;
+      if (e.key === 'ArrowLeft') setPage(p => Math.max(0, p - 1));
+      if (e.key === 'ArrowRight') setPage(p => Math.min(pageCount - 1, p + 1));
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pageCount, setSearch]);
 
   return (
     <div className="space-y-3">
