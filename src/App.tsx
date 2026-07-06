@@ -21,53 +21,77 @@ import NPCPage from "@/pages/NPCPage";
 import EncounterPage from "@/pages/EncounterPage";
 import ChroniclePage from "@/pages/ChroniclePage";
 import WorldsPage from "@/pages/WorldsPage";
+import WorldHeader from "@/components/WorldHeader";
+import EmptyWorldsState from "@/components/EmptyWorldsState";
+import { useWorld } from "@/contexts/WorldContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import AuthPage from "@/pages/AuthPage";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
+function AppLoadingSkeleton() {
+  return (
+    <div className="flex min-h-screen">
+      <div className="w-56 border-r p-4 space-y-3">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-6 w-full" />
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-6 w-full" />
+      </div>
+      <main className="flex-1 p-6 space-y-4">
+        <Skeleton className="h-10 w-1/3" />
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </main>
+    </div>
+  );
+}
+
+function WorldGate() {
+  const { worlds, loading: worldsLoading } = useWorld();
+  if (worldsLoading) return <AppLoadingSkeleton />;
+  if (worlds.length === 0) return <EmptyWorldsState />;
+  return (
+    <CalendarProvider>
+      <div className="flex min-h-screen">
+        <AppSidebar />
+        <main className="flex-1 p-6 overflow-auto">
+          <WorldHeader />
+          <Routes>
+            <Route path="/" element={<HeroesPage />} />
+            <Route path="/bestiar" element={<BestiaryPage />} />
+            <Route path="/boj" element={<BattlePage />} />
+            <Route path="/setkani" element={<EncounterPage />} />
+            <Route path="/zkusenosti" element={<XPPage />} />
+            <Route path="/statistika" element={<StatsPage />} />
+            <Route path="/zabiti" element={<StatsPage />} />
+            <Route path="/npc" element={<NPCPage />} />
+            <Route path="/kronika" element={<ChroniclePage />} />
+            <Route path="/export" element={<ExportPage />} />
+            <Route path="/mapa" element={<MapPage />} />
+            <Route path="/svety" element={<WorldsPage />} />
+            <Route path="/admin" element={<AdminPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </main>
+      </div>
+    </CalendarProvider>
+  );
+}
+
 function AppContent() {
   const { user, loading } = useAuth();
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground font-display text-lg">Načítání...</p>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <AuthPage />;
-  }
+  if (loading) return <AppLoadingSkeleton />;
+  if (!user) return <AuthPage />;
 
   return (
     <GameProvider>
       <WorldProvider>
-        <CalendarProvider>
-          <div className="flex min-h-screen">
-            <AppSidebar />
-            <main className="flex-1 p-6 overflow-auto">
-              <Routes>
-                <Route path="/" element={<HeroesPage />} />
-                <Route path="/bestiar" element={<BestiaryPage />} />
-                <Route path="/boj" element={<BattlePage />} />
-                <Route path="/setkani" element={<EncounterPage />} />
-                <Route path="/zkusenosti" element={<XPPage />} />
-                <Route path="/statistika" element={<StatsPage />} />
-                <Route path="/zabiti" element={<StatsPage />} />
-                <Route path="/npc" element={<NPCPage />} />
-                <Route path="/kronika" element={<ChroniclePage />} />
-                <Route path="/export" element={<ExportPage />} />
-                <Route path="/mapa" element={<MapPage />} />
-                <Route path="/svety" element={<WorldsPage />} />
-                <Route path="/admin" element={<AdminPage />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </main>
-          </div>
-        </CalendarProvider>
+        <WorldGate />
       </WorldProvider>
     </GameProvider>
   );
