@@ -50,6 +50,7 @@ export default function ChroniclePage() {
   const { calendar } = useCalendar();
   const { activeWorldId } = useWorld();
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'staff_only'>('all');
   const [entryDate, setEntryDate] = useState<{ d: number; m: number; y: number } | null>(null);
