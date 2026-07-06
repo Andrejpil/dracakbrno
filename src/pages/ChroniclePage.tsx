@@ -337,8 +337,9 @@ function ChronicleBook({
         <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchRef}
             className="pl-7"
-            placeholder="Hledat v textu nebo autorovi…"
+            placeholder="Hledat…  (stiskni / )"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -348,7 +349,16 @@ function ChronicleBook({
       <Card className="p-0 overflow-hidden border-primary/30 shadow-lg">
         <ScrollArea className="h-[600px]">
           <div className="p-6 space-y-4">
-            {current.length === 0 && (
+            {!loaded && (
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-10/12" />
+                <Skeleton className="h-4 w-8/12" />
+              </div>
+            )}
+            {loaded && current.length === 0 && (
               <p className="text-muted-foreground text-sm text-center py-12">
                 {search ? 'Nic nenalezeno.' : 'Zatím žádné zápisky.'}
               </p>
