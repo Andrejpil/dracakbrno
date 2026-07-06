@@ -13,8 +13,24 @@ import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2, Sparkles, EyeOff, Pencil, Check, X, Search, FileDown, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useWorld } from '@/contexts/WorldContext';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
+import { useRef } from 'react';
 import jsPDF from 'jspdf';
+
+function escapeRegExp(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+function highlight(text: string, query: string) {
+  const q = query.trim();
+  if (!q) return text;
+  const re = new RegExp(`(${escapeRegExp(q)})`, 'gi');
+  const lower = q.toLowerCase();
+  const parts = text.split(re);
+  return parts.map((p, i) =>
+    p.toLowerCase() === lower
+      ? <mark key={i} className="bg-primary/30 text-foreground rounded px-0.5">{p}</mark>
+      : <span key={i}>{p}</span>
+  );
+}
 
 interface Entry {
   id: string;
@@ -34,6 +50,7 @@ export default function ChroniclePage() {
   const { calendar } = useCalendar();
   const { activeWorldId } = useWorld();
   const [entries, setEntries] = useState<Entry[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [content, setContent] = useState('');
   const [visibility, setVisibility] = useState<'all' | 'staff_only'>('all');
   const [entryDate, setEntryDate] = useState<{ d: number; m: number; y: number } | null>(null);
@@ -62,7 +79,7 @@ export default function ChroniclePage() {
   useEffect(() => { load(); }, [activeWorldId]);
 
   async function load() {
-    if (!activeWorldId) { setEntries([]); return; }
+    if (!activeWorldId) { setEntries([]); setLoaded(true); return; }
     const { data } = await supabase.from('chronicle_entries' as any)
       .select('*')
       .eq('world_id', activeWorldId)
@@ -71,6 +88,7 @@ export default function ChroniclePage() {
       .order('entry_day', { ascending: false })
       .order('created_at', { ascending: false });
     setEntries((data as any) || []);
+    setLoaded(true);
   }
 
   async function addEntry() {
@@ -252,6 +270,7 @@ export default function ChroniclePage() {
       </Card>
 
       <ChronicleBook
+        loaded={loaded}
         grouped={grouped}
         totalEntries={filteredEntries.length}
         totalAll={entries.length}
@@ -277,7 +296,7 @@ export default function ChroniclePage() {
 }
 
 function ChronicleBook({
-  grouped, totalEntries, totalAll, search, setSearch, eraName,
+  loaded, grouped, totalEntries, totalAll, search, setSearch, eraName,
   user, isEditor, editingId, editContent, setEditContent,
   editVisibility, setEditVisibility, editDate, setEditDate,
   startEdit, saveEdit, cancelEdit, deleteEntry,
@@ -285,8 +304,31 @@ function ChronicleBook({
   const [page, setPage] = useState(0);
   const perPage = 1; // one day per page = book-like
   const pageCount = Math.max(1, Math.ceil(grouped.length / perPage));
+  const searchRef = useRef<HTMLInputElement>(null);
   useEffect(() => { setPage(0); }, [search, grouped.length]);
   const current = grouped.slice(page * perPage, page * perPage + perPage);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = document.activeElement as HTMLElement | null;
+      const inField = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as any).isContentEditable);
+      if (e.key === '/' && !inField) {
+        e.preventDefault();
+        searchRef.current?.focus();
+        return;
+      }
+      if (e.key === 'Escape' && el === searchRef.current) {
+        setSearch('');
+        searchRef.current?.blur();
+        return;
+      }
+      if (inField) return;
+      if (e.key === 'ArrowLeft') setPage(p => Math.max(0, p - 1));
+      if (e.key === 'ArrowRight') setPage(p => Math.min(pageCount - 1, p + 1));
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [pageCount, setSearch]);
 
   return (
     <div className="space-y-3">
@@ -295,8 +337,9 @@ function ChronicleBook({
         <div className="relative flex-1 min-w-[200px] max-w-sm ml-auto">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
+            ref={searchRef}
             className="pl-7"
-            placeholder="Hledat v textu nebo autorovi…"
+            placeholder="Hledat…  (stiskni / )"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -306,7 +349,16 @@ function ChronicleBook({
       <Card className="p-0 overflow-hidden border-primary/30 shadow-lg">
         <ScrollArea className="h-[600px]">
           <div className="p-6 space-y-4">
-            {current.length === 0 && (
+            {!loaded && (
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-1/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-10/12" />
+                <Skeleton className="h-4 w-8/12" />
+              </div>
+            )}
+            {loaded && current.length === 0 && (
               <p className="text-muted-foreground text-sm text-center py-12">
                 {search ? 'Nic nenalezeno.' : 'Zatím žádné zápisky.'}
               </p>
@@ -326,7 +378,7 @@ function ChronicleBook({
                         <div key={e.id} className="border-l-2 border-primary/40 pl-3">
                           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                             <span className="flex items-center gap-2">
-                              <strong className="text-foreground">{e.author_name}</strong>
+                              <strong className="text-foreground">{highlight(e.author_name || '', search)}</strong>
                               {e.visibility === 'staff_only' && (
                                 <span className="flex items-center gap-1 text-accent"><EyeOff size={11} />staff</span>
                               )}
@@ -363,7 +415,7 @@ function ChronicleBook({
                               )}
                             </div>
                           ) : (
-                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{e.content}</div>
+                            <div className="text-sm whitespace-pre-wrap leading-relaxed">{highlight(e.content, search)}</div>
                           )}
                         </div>
                       );
@@ -387,6 +439,9 @@ function ChronicleBook({
           </Button>
         </div>
       </Card>
+      <p className="text-[11px] text-muted-foreground text-center">
+        ← → listování · / hledání · Esc vyčistit
+      </p>
     </div>
   );
 }
