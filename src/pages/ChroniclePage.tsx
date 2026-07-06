@@ -439,8 +439,6 @@ function ChronicleBook({
           </Button>
         </div>
       </Card>
-        </div>
-      </Card>
       <p className="text-[11px] text-muted-foreground text-center">
         ← → listování · / hledání · Esc vyčistit
       </p>
