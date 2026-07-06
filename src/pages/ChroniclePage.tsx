@@ -270,6 +270,7 @@ export default function ChroniclePage() {
       </Card>
 
       <ChronicleBook
+        loaded={loaded}
         grouped={grouped}
         totalEntries={filteredEntries.length}
         totalAll={entries.length}
