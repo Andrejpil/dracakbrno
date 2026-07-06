@@ -20,11 +20,15 @@ import jsPDF from 'jspdf';
 
 function escapeRegExp(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function highlight(text: string, query: string) {
-  if (!query.trim()) return text;
-  const re = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+  const q = query.trim();
+  if (!q) return text;
+  const re = new RegExp(`(${escapeRegExp(q)})`, 'gi');
+  const lower = q.toLowerCase();
   const parts = text.split(re);
   return parts.map((p, i) =>
-    re.test(p) ? <mark key={i} className="bg-primary/30 text-foreground rounded px-0.5">{p}</mark> : <span key={i}>{p}</span>
+    p.toLowerCase() === lower
+      ? <mark key={i} className="bg-primary/30 text-foreground rounded px-0.5">{p}</mark>
+      : <span key={i}>{p}</span>
   );
 }
 
