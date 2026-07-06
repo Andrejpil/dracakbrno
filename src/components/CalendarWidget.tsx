@@ -9,13 +9,22 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function CalendarWidget() {
   const { calendar, specialDays, shift, update, addSpecialDay, deleteSpecialDay } = useCalendar();
   const { isEditor } = useUserRole();
   const [editorOpen, setEditorOpen] = useState(false);
 
-  if (!calendar) return null;
+  if (!calendar) {
+    return (
+      <div className="rounded-md border border-sidebar-border bg-sidebar-accent/40 p-3 mb-4 space-y-2">
+        <Skeleton className="h-3 w-16" />
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-6 w-full" />
+      </div>
+    );
+  }
 
   const activeSpecials = specialDays.filter(sd =>
     isDateInRange(calendar.current_day, calendar.current_month, calendar.current_year,
