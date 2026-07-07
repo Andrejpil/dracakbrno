@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useRef } from 'react';
 import jsPDF from 'jspdf';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 function escapeRegExp(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function highlight(text: string, query: string) {
@@ -49,6 +50,7 @@ export default function ChroniclePage() {
   const { isEditor } = useUserRole();
   const { calendar } = useCalendar();
   const { activeWorldId } = useWorld();
+  const { settings, getWorldNickname } = useUserSettings();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [content, setContent] = useState('');
@@ -96,7 +98,7 @@ export default function ChroniclePage() {
     const { error } = await supabase.from('chronicle_entries' as any).insert({
       user_id: user.id,
       world_id: activeWorldId,
-      author_name: authorName || user.email?.split('@')[0] || 'Neznámý',
+      author_name: authorName || (activeWorldId ? getWorldNickname(activeWorldId) : '') || user.email?.split('@')[0] || 'Neznámý',
       entry_year: entryDate.y, entry_month: entryDate.m, entry_day: entryDate.d,
       content: content.trim(),
       visibility: isEditor ? visibility : 'all',
@@ -204,8 +206,9 @@ export default function ChroniclePage() {
       if (!g.has(k)) g.set(k, []);
       g.get(k)!.push(e);
     });
-    return Array.from(g.entries());
-  }, [filteredEntries]);
+    const arr = Array.from(g.entries());
+    return settings.chronicle_order === 'oldest_first' ? arr.reverse() : arr;
+  }, [filteredEntries, settings.chronicle_order]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -290,6 +293,7 @@ export default function ChroniclePage() {
         saveEdit={saveEdit}
         cancelEdit={() => setEditingId(null)}
         deleteEntry={deleteEntry}
+        openPage={settings.chronicle_open_page}
       />
     </div>
   );
@@ -299,13 +303,18 @@ function ChronicleBook({
   loaded, grouped, totalEntries, totalAll, search, setSearch, eraName,
   user, isEditor, editingId, editContent, setEditContent,
   editVisibility, setEditVisibility, editDate, setEditDate,
-  startEdit, saveEdit, cancelEdit, deleteEntry,
+  startEdit, saveEdit, cancelEdit, deleteEntry, openPage,
 }: any) {
-  const [page, setPage] = useState(0);
-  const perPage = 1; // one day per page = book-like
+  const perPage = 1;
   const pageCount = Math.max(1, Math.ceil(grouped.length / perPage));
+  const [page, setPage] = useState(openPage === 'last' ? pageCount - 1 : 0);
   const searchRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { setPage(0); }, [search, grouped.length]);
+  // Reset to configured start when the set of entries changes or the search resets
+  useEffect(() => {
+    setPage(openPage === 'last' ? Math.max(0, pageCount - 1) : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grouped.length, openPage]);
+  useEffect(() => { setPage(0); }, [search]);
   const current = grouped.slice(page * perPage, page * perPage + perPage);
 
   useEffect(() => {

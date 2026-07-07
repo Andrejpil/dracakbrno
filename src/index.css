@@ -78,6 +78,53 @@
     --bonus-negative: 0 65% 45%;
     --bonus-neutral: 220 10% 45%;
   }
+
+  /* Colour variants — override accent tokens on top of dark/light base */
+  .theme-emerald {
+    --primary: 155 65% 45%;
+    --primary-foreground: 155 30% 8%;
+    --accent: 165 60% 30%;
+    --accent-foreground: 40 20% 95%;
+    --ring: 155 65% 45%;
+    --sidebar-primary: 155 65% 45%;
+    --sidebar-primary-foreground: 155 30% 8%;
+    --sidebar-ring: 155 65% 45%;
+  }
+  .theme-royal {
+    --primary: 220 70% 60%;
+    --primary-foreground: 220 40% 10%;
+    --accent: 265 55% 55%;
+    --accent-foreground: 40 20% 95%;
+    --ring: 220 70% 60%;
+    --sidebar-primary: 220 70% 60%;
+    --sidebar-primary-foreground: 220 40% 10%;
+    --sidebar-ring: 220 70% 60%;
+  }
+  .theme-crimson {
+    --primary: 345 70% 55%;
+    --primary-foreground: 345 40% 10%;
+    --accent: 355 60% 40%;
+    --accent-foreground: 40 20% 95%;
+    --ring: 345 70% 55%;
+    --sidebar-primary: 345 70% 55%;
+    --sidebar-primary-foreground: 345 40% 10%;
+    --sidebar-ring: 345 70% 55%;
+  }
+  .theme-parchment {
+    --background: 40 40% 92%;
+    --card: 40 45% 96%;
+    --sidebar-background: 35 40% 86%;
+    --sidebar-accent: 35 35% 80%;
+    --primary: 25 70% 40%;
+    --primary-foreground: 40 45% 96%;
+    --accent: 15 55% 40%;
+    --accent-foreground: 40 45% 96%;
+    --border: 30 25% 70%;
+    --ring: 25 70% 40%;
+    --sidebar-primary: 25 70% 40%;
+    --sidebar-primary-foreground: 40 45% 96%;
+  }
+
 }
 
 @layer base {
