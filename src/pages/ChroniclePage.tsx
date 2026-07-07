@@ -50,6 +50,7 @@ export default function ChroniclePage() {
   const { isEditor } = useUserRole();
   const { calendar } = useCalendar();
   const { activeWorldId } = useWorld();
+  const { settings, getWorldNickname } = useUserSettings();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [content, setContent] = useState('');
