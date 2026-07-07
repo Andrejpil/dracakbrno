@@ -1217,6 +1217,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_settings: {
+        Row: {
+          chronicle_open_page: string
+          chronicle_order: string
+          created_at: string
+          theme: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chronicle_open_page?: string
+          chronicle_order?: string
+          created_at?: string
+          theme?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chronicle_open_page?: string
+          chronicle_order?: string
+          created_at?: string
+          theme?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       world_members: {
         Row: {
           created_at: string
@@ -1239,6 +1266,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "world_members_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_nicknames: {
+        Row: {
+          created_at: string
+          nickname: string
+          updated_at: string
+          user_id: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          nickname: string
+          updated_at?: string
+          user_id: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          nickname?: string
+          updated_at?: string
+          user_id?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_nicknames_world_id_fkey"
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"
