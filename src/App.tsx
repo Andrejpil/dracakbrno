@@ -21,7 +21,6 @@ import NPCPage from "@/pages/NPCPage";
 import EncounterPage from "@/pages/EncounterPage";
 import ChroniclePage from "@/pages/ChroniclePage";
 import WorldsPage from "@/pages/WorldsPage";
-import WorldHeader from "@/components/WorldHeader";
 import EmptyWorldsState from "@/components/EmptyWorldsState";
 import { useWorld } from "@/contexts/WorldContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -60,7 +59,6 @@ function WorldGate() {
       <div className="flex min-h-screen">
         <AppSidebar />
         <main className="flex-1 p-6 overflow-auto">
-          <WorldHeader />
           <Routes>
             <Route path="/" element={<HeroesPage />} />
             <Route path="/bestiar" element={<BestiaryPage />} />
