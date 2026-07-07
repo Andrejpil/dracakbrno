@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useRef } from 'react';
 import jsPDF from 'jspdf';
+import { useUserSettings } from '@/hooks/useUserSettings';
 
 function escapeRegExp(s: string) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function highlight(text: string, query: string) {
