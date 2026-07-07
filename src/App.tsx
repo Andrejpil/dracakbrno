@@ -21,8 +21,10 @@ import NPCPage from "@/pages/NPCPage";
 import EncounterPage from "@/pages/EncounterPage";
 import ChroniclePage from "@/pages/ChroniclePage";
 import WorldsPage from "@/pages/WorldsPage";
+import SettingsPage from "@/pages/SettingsPage";
 import EmptyWorldsState from "@/components/EmptyWorldsState";
 import { useWorld } from "@/contexts/WorldContext";
+import { UserSettingsProvider } from "@/hooks/useUserSettings";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import AuthPage from "@/pages/AuthPage";
@@ -72,6 +74,7 @@ function WorldGate() {
             <Route path="/export" element={<ExportPage />} />
             <Route path="/mapa" element={<MapPage />} />
             <Route path="/svety" element={<WorldsPage />} />
+            <Route path="/nastaveni" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
@@ -88,27 +91,31 @@ function AppContent() {
   if (!user) return <AuthPage />;
 
   return (
-    <GameProvider>
-      <WorldProvider>
-        <WorldGate />
-      </WorldProvider>
-    </GameProvider>
+    <UserSettingsProvider>
+      <GameProvider>
+        <WorldProvider>
+          <WorldGate />
+        </WorldProvider>
+      </GameProvider>
+    </UserSettingsProvider>
   );
 }
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <AuthProvider>
+          <UserSettingsProvider>
+            <ThemeProvider>
+              <AppContent />
+            </ThemeProvider>
+          </UserSettingsProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </TooltipProvider>
   </QueryClientProvider>
 );
 
