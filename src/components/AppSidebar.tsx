@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, ScrollText, Globe } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, ScrollText, Globe, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useWorld } from '@/contexts/WorldContext';
@@ -28,9 +28,10 @@ export default function AppSidebar() {
 
   const visibleLinks = allLinks.filter(l => canView(l.page));
   const withWorlds = [...visibleLinks, { to: '/svety', label: 'Světy', icon: Globe, page: 'worlds' }];
+  const withSettings = [...withWorlds, { to: '/nastaveni', label: 'Nastavení', icon: Settings, page: 'settings' }];
   const finalLinks = isAdmin
-    ? [...withWorlds, { to: '/admin', label: 'Uživatelé', icon: Users, page: 'admin' }]
-    : withWorlds;
+    ? [...withSettings, { to: '/admin', label: 'Uživatelé', icon: Users, page: 'admin' }]
+    : withSettings;
 
   return (
     <aside className="w-52 min-h-screen bg-sidebar border-r border-sidebar-border flex flex-col py-6 px-3 shrink-0">

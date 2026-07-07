@@ -91,13 +91,11 @@ function AppContent() {
   if (!user) return <AuthPage />;
 
   return (
-    <UserSettingsProvider>
-      <GameProvider>
-        <WorldProvider>
-          <WorldGate />
-        </WorldProvider>
-      </GameProvider>
-    </UserSettingsProvider>
+    <GameProvider>
+      <WorldProvider>
+        <WorldGate />
+      </WorldProvider>
+    </GameProvider>
   );
 }
 
