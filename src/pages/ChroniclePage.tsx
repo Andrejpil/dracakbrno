@@ -98,7 +98,7 @@ export default function ChroniclePage() {
     const { error } = await supabase.from('chronicle_entries' as any).insert({
       user_id: user.id,
       world_id: activeWorldId,
-      author_name: authorName || user.email?.split('@')[0] || 'Neznámý',
+      author_name: authorName || (activeWorldId ? getWorldNickname(activeWorldId) : '') || user.email?.split('@')[0] || 'Neznámý',
       entry_year: entryDate.y, entry_month: entryDate.m, entry_day: entryDate.d,
       content: content.trim(),
       visibility: isEditor ? visibility : 'all',
