@@ -206,8 +206,9 @@ export default function ChroniclePage() {
       if (!g.has(k)) g.set(k, []);
       g.get(k)!.push(e);
     });
-    return Array.from(g.entries());
-  }, [filteredEntries]);
+    const arr = Array.from(g.entries());
+    return settings.chronicle_order === 'oldest_first' ? arr.reverse() : arr;
+  }, [filteredEntries, settings.chronicle_order]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
