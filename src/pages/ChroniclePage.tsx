@@ -293,6 +293,7 @@ export default function ChroniclePage() {
         saveEdit={saveEdit}
         cancelEdit={() => setEditingId(null)}
         deleteEntry={deleteEntry}
+        openPage={settings.chronicle_open_page}
       />
     </div>
   );
@@ -302,13 +303,18 @@ function ChronicleBook({
   loaded, grouped, totalEntries, totalAll, search, setSearch, eraName,
   user, isEditor, editingId, editContent, setEditContent,
   editVisibility, setEditVisibility, editDate, setEditDate,
-  startEdit, saveEdit, cancelEdit, deleteEntry,
+  startEdit, saveEdit, cancelEdit, deleteEntry, openPage,
 }: any) {
-  const [page, setPage] = useState(0);
-  const perPage = 1; // one day per page = book-like
+  const perPage = 1;
   const pageCount = Math.max(1, Math.ceil(grouped.length / perPage));
+  const [page, setPage] = useState(openPage === 'last' ? pageCount - 1 : 0);
   const searchRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { setPage(0); }, [search, grouped.length]);
+  // Reset to configured start when the set of entries changes or the search resets
+  useEffect(() => {
+    setPage(openPage === 'last' ? Math.max(0, pageCount - 1) : 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grouped.length, openPage]);
+  useEffect(() => { setPage(0); }, [search]);
   const current = grouped.slice(page * perPage, page * perPage + perPage);
 
   useEffect(() => {
