@@ -1065,6 +1065,130 @@ export type Database = {
           },
         ]
       }
+      price_item_locations: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          location_id: string
+          override_modifier_pct: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          location_id: string
+          override_modifier_pct?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          location_id?: string
+          override_modifier_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_item_locations_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "price_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_item_locations_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "price_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_items: {
+        Row: {
+          base_price_copper: number
+          category: string | null
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          unit: string | null
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          base_price_copper?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          unit?: string | null
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          base_price_copper?: number
+          category?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          unit?: string | null
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_items_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_locations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          price_modifier_pct: number
+          type: Database["public"]["Enums"]["price_location_type"]
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          price_modifier_pct?: number
+          type?: Database["public"]["Enums"]["price_location_type"]
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          price_modifier_pct?: number
+          type?: Database["public"]["Enums"]["price_location_type"]
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_locations_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1244,6 +1368,41 @@ export type Database = {
         }
         Relationships: []
       }
+      world_economy: {
+        Row: {
+          created_at: string
+          custom_modifier_pct: number
+          id: string
+          state: Database["public"]["Enums"]["economy_state"]
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          custom_modifier_pct?: number
+          id?: string
+          state?: Database["public"]["Enums"]["economy_state"]
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          custom_modifier_pct?: number
+          id?: string
+          state?: Database["public"]["Enums"]["economy_state"]
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_economy_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: true
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       world_members: {
         Row: {
           created_at: string
@@ -1410,6 +1569,23 @@ export type Database = {
     Enums: {
       app_role: "admin" | "editor" | "viewer"
       chronicle_visibility: "all" | "staff_only"
+      economy_state:
+        | "normal"
+        | "mobilization"
+        | "war"
+        | "famine"
+        | "plague"
+        | "festival"
+        | "trade_boom"
+        | "embargo"
+        | "custom"
+      price_location_type:
+        | "city"
+        | "town"
+        | "village"
+        | "hamlet"
+        | "fortress"
+        | "market"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1539,6 +1715,25 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "editor", "viewer"],
       chronicle_visibility: ["all", "staff_only"],
+      economy_state: [
+        "normal",
+        "mobilization",
+        "war",
+        "famine",
+        "plague",
+        "festival",
+        "trade_boom",
+        "embargo",
+        "custom",
+      ],
+      price_location_type: [
+        "city",
+        "town",
+        "village",
+        "hamlet",
+        "fortress",
+        "market",
+      ],
     },
   },
 } as const

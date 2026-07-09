@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, ScrollText, Globe, Settings } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, ScrollText, Globe, Settings, Coins } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useWorld } from '@/contexts/WorldContext';
@@ -18,6 +18,7 @@ const allLinks = [
   { to: '/kronika', label: 'Kronika', icon: ScrollText, page: 'heroes' },
   { to: '/export', label: 'Export / Import', icon: Download, page: 'export' },
   { to: '/mapa', label: 'Mapa', icon: Map, page: 'map' },
+  { to: '/cenik', label: 'Ceník', icon: Coins, page: 'pricing' },
 ];
 
 export default function AppSidebar() {

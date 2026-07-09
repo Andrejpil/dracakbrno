@@ -1,108 +1,58 @@
+## Ceník — cenový systém per svět (pouze editor/admin)
 
-# Balíček UX vylepšení
+Nový modul „Ceník" v levém panelu, viditelný **jen pro role `editor` a `admin`**. Hráč (viewer) položku ani stránku nevidí. Data jsou vždy vázaná na aktivní svět (`world_id`) — každý svět má vlastní města, předměty a ekonomiku.
 
-Pět malých, ale viditelných zlepšení, která zpříjemní každodenní práci s aplikací. Žádná změna business logiky ani databáze — jen frontend.
+### Měna
 
-## 1. Indikátor aktivního světa v hlavičce
+Fixní kurz: **1 zl = 10 st = 100 md**. Ceny ukládáme interně v měděných (`price_copper`, integer). UI zobrazuje ve formátu `X zl Y st Z md` a nabízí zadávání v každé jednotce.
 
-Přes všechny stránky přidat malý pruh nahoře (nad obsah v `<main>` v `src/App.tsx`), který zobrazí:
+### Datový model (per svět)
 
-- název aktivního světa (`activeWorld.name`)
-- ikonu 🌍 / `Globe` z lucide
-- badge s rolí uživatele ve světě (Vlastník / Editor / Viewer)
+Nové tabulky, všechny s `world_id uuid` + RLS `is_world_member(world_id, auth.uid())` pro čtení a `is_world_editor(world_id, auth.uid())` pro zápis. Viewer roli funkce `is_world_editor` odmítne, viewer tak modul nemá jak číst.
 
-Když je aktivních víc světů, název bude klikací a otevře `/svety`. Když neexistuje žádný svět, zobrazí se výzva „Vytvoř si první svět →".
+- **`price_locations`** — sídla: `name`, `type` (`city` / `town` / `village` / `hamlet` / `fortress` / `market`), `price_modifier_pct` (int, výchozí 0), `note`.
+- **`price_items`** — předměty / služby: `name`, `category` (např. „Nápoje", „Zbroj", „Služby"), `base_price_copper` (int), `unit` (např. „kus", „džbán", „noc"), `note`.
+- **`price_item_locations`** — kde se položka vyskytuje: `item_id`, `location_id`, `override_modifier_pct` (nullable — když je vyplněné, přebíjí `price_modifier_pct` z lokace pro tuto konkrétní položku).
+- **`world_economy`** — jednořádkové nastavení světové ekonomiky (unikátní `world_id`): `state` (enum: `normal`, `mobilization`, `war`, `famine`, `plague`, `festival`, `trade_boom`, `embargo`, `custom`) + `custom_modifier_pct` (int, použije se když `state = custom`).
 
-**Soubor:** `src/App.tsx` (přidat komponentu `WorldHeader` nad `<Routes>`).
+Presety pro `state` (výchozí modifikátory, přepsatelné v UI):
+- `normal` 0 %, `mobilization` +15 %, `war` +40 %, `famine` +60 %, `plague` +80 %, `festival` −10 %, `trade_boom` −20 %, `embargo` +50 %.
 
-## 2. Prázdný stav pro nové uživatele
-
-Když se přihlásí uživatel, který není členem/vlastníkem žádného světa:
-
-- `WorldContext` už vrací `worlds: []`
-- Místo prázdné stránky zobrazit uvítací obrazovku s dvěma tlačítky:
-  - „Vytvořit vlastní svět" → `/svety`
-  - „Požádat o pozvání" (text s vysvětlením, koho kontaktovat)
-
-**Soubor:** nová komponenta `src/components/EmptyWorldsState.tsx`, použitá v `App.tsx` mezi kontrolou `user` a routes.
-
-## 3. Klávesové zkratky v kronice
-
-V `ChronicleBook` přidat `useEffect` s `window.addEventListener('keydown')`:
-
-- `←` / `→` — předchozí / další strana (ignorovat když je fokus v inputu/textarea)
-- `/` — fokus na vyhledávací input (`preventDefault` na `/`)
-- `Esc` — vyčistit hledání a odfokusovat
-
-Malá nápověda „← → listování · / hledání" pod paginací šedivým textem.
-
-**Soubor:** `src/pages/ChroniclePage.tsx`.
-
-## 4. Zvýraznění hledaného textu v kronice
-
-Když je vyplněné `search`, obalit každý match v `e.content` a `e.author_name` do `<mark className="bg-primary/30 text-foreground rounded px-0.5">`.
-
-Pomocná funkce `highlight(text, query)` — split přes regex escapovaný query, insensitively.
-
-**Soubor:** `src/pages/ChroniclePage.tsx` (jen render, žádná změna dat).
-
-## 5. Loading skeletony
-
-Nahradit textové „Načítání..." skutečnými skeletony (shadcn `Skeleton` už existuje):
-
-- `App.tsx` — celostránkový skeleton s pruhem hlavičky + sidebarem + kartami
-- `ChroniclePage` — když `entries` ještě neexistuje: 3 dummy karty s `<Skeleton />`
-- `CalendarWidget` — když `calendar === null`: skeleton řádku
-- `BestiaryPage`, `HeroesPage`, `NPCPage` — nahoře, když se prvně načítá seznam: grid skeletonů (mimo scope pokud budeš chtít, můžu jen kroniku + kalendář + app)
-
-Pro tento krok navrhuji rozsah: **App shell + Kronika + Kalendář** (zbytek stránek necháme na později, aby balíček zůstal malý).
-
-## Layout diagram
+### Výpočet finální ceny
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ Sidebar  │  🌍 Hlavní svět  · Editor    [odkaz] │  ← NEW (1)
-│          ├─────────────────────────────────────┤
-│          │                                      │
-│  ...     │   Obsah stránky                      │
-│          │                                      │
-└──────────┴──────────────────────────────────────┘
-
-Kronika – kniha:
-┌───────────────────────────────────────────────┐
-│ Zápisky (12)                    [🔍 hledat]   │
-├───────────────────────────────────────────────┤
-│ 15. Jara 657                                  │
-│  Gorm — bojoval s **drakem** a zvítězil...    │  ← zvýrazněný match (4)
-│                                                │
-├───────────────────────────────────────────────┤
-│  ← Předchozí     Strana 1/12     Další →      │
-│  ← → listování · / hledání                    │  ← nápověda (3)
-└───────────────────────────────────────────────┘
+loc_mod   = item_override ?? location.price_modifier_pct
+econ_mod  = world_economy modifier (dle state / custom)
+final     = round( base_price_copper * (1 + loc_mod/100) * (1 + econ_mod/100) )
 ```
 
-## Technický přehled
+Vypisujeme rozklad ceny do tooltipu (základ → +lokace → +ekonomika → výsledek), ať PJ vidí co se stalo.
 
-- **Žádné DB změny, žádné nové migrace.**
-- **Žádné nové balíčky** — vše na existujících shadcn komponentách (`Skeleton`, `Badge`) a lucide ikonách.
-- Klávesové zkratky přes standardní `keydown` listener s guardem na `document.activeElement instanceof HTMLInputElement || HTMLTextAreaElement`.
-- Highlight bez `dangerouslySetInnerHTML` — přes `String.split` a mapování na React fragmenty.
+### UI — stránka `/cenik`
 
-## Soubory
+Levý panel: nová položka **Ceník** (ikona `Coins`), viditelná jen když `canEdit('pricing')` (přidáme do `role_permissions` pro editor/admin) — viewer ji nikdy neuvidí.
 
-**Nové:**
-- `src/components/WorldHeader.tsx`
-- `src/components/EmptyWorldsState.tsx`
-- `src/components/ChronicleSkeleton.tsx` (drobný wrapper nad `Skeleton`)
+Layout tří karet:
 
-**Upravené:**
-- `src/App.tsx` — WorldHeader + EmptyWorldsState + skeleton stav
-- `src/pages/ChroniclePage.tsx` — klávesnice, highlight, skeleton
-- `src/components/CalendarWidget.tsx` — skeleton stav
+1. **Světová ekonomika** — select `state` + input `custom_modifier_pct`, náhled aktuálního globálního modifikátoru.
+2. **Sídla** — tabulka lokací (jméno, typ, modifikátor %, poznámka), tlačítka Přidat/Upravit/Smazat.
+3. **Předměty a služby** — tabulka s filtrem podle kategorie a lokace. Editor otevře modal:
+   - základní údaje (název, kategorie, jednotka, poznámka)
+   - základní cena — tři inputy zl/st/md, ukládá se do `price_copper`
+   - checkboxy „Prodává se v" pro každou lokaci; u zaškrknuté lokace je pole `override %` (prázdné = použij modifikátor lokace)
+   - náhled výsledné ceny pro každou vybranou lokaci s aktuální ekonomikou
 
-## Mimo rozsah (dohodneme si příště)
+### Bezpečnost
 
-- Skeletony na Bestiáři / Hrdinech / NPC / Mapě
-- Real-time sync boje
-- Automatický zápis do kroniky z bitev
-- Export celé kroniky do PDF/TXT
+- RLS na všech 4 tabulkách: `SELECT` přes `is_world_member`, `INSERT/UPDATE/DELETE` přes `is_world_editor`. Grants pro `authenticated` a `service_role`, žádný `anon`.
+- Do `role_permissions` přidáme řádek `page = 'pricing'`: editor/admin `can_view = can_edit = true`, viewer oba `false`. `AppSidebar` položku filtruje přes `canView('pricing')`; sama stránka navíc znovu ověří `canEdit('pricing')` a jinak zobrazí „Přístup odepřen".
+
+### Soubory
+
+- Migrace: `supabase/migrations/..._pricing.sql` (4 tabulky + grants + RLS + policies + `role_permissions` seed).
+- Nové: `src/pages/PricingPage.tsx`, `src/components/pricing/LocationsCard.tsx`, `src/components/pricing/ItemsCard.tsx`, `src/components/pricing/EconomyCard.tsx`, `src/components/pricing/ItemEditor.tsx`, `src/lib/pricing.ts` (formát měny + výpočet).
+- Upravené: `src/App.tsx` (route `/cenik`), `src/components/AppSidebar.tsx` (položka Ceník, ikona `Coins`, gated `canView('pricing')`).
+
+### Otázka před stavbou
+
+Presety ekonomik uvedené výše (mobilizace +15, válka +40, hlad +60, mor +80, slavnost −10, obchodní boom −20, embargo +50) — sedí, nebo je chceš mít jinak / doplnit další stavy? Můžeme také začít se všemi na 0 % a nechat tě si je nastavit sám.

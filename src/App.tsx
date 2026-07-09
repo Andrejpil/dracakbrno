@@ -22,6 +22,7 @@ import EncounterPage from "@/pages/EncounterPage";
 import ChroniclePage from "@/pages/ChroniclePage";
 import WorldsPage from "@/pages/WorldsPage";
 import SettingsPage from "@/pages/SettingsPage";
+import PricingPage from "@/pages/PricingPage";
 import EmptyWorldsState from "@/components/EmptyWorldsState";
 import { useWorld } from "@/contexts/WorldContext";
 import { UserSettingsProvider } from "@/hooks/useUserSettings";
@@ -73,6 +74,7 @@ function WorldGate() {
             <Route path="/kronika" element={<ChroniclePage />} />
             <Route path="/export" element={<ExportPage />} />
             <Route path="/mapa" element={<MapPage />} />
+            <Route path="/cenik" element={<PricingPage />} />
             <Route path="/svety" element={<WorldsPage />} />
             <Route path="/nastaveni" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminPage />} />
