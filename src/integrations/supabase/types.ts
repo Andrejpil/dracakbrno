@@ -1370,6 +1370,7 @@ export type Database = {
       }
       world_economy: {
         Row: {
+          active_state_code: string | null
           created_at: string
           custom_modifier_pct: number
           id: string
@@ -1378,6 +1379,7 @@ export type Database = {
           world_id: string
         }
         Insert: {
+          active_state_code?: string | null
           created_at?: string
           custom_modifier_pct?: number
           id?: string
@@ -1386,6 +1388,7 @@ export type Database = {
           world_id: string
         }
         Update: {
+          active_state_code?: string | null
           created_at?: string
           custom_modifier_pct?: number
           id?: string
@@ -1398,6 +1401,47 @@ export type Database = {
             foreignKeyName: "world_economy_world_id_fkey"
             columns: ["world_id"]
             isOneToOne: true
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_economy_states: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          label: string
+          modifier_pct: number
+          sort_order: number
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          modifier_pct?: number
+          sort_order?: number
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          modifier_pct?: number
+          sort_order?: number
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_economy_states_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
             referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
