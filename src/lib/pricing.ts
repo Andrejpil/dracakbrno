@@ -81,3 +81,96 @@ export function computePrice({ basePriceCopper, locationModifierPct, economyModi
   );
   return { final, base: basePriceCopper, locMod: locationModifierPct || 0, econMod: economyModifierPct || 0 };
 }
+
+// ---------------- CSV helpers ----------------
+
+export interface CsvItemRow {
+  name: string;
+  category: string;
+  unit: string;
+  note: string;
+  base_copper: number;
+  locations: { name: string; override: number | null }[];
+}
+
+function csvEscape(v: string) {
+  const s = v ?? '';
+  return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+export function buildItemsCsv(rows: CsvItemRow[]): string {
+  const header = ['nazev', 'kategorie', 'jednotka', 'zl', 'st', 'md', 'poznamka', 'sidla'];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    const p = copperToParts(r.base_copper);
+    const locs = r.locations
+      .map(l => (l.override == null ? l.name : `${l.name}=${l.override}`))
+      .join('|');
+    lines.push([
+      csvEscape(r.name), csvEscape(r.category), csvEscape(r.unit),
+      String(p.zl), String(p.st), String(p.md),
+      csvEscape(r.note), csvEscape(locs),
+    ].join(','));
+  }
+  return '\uFEFF' + lines.join('\n');
+}
+
+function splitCsvLine(line: string, delim: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; } else inQ = false;
+      } else cur += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === delim) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out.map(s => s.trim());
+}
+
+export function parseItemsCsv(text: string): { rows: CsvItemRow[]; errors: string[] } {
+  const clean = text.replace(/^\uFEFF/, '').replace(/\r/g, '');
+  const lines = clean.split('\n').filter(l => l.trim() !== '');
+  const errors: string[] = [];
+  if (lines.length < 2) return { rows: [], errors: ['Soubor je prázdný nebo chybí data.'] };
+  const delim = (lines[0].match(/;/g)?.length || 0) > (lines[0].match(/,/g)?.length || 0) ? ';' : ',';
+  const header = splitCsvLine(lines[0], delim).map(h => h.toLowerCase());
+  const idx = (n: string) => header.indexOf(n);
+  const iName = idx('nazev') >= 0 ? idx('nazev') : idx('název');
+  if (iName < 0) return { rows: [], errors: ['Chybí sloupec "nazev".'] };
+  const iCat = idx('kategorie'), iUnit = idx('jednotka'), iNote = idx('poznamka') >= 0 ? idx('poznamka') : idx('poznámka');
+  const iZl = idx('zl'), iSt = idx('st'), iMd = idx('md'), iLocs = idx('sidla') >= 0 ? idx('sidla') : idx('sídla');
+
+  const rows: CsvItemRow[] = [];
+  lines.slice(1).forEach((line, n) => {
+    const c = splitCsvLine(line, delim);
+    const name = (c[iName] || '').trim();
+    if (!name) { errors.push(`Řádek ${n + 2}: chybí název — přeskočeno.`); return; }
+    const num = (i: number) => (i >= 0 ? Number(c[i]) || 0 : 0);
+    const locs: CsvItemRow['locations'] = [];
+    if (iLocs >= 0 && c[iLocs]) {
+      c[iLocs].split('|').map(s => s.trim()).filter(Boolean).forEach(part => {
+        const eq = part.lastIndexOf('=');
+        if (eq > 0) {
+          const ln = part.slice(0, eq).trim();
+          const ov = Number(part.slice(eq + 1).trim());
+          locs.push({ name: ln, override: Number.isFinite(ov) ? ov : null });
+        } else locs.push({ name: part, override: null });
+      });
+    }
+    rows.push({
+      name,
+      category: iCat >= 0 ? (c[iCat] || '') : '',
+      unit: iUnit >= 0 ? (c[iUnit] || '') : '',
+      note: iNote >= 0 ? (c[iNote] || '') : '',
+      base_copper: partsToCopper(num(iZl), num(iSt), num(iMd)),
+      locations: locs,
+    });
+  });
+  return { rows, errors };
+}
