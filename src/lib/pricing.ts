@@ -174,3 +174,30 @@ export function parseItemsCsv(text: string): { rows: CsvItemRow[]; errors: strin
   });
   return { rows, errors };
 }
+
+// ---------------- settlement type inheritance ----------------
+
+export interface LocLike {
+  price_modifier_pct: number;
+  type_code?: string | null;
+  uses_type_default?: boolean | null;
+}
+
+/** Effective settlement modifier: own value, or the default of its settlement type. */
+export function effectiveLocationPct(
+  loc: LocLike,
+  typesByCode: Record<string, { default_modifier_pct: number }>
+): number {
+  if (loc.uses_type_default) return typesByCode[loc.type_code || '']?.default_modifier_pct ?? 0;
+  return loc.price_modifier_pct || 0;
+}
+
+/** Short human summary of an item's availability. */
+export function availabilitySummary(mode: string, count: number): string {
+  switch (mode) {
+    case 'ONLY_SELECTED': return count === 0 ? 'Žádná sídla nevybrána' : `Pouze v ${count} sídlech`;
+    case 'EXCEPT_SELECTED': return count === 0 ? 'Dostupné všude' : `Nedostupné v ${count} sídlech`;
+    case 'NOWHERE': return 'Nedostupné nikde';
+    default: return 'Dostupné všude';
+  }
+}
