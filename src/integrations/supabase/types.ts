@@ -1106,8 +1106,10 @@ export type Database = {
       }
       price_items: {
         Row: {
+          availability_mode: string
           base_price_copper: number
           category: string | null
+          code: string | null
           created_at: string
           id: string
           name: string
@@ -1117,8 +1119,10 @@ export type Database = {
           world_id: string
         }
         Insert: {
+          availability_mode?: string
           base_price_copper?: number
           category?: string | null
+          code?: string | null
           created_at?: string
           id?: string
           name: string
@@ -1128,8 +1132,10 @@ export type Database = {
           world_id: string
         }
         Update: {
+          availability_mode?: string
           base_price_copper?: number
           category?: string | null
+          code?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -1148,35 +1154,85 @@ export type Database = {
           },
         ]
       }
+      price_location_types: {
+        Row: {
+          code: string
+          created_at: string
+          default_modifier_pct: number
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          default_modifier_pct?: number
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          default_modifier_pct?: number
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_location_types_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_locations: {
         Row: {
+          code: string | null
           created_at: string
           id: string
           name: string
           note: string | null
           price_modifier_pct: number
           type: Database["public"]["Enums"]["price_location_type"]
+          type_code: string | null
           updated_at: string
+          uses_type_default: boolean
           world_id: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           id?: string
           name: string
           note?: string | null
           price_modifier_pct?: number
           type?: Database["public"]["Enums"]["price_location_type"]
+          type_code?: string | null
           updated_at?: string
+          uses_type_default?: boolean
           world_id: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           id?: string
           name?: string
           note?: string | null
           price_modifier_pct?: number
           type?: Database["public"]["Enums"]["price_location_type"]
+          type_code?: string | null
           updated_at?: string
+          uses_type_default?: boolean
           world_id?: string
         }
         Relationships: [
@@ -1609,6 +1665,7 @@ export type Database = {
         Args: { _user_id: string; _world_id: string }
         Returns: boolean
       }
+      pricing_slug: { Args: { _txt: string }; Returns: string }
     }
     Enums: {
       app_role: "admin" | "editor" | "viewer"
