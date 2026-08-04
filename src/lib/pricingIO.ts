@@ -40,7 +40,7 @@ export interface ExportSettlement {
 export interface ExportAvailability {
   item_code: string;
   settlement_code: string;
-  override_percent: number | '';
+  override_percent: number | string;
 }
 
 export interface ExportTypeRow {
