@@ -50,12 +50,16 @@ export default function PricingImportDialog({ open, onOpenChange, worldId, onDon
       const [items, locs, typesRes] = await Promise.all([
         fetchAllCodes('price_items', worldId),
         fetchAllCodes('price_locations', worldId),
-        supabase.from('price_location_types' as any).select('code').eq('world_id', worldId),
+        supabase.from('price_location_types' as any).select('code, label').eq('world_id', worldId),
       ]);
+      const nrm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
       const itemCodes = new Set(items.map(i => i.code || '').filter(Boolean));
       const settlementCodes = new Set(locs.map(l => l.code || '').filter(Boolean));
-      const typeCodes = new Set((((typesRes.data as any[]) || []).map(t => t.code)));
-      const v = validateImport(sheets, { itemCodes, settlementCodes, typeCodes });
+      const typeRows = ((typesRes.data as any[]) || []);
+      const typeCodes = new Set(typeRows.map(t => t.code));
+      const settlementCodeByName = new Map(locs.filter(l => l.code).map(l => [nrm(l.name), l.code as string]));
+      const typeCodeByLabel = new Map(typeRows.map(t => [nrm(t.label || ''), t.code as string]));
+      const v = validateImport(sheets, { itemCodes, settlementCodes, typeCodes, settlementCodeByName, typeCodeByLabel });
       setPreview({
         v,
         newItems: v.items.filter(i => !itemCodes.has(i.code)).length,
@@ -69,6 +73,7 @@ export default function PricingImportDialog({ open, onOpenChange, worldId, onDon
     }
     setBusy(false);
   }
+
 
   async function run() {
     if (!preview) return;
