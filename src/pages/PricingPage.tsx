@@ -389,14 +389,14 @@ export default function PricingPage() {
             <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('zip')}>
               <FileArchive size={14} className="mr-1" />CSV (ZIP)
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('items')}>
-              <Download size={14} className="mr-1" />items.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('item')}>
+              <Download size={14} className="mr-1" />ITEM.csv
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('settlements')}>
-              <Download size={14} className="mr-1" />settlements.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('mesta')}>
+              <Download size={14} className="mr-1" />MESTA.csv
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('availability')}>
-              <Download size={14} className="mr-1" />availability.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('sidla')}>
+              <Download size={14} className="mr-1" />SIDLA.csv
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}><Upload size={14} className="mr-1" />Import</Button>
             <Button size="sm" onClick={() => { setEditItem(null); setItemOpen(true); }}><Plus size={14} className="mr-1" />Přidat položku</Button>
