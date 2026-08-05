@@ -50,12 +50,16 @@ export default function PricingImportDialog({ open, onOpenChange, worldId, onDon
       const [items, locs, typesRes] = await Promise.all([
         fetchAllCodes('price_items', worldId),
         fetchAllCodes('price_locations', worldId),
-        supabase.from('price_location_types' as any).select('code').eq('world_id', worldId),
+        supabase.from('price_location_types' as any).select('code, label').eq('world_id', worldId),
       ]);
+      const nrm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
       const itemCodes = new Set(items.map(i => i.code || '').filter(Boolean));
       const settlementCodes = new Set(locs.map(l => l.code || '').filter(Boolean));
-      const typeCodes = new Set((((typesRes.data as any[]) || []).map(t => t.code)));
-      const v = validateImport(sheets, { itemCodes, settlementCodes, typeCodes });
+      const typeRows = ((typesRes.data as any[]) || []);
+      const typeCodes = new Set(typeRows.map(t => t.code));
+      const settlementCodeByName = new Map(locs.filter(l => l.code).map(l => [nrm(l.name), l.code as string]));
+      const typeCodeByLabel = new Map(typeRows.map(t => [nrm(t.label || ''), t.code as string]));
+      const v = validateImport(sheets, { itemCodes, settlementCodes, typeCodes, settlementCodeByName, typeCodeByLabel });
       setPreview({
         v,
         newItems: v.items.filter(i => !itemCodes.has(i.code)).length,
@@ -69,6 +73,7 @@ export default function PricingImportDialog({ open, onOpenChange, worldId, onDon
     }
     setBusy(false);
   }
+
 
   async function run() {
     if (!preview) return;
@@ -157,16 +162,19 @@ export default function PricingImportDialog({ open, onOpenChange, worldId, onDon
 
   function template() {
     downloadXlsx({
+      types: [
+        { code: 'city', label: 'Město', default_modifier_pct: 20 },
+        { code: 'village', label: 'Vesnice', default_modifier_pct: 10 },
+      ],
+      settlements: [
+        { code: 'belteren', name: 'Belteren', type_code: 'city', type_label: 'Město', effective_pct: 20, uses_type_default: true },
+        { code: 'blatna', name: 'Blatná', type_code: 'village', type_label: 'Vesnice', effective_pct: 5, uses_type_default: false },
+      ],
       items: [{
-        item_id: '', item_code: 'vino-belteren', name: 'Víno z Belterenu', category: 'Nápoje', unit: 'láhev',
-        base_gold: 1, base_silver: 2, base_copper: 0, availability_mode: 'ONLY_SELECTED', note: '',
+        code: 'pivo', name: 'Pivo', category: 'Nápoj', unit: 'Korbel',
+        base_price_copper: 40, availability_mode: 'ONLY_SELECTED',
+        cells: { belteren: true, blatna: false },
       }],
-      settlements: [{
-        settlement_id: '', settlement_code: 'belteren', name: 'Belteren', settlement_type: 'city',
-        price_modifier_percent: 0, uses_type_default: true, note: '',
-      }],
-      availability: [{ item_code: 'vino-belteren', settlement_code: 'belteren', override_percent: '' }],
-      types: [{ type_code: 'city', label: 'Město', default_modifier_percent: 10 }],
     }, 'cenik-sablona.xlsx');
   }
 
@@ -176,10 +184,14 @@ export default function PricingImportDialog({ open, onOpenChange, worldId, onDon
         <DialogHeader><DialogTitle>Import ceníku</DialogTitle></DialogHeader>
         <div className="space-y-3 text-sm">
           <p className="text-xs text-muted-foreground">
-            Přijímá <code>.xlsx</code> (listy Polozky / Sidla / Dostupnost / TypySidel), <code>.zip</code> s CSV soubory
-            (items.csv, settlements.csv, availability.csv) nebo jednotlivý <code>.csv</code>.
-            Položky a sídla se párují podle unikátního kódu, název je jen pomocná hodnota.
+            Formát sešitu: list <code>SIDLA</code> (typy sídel: NÁZEV TYPŮ / KÓD / VÝCHOZÍ %), list <code>MESTA</code>
+            (Sídlo / KÓD / TYP / Výsledný modifikátor / ZDROJ) a list <code>ITEM</code>
+            (Název / Kód / Kategorie / Jednotka / Základ / Dostupnost + jeden sloupec za každé sídlo).
+            V buňkách sídel je <code>TRUE</code> / <code>FALSE</code>, případně číslo = vlastní přepis % pro dané sídlo.
+            Cena „Základ" se píše textem, např. <code>4 st</code> nebo <code>1 zl 2 st</code>.
+            Přijímá se i <code>.zip</code> s CSV (MESTA.csv, SIDLA.csv, ITEM.csv) nebo jednotlivý <code>.csv</code>.
           </p>
+
           <Button size="sm" variant="secondary" onClick={template}>Stáhnout šablonu XLSX</Button>
           <input ref={fileRef} type="file" accept=".xlsx,.csv,.zip"
             onChange={() => setPreview(null)}

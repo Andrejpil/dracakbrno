@@ -18,8 +18,9 @@ import {
   computePrice, formatCopper, effectiveLocationPct, availabilitySummary,
 } from '@/lib/pricing';
 import {
-  AVAILABILITY_LABELS, AvailabilityMode, itemToExport, slugify,
+  AVAILABILITY_LABELS, AvailabilityMode, slugify,
   downloadXlsx, downloadZip, downloadCsv, PricingExportData,
+  itemRows, settlementRows, typeRows,
 } from '@/lib/pricingIO';
 import SettlementsManagerDialog from '@/components/pricing/SettlementsManagerDialog';
 import SettlementTypesDialog from '@/components/pricing/SettlementTypesDialog';
@@ -238,42 +239,66 @@ export default function PricingPage() {
       const { data } = await supabase.from('price_item_locations' as any).select('*').in('item_id', all.slice(i, i + 200).map(a => a.id));
       links.push(...(((data as any) || []) as PriceItemLocation[]));
     }
-    const itemCodeById = new Map(all.map(i => [i.id, i.code || '']));
-    const locCodeById = new Map(locations.map(l => [l.id, l.code || '']));
+    const locCodeById = new Map(locations.map(l => [l.id, l.code || slugify(l.name)]));
+    const linksByItem = new Map<string, PriceItemLocation[]>();
+    links.forEach(l => {
+      const arr = linksByItem.get(l.item_id) || [];
+      arr.push(l);
+      linksByItem.set(l.item_id, arr);
+    });
+
     return {
-      items: all.map(itemToExport),
+      types: types.map(t => ({ code: t.code, label: t.label, default_modifier_pct: t.default_modifier_pct })),
       settlements: locations.map(l => ({
-        settlement_id: l.id,
-        settlement_code: l.code || '',
+        code: l.code || slugify(l.name),
         name: l.name,
-        settlement_type: l.type_code || l.type,
-        price_modifier_percent: effectiveLocationPct(l, typesByCode),
-        uses_type_default: l.uses_type_default ? 'true' : 'false',
-        note: l.note || '',
+        type_code: l.type_code || l.type,
+        type_label: typesByCode[l.type_code || l.type]?.label || l.type_code || l.type,
+        effective_pct: effectiveLocationPct(l, typesByCode),
+        uses_type_default: !!l.uses_type_default,
       })),
-      availability: links.map(l => ({
-        item_code: itemCodeById.get(l.item_id) || '',
-        settlement_code: locCodeById.get(l.location_id) || '',
-        override_percent: l.override_modifier_pct ?? '',
-      })).filter(a => a.item_code && a.settlement_code),
-      types: types.map(t => ({ type_code: t.code, label: t.label, default_modifier_percent: t.default_modifier_pct })),
+      items: all.map(it => {
+        const mode = (it.availability_mode as AvailabilityMode) || 'EVERYWHERE';
+        const own = linksByItem.get(it.id) || [];
+        const cells: Record<string, boolean | number> = {};
+        const selected = new Map(own.map(l => [locCodeById.get(l.location_id) || '', l.override_modifier_pct]));
+        for (const l of locations) {
+          const code = l.code || slugify(l.name);
+          if (mode === 'NOWHERE') cells[code] = false;
+          else if (mode === 'EVERYWHERE') cells[code] = true;
+          else if (mode === 'ONLY_SELECTED') {
+            if (!selected.has(code)) cells[code] = false;
+            else { const ov = selected.get(code); cells[code] = ov == null ? true : ov; }
+          } else cells[code] = !selected.has(code);
+        }
+        return {
+          code: it.code || slugify(it.name),
+          name: it.name,
+          category: it.category || '',
+          unit: it.unit || '',
+          base_price_copper: it.base_price_copper,
+          availability_mode: mode,
+          cells,
+        };
+      }),
     };
   }
-  async function doExport(kind: 'xlsx' | 'zip' | 'items' | 'settlements' | 'availability') {
+  async function doExport(kind: 'xlsx' | 'zip' | 'item' | 'mesta' | 'sidla') {
     if (!activeWorldId) return;
     setExportBusy(true);
     try {
       const data = await collectExport();
       if (kind === 'xlsx') downloadXlsx(data);
       else if (kind === 'zip') await downloadZip(data);
-      else if (kind === 'items') downloadCsv(data.items, 'items.csv');
-      else if (kind === 'settlements') downloadCsv(data.settlements, 'settlements.csv');
-      else downloadCsv(data.availability, 'availability.csv');
+      else if (kind === 'item') downloadCsv(itemRows(data), 'ITEM.csv');
+      else if (kind === 'mesta') downloadCsv(settlementRows(data), 'MESTA.csv');
+      else downloadCsv(typeRows(data), 'SIDLA.csv');
     } catch (e: any) {
       toast.error(e.message || 'Export selhal');
     }
     setExportBusy(false);
   }
+
 
   if (roleLoading) return <p className="text-muted-foreground">Načítám…</p>;
   if (!canEditPage) {
@@ -364,14 +389,14 @@ export default function PricingPage() {
             <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('zip')}>
               <FileArchive size={14} className="mr-1" />CSV (ZIP)
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('items')}>
-              <Download size={14} className="mr-1" />items.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('item')}>
+              <Download size={14} className="mr-1" />ITEM.csv
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('settlements')}>
-              <Download size={14} className="mr-1" />settlements.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('mesta')}>
+              <Download size={14} className="mr-1" />MESTA.csv
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('availability')}>
-              <Download size={14} className="mr-1" />availability.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('sidla')}>
+              <Download size={14} className="mr-1" />SIDLA.csv
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}><Upload size={14} className="mr-1" />Import</Button>
             <Button size="sm" onClick={() => { setEditItem(null); setItemOpen(true); }}><Plus size={14} className="mr-1" />Přidat položku</Button>
