@@ -1065,6 +1065,154 @@ export type Database = {
           },
         ]
       }
+      price_availability_profiles: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          name: string
+          note: string | null
+          rules: Json
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          note?: string | null
+          rules?: Json
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          note?: string | null
+          rules?: Json
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_availability_profiles_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_categories: {
+        Row: {
+          code: string
+          created_at: string
+          default_profile_id: string | null
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          default_profile_id?: string | null
+          id?: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          default_profile_id?: string | null
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_categories_default_profile_id_fkey"
+            columns: ["default_profile_id"]
+            isOneToOne: false
+            referencedRelation: "price_availability_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "price_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_categories_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_item_exceptions: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          item_id: string
+          location_id: string
+          world_id: string
+        }
+        Insert: {
+          action?: string
+          created_at?: string
+          id?: string
+          item_id: string
+          location_id: string
+          world_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          location_id?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_item_exceptions_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "price_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_item_exceptions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "price_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_item_exceptions_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_item_locations: {
         Row: {
           created_at: string
@@ -1107,8 +1255,10 @@ export type Database = {
       price_items: {
         Row: {
           availability_mode: string
+          availability_profile_id: string | null
           base_price_copper: number
           category: string | null
+          category_id: string | null
           code: string | null
           created_at: string
           id: string
@@ -1120,8 +1270,10 @@ export type Database = {
         }
         Insert: {
           availability_mode?: string
+          availability_profile_id?: string | null
           base_price_copper?: number
           category?: string | null
+          category_id?: string | null
           code?: string | null
           created_at?: string
           id?: string
@@ -1133,8 +1285,10 @@ export type Database = {
         }
         Update: {
           availability_mode?: string
+          availability_profile_id?: string | null
           base_price_copper?: number
           category?: string | null
+          category_id?: string | null
           code?: string | null
           created_at?: string
           id?: string
@@ -1145,6 +1299,20 @@ export type Database = {
           world_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "price_items_availability_profile_id_fkey"
+            columns: ["availability_profile_id"]
+            isOneToOne: false
+            referencedRelation: "price_availability_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "price_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "price_items_world_id_fkey"
             columns: ["world_id"]
@@ -1203,10 +1371,13 @@ export type Database = {
           name: string
           note: string | null
           price_modifier_pct: number
+          region: string | null
+          size: number | null
           type: Database["public"]["Enums"]["price_location_type"]
           type_code: string | null
           updated_at: string
           uses_type_default: boolean
+          wealth: number | null
           world_id: string
         }
         Insert: {
@@ -1216,10 +1387,13 @@ export type Database = {
           name: string
           note?: string | null
           price_modifier_pct?: number
+          region?: string | null
+          size?: number | null
           type?: Database["public"]["Enums"]["price_location_type"]
           type_code?: string | null
           updated_at?: string
           uses_type_default?: boolean
+          wealth?: number | null
           world_id: string
         }
         Update: {
@@ -1229,15 +1403,99 @@ export type Database = {
           name?: string
           note?: string | null
           price_modifier_pct?: number
+          region?: string | null
+          size?: number | null
           type?: Database["public"]["Enums"]["price_location_type"]
           type_code?: string | null
           updated_at?: string
           uses_type_default?: boolean
+          wealth?: number | null
           world_id?: string
         }
         Relationships: [
           {
             foreignKeyName: "price_locations_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_settlement_tag_map: {
+        Row: {
+          created_at: string
+          location_id: string
+          tag_id: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          location_id: string
+          tag_id: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          location_id?: string
+          tag_id?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_settlement_tag_map_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "price_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_settlement_tag_map_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "price_settlement_tags"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_settlement_tag_map_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_settlement_tags: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_settlement_tags_world_id_fkey"
             columns: ["world_id"]
             isOneToOne: false
             referencedRelation: "worlds"
@@ -1664,6 +1922,82 @@ export type Database = {
       is_world_owner: {
         Args: { _user_id: string; _world_id: string }
         Returns: boolean
+      }
+      price_bulk_item_exceptions: {
+        Args: {
+          _action: string
+          _category_id: string
+          _ids: string[]
+          _location_ids: string[]
+          _mode_filter: string
+          _search: string
+          _world_id: string
+        }
+        Returns: number
+      }
+      price_bulk_tag_settlements: {
+        Args: {
+          _add: boolean
+          _location_ids: string[]
+          _tag_id: string
+          _world_id: string
+        }
+        Returns: number
+      }
+      price_bulk_update_items: {
+        Args: {
+          _category_id: string
+          _ids: string[]
+          _mode_filter: string
+          _patch: Json
+          _search: string
+          _world_id: string
+        }
+        Returns: number
+      }
+      price_item_availability_count: {
+        Args: { _item_id: string }
+        Returns: {
+          matched: number
+          total: number
+        }[]
+      }
+      price_item_available: {
+        Args: { _item_id: string; _location_id: string }
+        Returns: {
+          available: boolean
+          source: string
+        }[]
+      }
+      price_item_profile: {
+        Args: { _item_id: string }
+        Returns: {
+          profile_id: string
+          source: string
+        }[]
+      }
+      price_item_settlements: {
+        Args: { _item_id: string }
+        Returns: {
+          location_id: string
+          name: string
+          source: string
+        }[]
+      }
+      price_profile_preview: {
+        Args: { _profile_id: string }
+        Returns: {
+          matched: number
+          total: number
+        }[]
+      }
+      price_profile_settlements: {
+        Args: { _profile_id: string }
+        Returns: {
+          code: string
+          location_id: string
+          name: string
+        }[]
       }
       pricing_slug: { Args: { _txt: string }; Returns: string }
     }

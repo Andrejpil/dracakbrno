@@ -11,26 +11,50 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Coins, Plus, Trash2, Pencil, Landmark, Boxes, TrendingUp, Search, Upload, Download, Eye, Settings2, Tags, FileSpreadsheet, FileArchive } from 'lucide-react';
+import {
+  Coins, Plus, Trash2, Pencil, Landmark, Boxes, TrendingUp, Search, Upload, Download, Eye,
+  Settings2, Tags, FileSpreadsheet, FileArchive, Layers, ListTree,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { ECONOMY_PRESETS, ECONOMY_LABELS, computePrice, formatCopper, effectiveLocationPct } from '@/lib/pricing';
 import {
-  ECONOMY_PRESETS, ECONOMY_LABELS,
-  computePrice, formatCopper, effectiveLocationPct, availabilitySummary,
-} from '@/lib/pricing';
-import {
-  AVAILABILITY_LABELS, AvailabilityMode, slugify,
-  downloadXlsx, downloadZip, downloadCsv, PricingExportData,
-  itemRows, settlementRows, typeRows,
+  slugify, downloadXlsx, downloadZip, downloadCsv, PricingExportData,
+  itemRows, settlementRows, settlementTagRows, exceptionRows, profileRows, profileRuleRows, typeRows,
 } from '@/lib/pricingIO';
+import {
+  AVAILABILITY_LABELS, AVAILABILITY_MODES, type AvailabilityMode,
+  buildTagIndex, itemSettlements, resolveItemProfile,
+} from '@/lib/availability';
 import SettlementsManagerDialog from '@/components/pricing/SettlementsManagerDialog';
 import SettlementTypesDialog from '@/components/pricing/SettlementTypesDialog';
+import SettlementPickerDialog from '@/components/pricing/SettlementPickerDialog';
 import ItemEditorDialog from '@/components/pricing/ItemEditorDialog';
 import PricingImportDialog from '@/components/pricing/PricingImportDialog';
-import type { PriceItem, PriceLocation, PriceLocationType, PriceItemLocation } from '@/components/pricing/types';
+import TagsManagerDialog from '@/components/pricing/TagsManagerDialog';
+import ProfilesDialog from '@/components/pricing/ProfilesDialog';
+import CategoriesDialog from '@/components/pricing/CategoriesDialog';
+import type {
+  PriceItem, PriceLocation, PriceLocationType, PriceItemLocation,
+  SettlementTag, SettlementTagLink, AvailabilityProfile, PriceCategory, ItemException,
+} from '@/components/pricing/types';
 
 interface EconState { id: string; world_id: string; code: string; label: string; modifier_pct: number; sort_order: number; }
 
 const PAGE_SIZE = 25;
+const NONE = '__none__';
+
+async function fetchAllRows(table: string, worldId: string, cols = '*') {
+  const out: any[] = [];
+  const step = 1000;
+  for (let from = 0; ; from += step) {
+    const { data, error } = await supabase.from(table as any).select(cols).eq('world_id', worldId).range(from, from + step - 1);
+    if (error) throw error;
+    const rows = (data as any[]) || [];
+    out.push(...rows);
+    if (rows.length < step) break;
+  }
+  return out;
+}
 
 export default function PricingPage() {
   const { activeWorldId } = useWorld();
@@ -40,10 +64,14 @@ export default function PricingPage() {
   const [types, setTypes] = useState<PriceLocationType[]>([]);
   const [states, setStates] = useState<EconState[]>([]);
   const [activeStateCode, setActiveStateCode] = useState('normal');
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<PriceCategory[]>([]);
+  const [profiles, setProfiles] = useState<AvailabilityProfile[]>([]);
+  const [tags, setTags] = useState<SettlementTag[]>([]);
+  const [tagLinks, setTagLinks] = useState<SettlementTagLink[]>([]);
 
   const [items, setItems] = useState<PriceItem[]>([]);
   const [itemLocs, setItemLocs] = useState<PriceItemLocation[]>([]);
+  const [exceptions, setExceptions] = useState<ItemException[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -53,11 +81,23 @@ export default function PricingPage() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterMode, setFilterMode] = useState('all');
 
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [allFiltered, setAllFiltered] = useState(false);
+  const [bulkProfile, setBulkProfile] = useState('');
+  const [bulkCategory, setBulkCategory] = useState('');
+  const [bulkExAction, setBulkExAction] = useState<'ALLOW' | 'DENY' | 'REMOVE'>('DENY');
+  const [bulkExOpen, setBulkExOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const [econOpen, setEconOpen] = useState(false);
   const [typesOpen, setTypesOpen] = useState(false);
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [profilesOpen, setProfilesOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
   const [locListOpen, setLocListOpen] = useState(false);
   const [locOpen, setLocOpen] = useState(false);
   const [locDraft, setLocDraft] = useState<Partial<PriceLocation>>({});
+  const [locDraftTags, setLocDraftTags] = useState<string[]>([]);
   const [itemOpen, setItemOpen] = useState(false);
   const [editItem, setEditItem] = useState<PriceItem | null>(null);
   const [pricesItem, setPricesItem] = useState<PriceItem | null>(null);
@@ -74,17 +114,35 @@ export default function PricingPage() {
     () => states.find(s => s.code === activeStateCode)?.modifier_pct ?? 0,
     [states, activeStateCode]
   );
+  const tagIdx = useMemo(() => buildTagIndex(tagLinks, tags), [tagLinks, tags]);
+  const tagUsage = useMemo(() => {
+    const u: Record<string, number> = {};
+    tagLinks.forEach(l => { u[l.tag_id] = (u[l.tag_id] || 0) + 1; });
+    return u;
+  }, [tagLinks]);
+  const profileUsage = useMemo(() => {
+    const u: Record<string, number> = {};
+    categories.forEach(c => { if (c.default_profile_id) u[c.default_profile_id] = (u[c.default_profile_id] || 0) + 1; });
+    return u;
+  }, [categories]);
 
   // ---------- base data ----------
   async function loadBase(worldId: string) {
-    const [locRes, typeRes, econRes, stRes, catRes] = await Promise.all([
+    const [locRes, typeRes, econRes, stRes, catRes, profRes, tagRes, tagMapRes] = await Promise.all([
       supabase.from('price_locations' as any).select('*').eq('world_id', worldId).order('name'),
       supabase.from('price_location_types' as any).select('*').eq('world_id', worldId).order('sort_order'),
       supabase.from('world_economy' as any).select('*').eq('world_id', worldId).maybeSingle(),
       supabase.from('world_economy_states' as any).select('*').eq('world_id', worldId).order('sort_order'),
-      supabase.from('price_items' as any).select('category').eq('world_id', worldId).not('category', 'is', null).limit(2000),
+      supabase.from('price_categories' as any).select('*').eq('world_id', worldId).order('name'),
+      supabase.from('price_availability_profiles' as any).select('*').eq('world_id', worldId).order('name'),
+      supabase.from('price_settlement_tags' as any).select('*').eq('world_id', worldId).order('label'),
+      supabase.from('price_settlement_tag_map' as any).select('*').eq('world_id', worldId),
     ]);
     setLocations(((locRes.data as any) || []) as PriceLocation[]);
+    setCategories(((catRes.data as any) || []) as PriceCategory[]);
+    setProfiles(((profRes.data as any) || []) as AvailabilityProfile[]);
+    setTags(((tagRes.data as any) || []) as SettlementTag[]);
+    setTagLinks(((tagMapRes.data as any) || []) as SettlementTagLink[]);
 
     let tp = ((typeRes.data as any) || []) as PriceLocationType[];
     if (tp.length === 0) {
@@ -116,17 +174,14 @@ export default function PricingPage() {
         { onConflict: 'world_id' }
       );
     }
-    setCategories(Array.from(new Set((((catRes.data as any[]) || []).map(r => r.category)).filter(Boolean))).sort());
   }
 
   // ---------- server-side paged items ----------
   async function loadItems(worldId: string) {
     setLoading(true);
-    let q = supabase.from('price_items' as any)
-      .select('*', { count: 'exact' })
-      .eq('world_id', worldId);
+    let q = supabase.from('price_items' as any).select('*', { count: 'exact' }).eq('world_id', worldId);
     if (debouncedSearch.trim()) q = q.or(`name.ilike.%${debouncedSearch.trim()}%,code.ilike.%${debouncedSearch.trim()}%`);
-    if (filterCategory !== 'all') q = q.eq('category', filterCategory);
+    if (filterCategory !== 'all') q = q.eq('category_id', filterCategory);
     if (filterMode !== 'all') q = q.eq('availability_mode', filterMode);
     const { data, count, error } = await q.order('name').range(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE - 1);
     if (error) { toast.error(error.message); setLoading(false); return; }
@@ -134,10 +189,14 @@ export default function PricingPage() {
     setItems(rows);
     setTotal(count || 0);
     if (rows.length) {
-      const { data: links } = await supabase.from('price_item_locations' as any)
-        .select('*').in('item_id', rows.map(r => r.id));
-      setItemLocs(((links as any) || []) as PriceItemLocation[]);
-    } else setItemLocs([]);
+      const ids = rows.map(r => r.id);
+      const [links, exs] = await Promise.all([
+        supabase.from('price_item_locations' as any).select('*').in('item_id', ids),
+        supabase.from('price_item_exceptions' as any).select('*').in('item_id', ids),
+      ]);
+      setItemLocs(((links.data as any) || []) as PriceItemLocation[]);
+      setExceptions(((exs.data as any) || []) as ItemException[]);
+    } else { setItemLocs([]); setExceptions([]); }
     setLoading(false);
   }
 
@@ -145,8 +204,10 @@ export default function PricingPage() {
   useEffect(() => { if (activeWorldId) loadItems(activeWorldId); }, [activeWorldId, page, debouncedSearch, filterCategory, filterMode]);
   useEffect(() => { const t = setTimeout(() => { setDebouncedSearch(search); setPage(0); }, 350); return () => clearTimeout(t); }, [search]);
   useEffect(() => { setPage(0); }, [filterCategory, filterMode]);
+  useEffect(() => { setSelectedIds([]); setAllFiltered(false); }, [page, debouncedSearch, filterCategory, filterMode]);
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const selCount = allFiltered ? total : selectedIds.length;
 
   // ---------- economy ----------
   async function setActiveState(code: string) {
@@ -186,7 +247,13 @@ export default function PricingPage() {
 
   // ---------- locations ----------
   function openNewLocation() {
-    setLocDraft({ name: '', code: '', type_code: types[0]?.code || 'village', uses_type_default: true, price_modifier_pct: 0, note: '' });
+    setLocDraft({ name: '', code: '', type_code: types[0]?.code || 'village', uses_type_default: true, price_modifier_pct: 0, note: '', size: null, wealth: null, region: '' });
+    setLocDraftTags([]);
+    setLocOpen(true);
+  }
+  function openEditLocation(l: PriceLocation) {
+    setLocDraft(l);
+    setLocDraftTags(tagLinks.filter(t => t.location_id === l.id).map(t => t.tag_id));
     setLocOpen(true);
   }
   async function saveLocation() {
@@ -201,11 +268,25 @@ export default function PricingPage() {
       uses_type_default: !!locDraft.uses_type_default,
       price_modifier_pct: Number(locDraft.price_modifier_pct) || 0,
       note: locDraft.note || null,
+      size: locDraft.size ?? null,
+      wealth: locDraft.wealth ?? null,
+      region: locDraft.region || null,
     };
-    const { error } = locDraft.id
-      ? await supabase.from('price_locations' as any).update(payload).eq('id', locDraft.id)
-      : await supabase.from('price_locations' as any).insert(payload);
-    if (error) { toast.error(error.message); return; }
+    let id = locDraft.id;
+    if (id) {
+      const { error } = await supabase.from('price_locations' as any).update(payload).eq('id', id);
+      if (error) { toast.error(error.message); return; }
+    } else {
+      const { data, error } = await supabase.from('price_locations' as any).insert(payload).select('id').single();
+      if (error) { toast.error(error.message); return; }
+      id = (data as any).id;
+    }
+    await supabase.from('price_settlement_tag_map' as any).delete().eq('location_id', id);
+    if (locDraftTags.length) {
+      const { error } = await supabase.from('price_settlement_tag_map' as any)
+        .insert(locDraftTags.map(tag_id => ({ world_id: activeWorldId, location_id: id, tag_id })));
+      if (error) toast.error(error.message);
+    }
     setLocOpen(false);
     await loadBase(activeWorldId);
   }
@@ -223,29 +304,52 @@ export default function PricingPage() {
     if (activeWorldId) await loadItems(activeWorldId);
   }
 
+  // ---------- bulk item operations (server-side) ----------
+  function bulkArgs() {
+    return {
+      _world_id: activeWorldId,
+      _ids: allFiltered ? null : selectedIds,
+      _search: allFiltered ? debouncedSearch : null,
+      _category_id: allFiltered && filterCategory !== 'all' ? filterCategory : null,
+      _mode_filter: allFiltered && filterMode !== 'all' ? filterMode : null,
+    };
+  }
+  async function runBulk(patch: Record<string, any>, question: string) {
+    if (!selCount) return;
+    if (!confirm(question)) return;
+    setBulkBusy(true);
+    const { data, error } = await supabase.rpc('price_bulk_update_items' as any, { ...bulkArgs(), _patch: patch } as any);
+    setBulkBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Upraveno ${data} položek.`);
+    setSelectedIds([]); setAllFiltered(false);
+    if (activeWorldId) { await loadBase(activeWorldId); await loadItems(activeWorldId); }
+  }
+  async function runBulkExceptions(locationIds: string[]) {
+    if (!selCount || !locationIds.length) return;
+    setBulkBusy(true);
+    const { data, error } = await supabase.rpc('price_bulk_item_exceptions' as any, {
+      ...bulkArgs(), _location_ids: locationIds, _action: bulkExAction,
+    } as any);
+    setBulkBusy(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Zpracováno ${data} výjimek.`);
+    setSelectedIds([]); setAllFiltered(false);
+    if (activeWorldId) await loadItems(activeWorldId);
+  }
+
   // ---------- export ----------
   async function collectExport(): Promise<PricingExportData> {
     const worldId = activeWorldId!;
-    const all: PriceItem[] = [];
-    const step = 1000;
-    for (let from = 0; ; from += step) {
-      const { data } = await supabase.from('price_items' as any).select('*').eq('world_id', worldId).order('name').range(from, from + step - 1);
-      const rows = ((data as any) || []) as PriceItem[];
-      all.push(...rows);
-      if (rows.length < step) break;
-    }
-    const links: PriceItemLocation[] = [];
-    for (let i = 0; i < all.length; i += 200) {
-      const { data } = await supabase.from('price_item_locations' as any).select('*').in('item_id', all.slice(i, i + 200).map(a => a.id));
-      links.push(...(((data as any) || []) as PriceItemLocation[]));
-    }
+    const [all, exs, tagRows2] = await Promise.all([
+      fetchAllRows('price_items', worldId),
+      fetchAllRows('price_item_exceptions', worldId),
+      fetchAllRows('price_settlement_tag_map', worldId),
+    ]);
     const locCodeById = new Map(locations.map(l => [l.id, l.code || slugify(l.name)]));
-    const linksByItem = new Map<string, PriceItemLocation[]>();
-    links.forEach(l => {
-      const arr = linksByItem.get(l.item_id) || [];
-      arr.push(l);
-      linksByItem.set(l.item_id, arr);
-    });
+    const catById = new Map(categories.map(c => [c.id, c]));
+    const profById = new Map(profiles.map(p => [p.id, p]));
+    const tagById = new Map(tags.map(t => [t.id, t]));
 
     return {
       types: types.map(t => ({ code: t.code, label: t.label, default_modifier_pct: t.default_modifier_pct })),
@@ -254,51 +358,56 @@ export default function PricingPage() {
         name: l.name,
         type_code: l.type_code || l.type,
         type_label: typesByCode[l.type_code || l.type]?.label || l.type_code || l.type,
-        effective_pct: effectiveLocationPct(l, typesByCode),
+        size: l.size, wealth: l.wealth, region: l.region,
+        price_modifier_pct: l.price_modifier_pct,
         uses_type_default: !!l.uses_type_default,
+        effective_pct: effectiveLocationPct(l, typesByCode),
       })),
-      items: all.map(it => {
-        const mode = (it.availability_mode as AvailabilityMode) || 'EVERYWHERE';
-        const own = linksByItem.get(it.id) || [];
-        const cells: Record<string, boolean | number> = {};
-        const selected = new Map(own.map(l => [locCodeById.get(l.location_id) || '', l.override_modifier_pct]));
-        for (const l of locations) {
-          const code = l.code || slugify(l.name);
-          if (mode === 'NOWHERE') cells[code] = false;
-          else if (mode === 'EVERYWHERE') cells[code] = true;
-          else if (mode === 'ONLY_SELECTED') {
-            if (!selected.has(code)) cells[code] = false;
-            else { const ov = selected.get(code); cells[code] = ov == null ? true : ov; }
-          } else cells[code] = !selected.has(code);
-        }
+      settlementTags: tagRows2
+        .map(r => ({ settlement_code: locCodeById.get(r.location_id) || '', tag: tagById.get(r.tag_id)?.label || '' }))
+        .filter(r => r.settlement_code && r.tag),
+      items: (all as PriceItem[]).map(it => {
+        const cat = it.category_id ? catById.get(it.category_id) : undefined;
+        const parent = cat?.parent_id ? catById.get(cat.parent_id) : undefined;
         return {
           code: it.code || slugify(it.name),
           name: it.name,
-          category: it.category || '',
+          category: parent ? parent.name : (cat?.name || it.category || ''),
+          subcategory: parent ? (cat?.name || '') : '',
           unit: it.unit || '',
           base_price_copper: it.base_price_copper,
-          availability_mode: mode,
-          cells,
+          availability_mode: (it.availability_mode as AvailabilityMode) || 'INHERIT',
+          profile_code: it.availability_profile_id ? (profById.get(it.availability_profile_id)?.code || '') : '',
         };
       }),
+      exceptions: (exs as ItemException[])
+        .map(e => ({
+          item_code: (all as PriceItem[]).find(i => i.id === e.item_id)?.code || '',
+          settlement_code: locCodeById.get(e.location_id) || '',
+          action: e.action,
+        }))
+        .filter(e => e.item_code && e.settlement_code),
+      profiles: profiles.map(p => ({ code: p.code, name: p.name, note: p.note || '', rules: p.rules })),
     };
   }
-  async function doExport(kind: 'xlsx' | 'zip' | 'item' | 'mesta' | 'sidla') {
+  async function doExport(kind: 'xlsx' | 'zip' | 'items' | 'settlements' | 'tags' | 'exceptions' | 'profiles') {
     if (!activeWorldId) return;
     setExportBusy(true);
     try {
       const data = await collectExport();
       if (kind === 'xlsx') downloadXlsx(data);
       else if (kind === 'zip') await downloadZip(data);
-      else if (kind === 'item') downloadCsv(itemRows(data), 'ITEM.csv');
-      else if (kind === 'mesta') downloadCsv(settlementRows(data), 'MESTA.csv');
-      else downloadCsv(typeRows(data), 'SIDLA.csv');
+      else if (kind === 'items') downloadCsv(itemRows(data), 'ITEMS.csv');
+      else if (kind === 'settlements') downloadCsv(settlementRows(data), 'SETTLEMENTS.csv');
+      else if (kind === 'tags') downloadCsv(settlementTagRows(data), 'SETTLEMENT_TAGS.csv');
+      else if (kind === 'exceptions') downloadCsv(exceptionRows(data), 'ITEM_EXCEPTIONS.csv');
+      else downloadCsv([...profileRows(data), ...profileRuleRows(data)], 'AVAILABILITY_PROFILES.csv');
+      void typeRows;
     } catch (e: any) {
       toast.error(e.message || 'Export selhal');
     }
     setExportBusy(false);
   }
-
 
   if (roleLoading) return <p className="text-muted-foreground">Načítám…</p>;
   if (!canEditPage) {
@@ -311,20 +420,7 @@ export default function PricingPage() {
   }
   if (!activeWorldId) return <p className="text-muted-foreground">Vyber svět v levém panelu.</p>;
 
-  // locations relevant for an item (used in price dialog)
-  function itemLocationsFor(it: PriceItem): { loc: PriceLocation; override: number | null }[] {
-    const links = itemLocs.filter(il => il.item_id === it.id);
-    const linkedIds = new Set(links.map(l => l.location_id));
-    if (it.availability_mode === 'NOWHERE') return [];
-    if (it.availability_mode === 'ONLY_SELECTED') {
-      return links.map(l => ({ loc: locations.find(x => x.id === l.location_id)!, override: l.override_modifier_pct }))
-        .filter(x => x.loc);
-    }
-    const base = it.availability_mode === 'EXCEPT_SELECTED'
-      ? locations.filter(l => !linkedIds.has(l.id))
-      : locations;
-    return base.map(loc => ({ loc, override: null }));
-  }
+  const availCtx = { exceptions, itemLocations: itemLocs, categories, profiles, tagIdx };
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -333,7 +429,7 @@ export default function PricingPage() {
         <h1 className="text-3xl font-display text-primary">Ceník</h1>
       </div>
       <p className="text-xs text-muted-foreground">
-        1 zl = 10 st = 100 md. Ceny se počítají a ukládají v měděných. Ceník vidí a upravují jen Editor a Admin, data jsou oddělená podle světa.
+        1 zl = 10 st = 100 md. Ceny se počítají a ukládají v měděných. Dostupnost řeší profily, tagy sídel a výjimky — nezávisle na cenových modifikátorech.
       </p>
 
       {/* Economy */}
@@ -366,12 +462,25 @@ export default function PricingPage() {
       <Card className="p-4 flex items-center justify-between flex-wrap gap-2">
         <h2 className="font-display text-lg flex items-center gap-2">
           <Landmark size={18} className="text-primary" />Sídla
-          <span className="text-sm text-muted-foreground font-sans">({locations.length})</span>
+          <span className="text-sm text-muted-foreground font-sans">({locations.length}) · {tags.length} tagů</span>
         </h2>
         <div className="flex gap-2 flex-wrap">
           <Button size="sm" variant="secondary" onClick={() => setTypesOpen(true)}><Tags size={14} className="mr-1" />Typy sídel</Button>
+          <Button size="sm" variant="secondary" onClick={() => setTagsOpen(true)}><Tags size={14} className="mr-1" />Tagy sídel</Button>
           <Button size="sm" variant="secondary" onClick={() => setLocListOpen(true)}><Eye size={14} className="mr-1" />Spravovat sídla</Button>
           <Button size="sm" onClick={openNewLocation}><Plus size={14} className="mr-1" />Přidat sídlo</Button>
+        </div>
+      </Card>
+
+      {/* Availability system */}
+      <Card className="p-4 flex items-center justify-between flex-wrap gap-2">
+        <h2 className="font-display text-lg flex items-center gap-2">
+          <Layers size={18} className="text-primary" />Dostupnost
+          <span className="text-sm text-muted-foreground font-sans">({profiles.length} profilů, {categories.length} kategorií)</span>
+        </h2>
+        <div className="flex gap-2 flex-wrap">
+          <Button size="sm" variant="secondary" onClick={() => setProfilesOpen(true)}><Layers size={14} className="mr-1" />Profily dostupnosti</Button>
+          <Button size="sm" variant="secondary" onClick={() => setCatsOpen(true)}><ListTree size={14} className="mr-1" />Kategorie</Button>
         </div>
       </Card>
 
@@ -389,14 +498,20 @@ export default function PricingPage() {
             <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('zip')}>
               <FileArchive size={14} className="mr-1" />CSV (ZIP)
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('item')}>
-              <Download size={14} className="mr-1" />ITEM.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('items')}>
+              <Download size={14} className="mr-1" />ITEMS.csv
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('mesta')}>
-              <Download size={14} className="mr-1" />MESTA.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('exceptions')}>
+              <Download size={14} className="mr-1" />ITEM_EXCEPTIONS.csv
             </Button>
-            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('sidla')}>
-              <Download size={14} className="mr-1" />SIDLA.csv
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('settlements')}>
+              <Download size={14} className="mr-1" />SETTLEMENTS.csv
+            </Button>
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('tags')}>
+              <Download size={14} className="mr-1" />SETTLEMENT_TAGS.csv
+            </Button>
+            <Button size="sm" variant="secondary" disabled={exportBusy} onClick={() => doExport('profiles')}>
+              <Download size={14} className="mr-1" />PROFILES.csv
             </Button>
             <Button size="sm" variant="secondary" onClick={() => setImportOpen(true)}><Upload size={14} className="mr-1" />Import</Button>
             <Button size="sm" onClick={() => { setEditItem(null); setItemOpen(true); }}><Plus size={14} className="mr-1" />Přidat položku</Button>
@@ -409,22 +524,69 @@ export default function PricingPage() {
             <Input className="pl-7 h-8 text-sm" placeholder="Hledat předmět nebo kód…" value={search} onChange={e => setSearch(e.target.value)} />
           </div>
           <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Kategorie" /></SelectTrigger>
+            <SelectTrigger className="w-44 h-8 text-xs"><SelectValue placeholder="Kategorie" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Všechny kategorie</SelectItem>
-              {categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterMode} onValueChange={setFilterMode}>
             <SelectTrigger className="w-52 h-8 text-xs"><SelectValue placeholder="Dostupnost" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Všechny režimy</SelectItem>
-              {(Object.keys(AVAILABILITY_LABELS) as AvailabilityMode[]).map(m => (
-                <SelectItem key={m} value={m}>{AVAILABILITY_LABELS[m]}</SelectItem>
-              ))}
+              {AVAILABILITY_MODES.map(m => <SelectItem key={m} value={m}>{AVAILABILITY_LABELS[m]}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
+
+        <div className="flex gap-2 items-center text-xs flex-wrap">
+          <Button size="sm" variant="secondary" onClick={() => { setAllFiltered(false); setSelectedIds(items.map(i => i.id)); }}>Vybrat stránku</Button>
+          <Button size="sm" variant="secondary" onClick={() => { setAllFiltered(true); setSelectedIds([]); }}>Vybrat všechny filtrované ({total})</Button>
+          <Button size="sm" variant="ghost" onClick={() => { setSelectedIds([]); setAllFiltered(false); }}>Zrušit výběr</Button>
+          <span className="text-muted-foreground ml-auto">Vybráno: <strong>{selCount}</strong></span>
+        </div>
+
+        {selCount > 0 && (
+          <div className="border rounded p-3 space-y-2 bg-muted/40">
+            <p className="text-xs font-medium">Hromadné akce pro {selCount} položek</p>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Select value={bulkProfile} onValueChange={setBulkProfile}>
+                <SelectTrigger className="w-52 h-8 text-xs"><SelectValue placeholder="Profil dostupnosti" /></SelectTrigger>
+                <SelectContent>{profiles.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="sm" disabled={!bulkProfile || bulkBusy}
+                onClick={() => runBulk({ availability_mode: 'PROFILE', availability_profile_id: bulkProfile },
+                  `Nastavit profil u ${selCount} položek?`)}>Nastavit profil</Button>
+              <Button size="sm" variant="secondary" disabled={bulkBusy}
+                onClick={() => runBulk({ availability_mode: 'INHERIT', availability_profile_id: '' },
+                  `Nastavit „zdědit z kategorie" u ${selCount} položek?`)}>Zdědit z kategorie</Button>
+              <Button size="sm" variant="secondary" disabled={bulkBusy}
+                onClick={() => runBulk({ availability_mode: 'EVERYWHERE' }, `Nastavit „dostupné všude" u ${selCount} položek?`)}>Dostupné všude</Button>
+              <Button size="sm" variant="secondary" disabled={bulkBusy}
+                onClick={() => runBulk({ availability_mode: 'NOWHERE' }, `Nastavit „nedostupné nikde" u ${selCount} položek?`)}>Nedostupné nikde</Button>
+            </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Select value={bulkCategory} onValueChange={setBulkCategory}>
+                <SelectTrigger className="w-52 h-8 text-xs"><SelectValue placeholder="Kategorie" /></SelectTrigger>
+                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="sm" disabled={!bulkCategory || bulkBusy}
+                onClick={() => {
+                  const c = categories.find(x => x.id === bulkCategory);
+                  runBulk({ category_id: bulkCategory, category: c?.name || '' }, `Přesunout ${selCount} položek do kategorie „${c?.name}"?`);
+                }}>Změnit kategorii</Button>
+              <Select value={bulkExAction} onValueChange={(v: any) => setBulkExAction(v)}>
+                <SelectTrigger className="w-40 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ALLOW">Výjimka: Povolit</SelectItem>
+                  <SelectItem value="DENY">Výjimka: Zakázat</SelectItem>
+                  <SelectItem value="REMOVE">Výjimku odebrat</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setBulkExOpen(true)}>Vybrat sídla a použít</Button>
+            </div>
+          </div>
+        )}
 
         {loading ? <p className="text-sm text-muted-foreground">Načítám…</p> : items.length === 0 ? (
           <p className="text-sm text-muted-foreground">Žádné položky.</p>
@@ -434,6 +596,7 @@ export default function PricingPage() {
               <table className="w-full text-sm">
                 <thead className="text-xs text-muted-foreground">
                   <tr className="border-b">
+                    <th className="w-8"></th>
                     <th className="text-left py-2">Název</th>
                     <th className="text-left">Kód</th>
                     <th className="text-left">Kategorie</th>
@@ -445,17 +608,27 @@ export default function PricingPage() {
                 </thead>
                 <tbody>
                   {items.map(it => {
-                    const linked = itemLocs.filter(il => il.item_id === it.id).length;
+                    const avail = itemSettlements(it, locations, availCtx);
+                    const res = resolveItemProfile(it, categories, profiles);
+                    const cat = categories.find(c => c.id === it.category_id);
                     return (
                       <tr key={it.id} className="border-b hover:bg-muted/30">
+                        <td>
+                          <Checkbox checked={allFiltered || selectedIds.includes(it.id)}
+                            onCheckedChange={v => {
+                              setAllFiltered(false);
+                              setSelectedIds(prev => v ? Array.from(new Set([...prev, it.id])) : prev.filter(x => x !== it.id));
+                            }} />
+                        </td>
                         <td className="py-2 font-medium">{it.name}</td>
                         <td className="text-xs text-muted-foreground">{it.code}</td>
-                        <td>{it.category}</td>
+                        <td>{cat?.name || it.category}</td>
                         <td>{it.unit}</td>
                         <td className="whitespace-nowrap">{formatCopper(it.base_price_copper)}</td>
                         <td className="text-xs">
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setPricesItem(it)}>
-                            {availabilitySummary(it.availability_mode, linked)}
+                            {avail.length} / {locations.length} sídel
+                            {res.profile ? ` · ${res.profile.name}` : ''}
                           </Button>
                         </td>
                         <td className="text-right whitespace-nowrap">
@@ -510,10 +683,29 @@ export default function PricingPage() {
         onReload={() => loadBase(activeWorldId)}
       />
 
+      <TagsManagerDialog
+        open={tagsOpen} onOpenChange={setTagsOpen}
+        worldId={activeWorldId} tags={tags} usage={tagUsage}
+        onReload={() => loadBase(activeWorldId)}
+      />
+
+      <ProfilesDialog
+        open={profilesOpen} onOpenChange={setProfilesOpen}
+        worldId={activeWorldId} profiles={profiles} types={types} tags={tags}
+        locations={locations} tagIdx={tagIdx} usage={profileUsage}
+        onReload={() => loadBase(activeWorldId)}
+      />
+
+      <CategoriesDialog
+        open={catsOpen} onOpenChange={setCatsOpen}
+        worldId={activeWorldId} categories={categories} profiles={profiles}
+        onReload={() => loadBase(activeWorldId)}
+      />
+
       <SettlementsManagerDialog
         open={locListOpen} onOpenChange={setLocListOpen}
-        worldId={activeWorldId} locations={locations} types={types}
-        onEdit={l => { setLocDraft(l); setLocOpen(true); }}
+        worldId={activeWorldId} locations={locations} types={types} tags={tags} tagIdx={tagIdx}
+        onEdit={openEditLocation}
         onAdd={openNewLocation}
         onDelete={deleteLocation}
         onReload={() => loadBase(activeWorldId)}
@@ -521,7 +713,8 @@ export default function PricingPage() {
 
       <ItemEditorDialog
         open={itemOpen} onOpenChange={setItemOpen}
-        worldId={activeWorldId} item={editItem} locations={locations} types={types} econMod={econMod}
+        worldId={activeWorldId} item={editItem} locations={locations} types={types}
+        categories={categories} profiles={profiles} tagIdx={tagIdx} econMod={econMod}
         onSaved={async () => { await loadBase(activeWorldId); await loadItems(activeWorldId); }}
       />
 
@@ -530,53 +723,63 @@ export default function PricingPage() {
         onDone={async () => { await loadBase(activeWorldId); await loadItems(activeWorldId); }}
       />
 
-      {/* Prices per item dialog */}
+      <SettlementPickerDialog
+        open={bulkExOpen} onOpenChange={setBulkExOpen}
+        title="Sídla pro hromadnou výjimku"
+        locations={locations} types={types} selected={[]}
+        onChange={ids => runBulkExceptions(ids)}
+      />
+
+      {/* Prices / availability per item dialog */}
       <Dialog open={!!pricesItem} onOpenChange={o => !o && setPricesItem(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Ceny — {pricesItem?.name}</DialogTitle>
-          </DialogHeader>
-          {pricesItem && (
-            <>
-              <p className="text-xs text-muted-foreground">
-                {AVAILABILITY_LABELS[(pricesItem.availability_mode as AvailabilityMode)] || pricesItem.availability_mode}
-              </p>
-              <div className="flex flex-wrap gap-1">
-                {itemLocationsFor(pricesItem).slice(0, 300).map(({ loc, override }) => {
-                  const locMod = override ?? effectiveLocationPct(loc, typesByCode);
-                  const calc = computePrice({
-                    basePriceCopper: pricesItem.base_price_copper,
-                    locationModifierPct: locMod,
-                    economyModifierPct: econMod,
-                  });
-                  return (
-                    <Tooltip key={loc.id}>
-                      <TooltipTrigger asChild>
-                        <span className="text-xs px-2 py-0.5 rounded bg-muted cursor-help">
-                          <strong>{loc.name}:</strong> {formatCopper(calc.final)}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent className="text-xs">
-                        <div>Základ: {formatCopper(calc.base)}</div>
-                        <div>Sídlo: {locMod > 0 ? '+' : ''}{locMod} %{override != null ? ' (výjimka položky)' : loc.uses_type_default ? ' (výchozí hodnota typu)' : ' (vlastní hodnota sídla)'}</div>
-                        <div>Ekonomika: {econMod > 0 ? '+' : ''}{econMod} %</div>
-                        <div className="border-t mt-1 pt-1">Výsledek: <strong>{formatCopper(calc.final)}</strong></div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-                {itemLocationsFor(pricesItem).length === 0 && (
-                  <p className="text-sm text-muted-foreground">Položka není nikde dostupná.</p>
-                )}
-              </div>
-            </>
-          )}
+          <DialogHeader><DialogTitle>Ceny a dostupnost — {pricesItem?.name}</DialogTitle></DialogHeader>
+          {pricesItem && (() => {
+            const res = resolveItemProfile(pricesItem, categories, profiles);
+            const avail = itemSettlements(pricesItem, locations, availCtx);
+            return (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Režim: {AVAILABILITY_LABELS[pricesItem.availability_mode] || pricesItem.availability_mode}
+                  {res.profile ? ` · Profil „${res.profile.name}" (${res.source})` : ''}
+                  {' · '}{avail.length} / {locations.length} sídel
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {avail.slice(0, 400).map(({ loc, source }) => {
+                    const locMod = effectiveLocationPct(loc, typesByCode);
+                    const calc = computePrice({
+                      basePriceCopper: pricesItem.base_price_copper,
+                      locationModifierPct: locMod,
+                      economyModifierPct: econMod,
+                    });
+                    return (
+                      <Tooltip key={loc.id}>
+                        <TooltipTrigger asChild>
+                          <span className="text-xs px-2 py-0.5 rounded bg-muted cursor-help">
+                            <strong>{loc.name}:</strong> {formatCopper(calc.final)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs">
+                          <div>Základ: {formatCopper(calc.base)}</div>
+                          <div>Sídlo: {locMod > 0 ? '+' : ''}{locMod} %{loc.uses_type_default ? ' (výchozí hodnota typu)' : ' (vlastní hodnota sídla)'}</div>
+                          <div>Ekonomika: {econMod > 0 ? '+' : ''}{econMod} %</div>
+                          <div className="border-t mt-1 pt-1">Výsledek: <strong>{formatCopper(calc.final)}</strong></div>
+                          <div className="border-t mt-1 pt-1">Dostupnost: ANO — {source}</div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                  {avail.length === 0 && <p className="text-sm text-muted-foreground">Položka není nikde dostupná.</p>}
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
       {/* Location dialog */}
       <Dialog open={locOpen} onOpenChange={setLocOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{locDraft.id ? 'Upravit sídlo' : 'Nové sídlo'}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -607,6 +810,38 @@ export default function PricingPage() {
                   onChange={e => setLocDraft(p => ({ ...p, price_modifier_pct: Number(e.target.value) || 0 }))} />
               </div>
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <Label className="text-xs">Velikost (1–5)</Label>
+                <Input type="number" min={1} max={5} value={locDraft.size ?? ''}
+                  onChange={e => setLocDraft(p => ({ ...p, size: e.target.value === '' ? null : Number(e.target.value) }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Bohatství (1–5)</Label>
+                <Input type="number" min={1} max={5} value={locDraft.wealth ?? ''}
+                  onChange={e => setLocDraft(p => ({ ...p, wealth: e.target.value === '' ? null : Number(e.target.value) }))} />
+              </div>
+              <div>
+                <Label className="text-xs">Region</Label>
+                <Input value={locDraft.region || ''} onChange={e => setLocDraft(p => ({ ...p, region: e.target.value }))} />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs">Tagy</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {tags.length === 0 && <span className="text-xs text-muted-foreground">Zatím žádné tagy — vytvoř je v „Tagy sídel".</span>}
+                {tags.map(t => {
+                  const on = locDraftTags.includes(t.id);
+                  return (
+                    <button key={t.id} type="button"
+                      onClick={() => setLocDraftTags(prev => on ? prev.filter(x => x !== t.id) : [...prev, t.id])}
+                      className={`text-xs px-2 py-0.5 rounded border transition-colors ${
+                        on ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted border-border hover:bg-muted/70'
+                      }`}>{t.label}</button>
+                  );
+                })}
+              </div>
+            </div>
             <label className="flex items-center gap-2 text-sm">
               <Checkbox checked={!!locDraft.uses_type_default}
                 onCheckedChange={v => setLocDraft(p => ({ ...p, uses_type_default: !!v }))} />
@@ -628,6 +863,8 @@ export default function PricingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {void NONE}
     </div>
   );
 }
