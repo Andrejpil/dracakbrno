@@ -1,73 +1,63 @@
 // Import / export helpers for the pricing module.
-// Workbook layout (uživatelský formát):
-//   list SIDLA — typy sídel:  NÁZEV TYPŮ | KÓD | VÝCHOZÍ %
-//   list MESTA — sídla:       Sídlo | KÓD | TYP | Výsledný modifikátor | ZDROJ
-//   list ITEM  — předměty:    Název | Kód | Kategorie | Jednotka | Základ | Dostupnost | <sloupec za každé sídlo>
-// Buňka sídla v listu ITEM: TRUE / FALSE, nebo číslo = vlastní přepis % pro dané sídlo.
+// Sešit je normalizovaný (žádná matice předmět × sídlo):
+//   ITEMS                 — item_code | name | category | subcategory | unit | base_price | availability_mode | availability_profile
+//   ITEM_EXCEPTIONS       — item_code | settlement_code | action (ALLOW/DENY)
+//   SETTLEMENTS           — settlement_code | name | type | size | wealth | region | modifier_pct | uses_type_default
+//   SETTLEMENT_TAGS       — settlement_code | tag
+//   AVAILABILITY_PROFILES — profile_code | name | note
+//   PROFILE_RULES         — profile_code | rule | value
+//   SETTLEMENT_TYPES      — type_code | label | default_modifier_pct
 import * as XLSX from 'xlsx';
 import JSZip from 'jszip';
-import { copperToParts, partsToCopper, formatCopper } from '@/lib/pricing';
+import { partsToCopper, formatCopper } from '@/lib/pricing';
+import { AVAILABILITY_LABELS, AVAILABILITY_MODES, type AvailabilityMode } from '@/lib/availability';
+import type { ProfileRules } from '@/components/pricing/types';
 
-export type AvailabilityMode = 'EVERYWHERE' | 'ONLY_SELECTED' | 'EXCEPT_SELECTED' | 'NOWHERE';
+export { AVAILABILITY_LABELS, AVAILABILITY_MODES };
+export type { AvailabilityMode };
 
-export const AVAILABILITY_MODES: AvailabilityMode[] = ['EVERYWHERE', 'ONLY_SELECTED', 'EXCEPT_SELECTED', 'NOWHERE'];
+export const SHEET_ITEMS = 'ITEMS';
+export const SHEET_EXCEPTIONS = 'ITEM_EXCEPTIONS';
+export const SHEET_SETTLEMENTS = 'SETTLEMENTS';
+export const SHEET_SETTLEMENT_TAGS = 'SETTLEMENT_TAGS';
+export const SHEET_PROFILES = 'AVAILABILITY_PROFILES';
+export const SHEET_PROFILE_RULES = 'PROFILE_RULES';
+export const SHEET_TYPES = 'SETTLEMENT_TYPES';
 
-export const AVAILABILITY_LABELS: Record<AvailabilityMode, string> = {
-  EVERYWHERE: 'Dostupné všude',
-  ONLY_SELECTED: 'Dostupné pouze ve vybraných sídlech',
-  EXCEPT_SELECTED: 'Dostupné všude kromě vybraných sídel',
-  NOWHERE: 'Nedostupné nikde',
-};
+export const RULE_KEYS = [
+  'type_codes', 'tags_any', 'tags_all', 'tags_none',
+  'size_min', 'size_max', 'wealth_min', 'wealth_max',
+  'regions_in', 'regions_not_in',
+] as const;
+const LIST_RULES = new Set(['type_codes', 'tags_any', 'tags_all', 'tags_none', 'regions_in', 'regions_not_in']);
 
-export const SHEET_TYPES = 'SIDLA';
-export const SHEET_SETTLEMENTS = 'MESTA';
-export const SHEET_ITEMS = 'ITEM';
+// ---------------- export shapes ----------------
 
-export const SOURCE_OWN = 'Vlastní hodnota';
-export const SOURCE_TYPE = 'Výchozí typu';
-
-// ---------------- shared shapes ----------------
-
-export interface ExportType {
-  code: string;
-  label: string;
-  default_modifier_pct: number;
-}
-
+export interface ExportType { code: string; label: string; default_modifier_pct: number }
 export interface ExportSettlement {
-  code: string;
-  name: string;
-  type_code: string;
-  type_label: string;
-  effective_pct: number;
-  uses_type_default: boolean;
+  code: string; name: string; type_code: string; type_label: string;
+  size: number | null; wealth: number | null; region: string | null;
+  price_modifier_pct: number; uses_type_default: boolean; effective_pct: number;
 }
-
 export interface ExportItem {
-  code: string;
-  name: string;
-  category: string;
-  unit: string;
-  base_price_copper: number;
-  availability_mode: AvailabilityMode;
-  /** klíč = kód sídla, hodnota = true / false / číslo (přepis %) */
-  cells: Record<string, boolean | number>;
+  code: string; name: string; category: string; subcategory: string; unit: string;
+  base_price_copper: number; availability_mode: AvailabilityMode; profile_code: string;
 }
+export interface ExportProfile { code: string; name: string; note: string; rules: ProfileRules }
 
 export interface PricingExportData {
   types: ExportType[];
   settlements: ExportSettlement[];
+  settlementTags: { settlement_code: string; tag: string }[];
   items: ExportItem[];
+  exceptions: { item_code: string; settlement_code: string; action: string }[];
+  profiles: ExportProfile[];
 }
 
 // ---------------- currency text ----------------
 
-/** 123 md -> "1 zl 2 st 3 md" */
-export function copperToText(copper: number): string {
-  return formatCopper(copper);
-}
+export function copperToText(copper: number): string { return formatCopper(copper); }
 
-/** "4 st", "1 zl 2 st", "35" (= md) -> počet měďáků */
 export function textToCopper(txt: string | number): number {
   if (typeof txt === 'number') return Math.round(txt);
   const s = String(txt || '').trim().toLowerCase().replace(',', '.');
@@ -91,6 +81,55 @@ export function textToCopper(txt: string | number): number {
   return partsToCopper(zl, st, md);
 }
 
+export function slugify(txt: string): string {
+  return (txt || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'kod';
+}
+
+// ---------------- row builders ----------------
+
+export function itemRows(d: PricingExportData) {
+  return d.items.map(i => ({
+    item_code: i.code, name: i.name, category: i.category, subcategory: i.subcategory,
+    unit: i.unit, base_price: copperToText(i.base_price_copper),
+    base_price_copper: i.base_price_copper,
+    availability_mode: i.availability_mode, availability_profile: i.profile_code,
+  }));
+}
+export function exceptionRows(d: PricingExportData) {
+  return d.exceptions.map(e => ({ item_code: e.item_code, settlement_code: e.settlement_code, action: e.action }));
+}
+export function settlementRows(d: PricingExportData) {
+  return d.settlements.map(s => ({
+    settlement_code: s.code, name: s.name, type: s.type_code, type_label: s.type_label,
+    size: s.size ?? '', wealth: s.wealth ?? '', region: s.region ?? '',
+    modifier_pct: s.price_modifier_pct, uses_type_default: s.uses_type_default,
+    effective_pct: s.effective_pct,
+  }));
+}
+export function settlementTagRows(d: PricingExportData) {
+  return d.settlementTags.map(t => ({ settlement_code: t.settlement_code, tag: t.tag }));
+}
+export function profileRows(d: PricingExportData) {
+  return d.profiles.map(p => ({ profile_code: p.code, name: p.name, note: p.note }));
+}
+export function profileRuleRows(d: PricingExportData) {
+  const out: Record<string, any>[] = [];
+  for (const p of d.profiles) {
+    for (const key of RULE_KEYS) {
+      const v = (p.rules as any)?.[key];
+      if (v == null) continue;
+      if (Array.isArray(v)) { if (!v.length) continue; out.push({ profile_code: p.code, rule: key, value: v.join(';') }); }
+      else out.push({ profile_code: p.code, rule: key, value: String(v) });
+    }
+  }
+  return out;
+}
+export function typeRows(d: PricingExportData) {
+  return d.types.map(t => ({ type_code: t.code, label: t.label, default_modifier_pct: t.default_modifier_pct }));
+}
+
 // ---------------- writers ----------------
 
 function download(blob: Blob, filename: string) {
@@ -101,47 +140,17 @@ function download(blob: Blob, filename: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
-export function typeRows(data: PricingExportData): Record<string, any>[] {
-  return data.types.map(t => ({
-    'NÁZEV TYPŮ': t.label,
-    'KÓD': t.code,
-    'VÝCHOZÍ %': t.default_modifier_pct,
-  }));
-}
-
-export function settlementRows(data: PricingExportData): Record<string, any>[] {
-  return data.settlements.map(s => ({
-    'Sídlo': s.name,
-    'KÓD': s.code,
-    'TYP': s.type_label || s.type_code,
-    'Výsledný modifikátor': s.effective_pct,
-    'ZDROJ': s.uses_type_default ? SOURCE_TYPE : SOURCE_OWN,
-  }));
-}
-
-export function itemRows(data: PricingExportData): Record<string, any>[] {
-  return data.items.map(it => {
-    const row: Record<string, any> = {
-      'Název': it.name,
-      'Kód': it.code,
-      'Kategorie': it.category,
-      'Jednotka': it.unit,
-      'Základ': copperToText(it.base_price_copper),
-      'Dostupnost': AVAILABILITY_LABELS[it.availability_mode],
-    };
-    for (const s of data.settlements) {
-      const v = it.cells[s.code];
-      row[s.name] = typeof v === 'number' ? v : v === true;
-    }
-    return row;
-  });
-}
-
 export function downloadXlsx(data: PricingExportData, filename = 'cenik.xlsx') {
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(settlementRows(data)), SHEET_SETTLEMENTS);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(typeRows(data)), SHEET_TYPES);
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(itemRows(data)), SHEET_ITEMS);
+  const add = (name: string, rows: Record<string, any>[]) =>
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), name);
+  add(SHEET_ITEMS, itemRows(data));
+  add(SHEET_EXCEPTIONS, exceptionRows(data));
+  add(SHEET_SETTLEMENTS, settlementRows(data));
+  add(SHEET_SETTLEMENT_TAGS, settlementTagRows(data));
+  add(SHEET_PROFILES, profileRows(data));
+  add(SHEET_PROFILE_RULES, profileRuleRows(data));
+  add(SHEET_TYPES, typeRows(data));
   const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   download(new Blob([out], { type: 'application/octet-stream' }), filename);
 }
@@ -162,99 +171,106 @@ export function downloadCsv(rows: Record<string, any>[], filename: string) {
 
 export async function downloadZip(data: PricingExportData, filename = 'cenik-csv.zip') {
   const zip = new JSZip();
-  zip.file('MESTA.csv', rowsToCsv(settlementRows(data)));
-  zip.file('SIDLA.csv', rowsToCsv(typeRows(data)));
-  zip.file('ITEM.csv', rowsToCsv(itemRows(data)));
-  const blob = await zip.generateAsync({ type: 'blob' });
-  download(blob, filename);
+  zip.file('ITEMS.csv', rowsToCsv(itemRows(data)));
+  zip.file('ITEM_EXCEPTIONS.csv', rowsToCsv(exceptionRows(data)));
+  zip.file('SETTLEMENTS.csv', rowsToCsv(settlementRows(data)));
+  zip.file('SETTLEMENT_TAGS.csv', rowsToCsv(settlementTagRows(data)));
+  zip.file('AVAILABILITY_PROFILES.csv', rowsToCsv(profileRows(data)));
+  zip.file('PROFILE_RULES.csv', rowsToCsv(profileRuleRows(data)));
+  zip.file('SETTLEMENT_TYPES.csv', rowsToCsv(typeRows(data)));
+  download(await zip.generateAsync({ type: 'blob' }), filename);
 }
 
 // ---------------- parsing ----------------
 
 export interface ParsedSheets {
-  types: Record<string, any>[];
-  settlements: Record<string, any>[];
   items: Record<string, any>[];
+  exceptions: Record<string, any>[];
+  settlements: Record<string, any>[];
+  settlementTags: Record<string, any>[];
+  profiles: Record<string, any>[];
+  profileRules: Record<string, any>[];
+  types: Record<string, any>[];
 }
+
+const emptySheets = (): ParsedSheets => ({
+  items: [], exceptions: [], settlements: [], settlementTags: [], profiles: [], profileRules: [], types: [],
+});
+
+const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const SHEET_ALIASES: Record<keyof ParsedSheets, string[]> = {
+  items: ['items', 'item', 'polozky'],
+  exceptions: ['itemexceptions', 'exceptions', 'vyjimky'],
+  settlements: ['settlements', 'mesta', 'sidla2'],
+  settlementTags: ['settlementtags', 'tags', 'tagy'],
+  profiles: ['availabilityprofiles', 'profiles', 'profily'],
+  profileRules: ['profilerules', 'rules', 'pravidla'],
+  types: ['settlementtypes', 'types', 'typysidel', 'sidla'],
+};
 
 function csvToRows(text: string): Record<string, any>[] {
   const wb = XLSX.read(text.replace(/^\uFEFF/, ''), { type: 'string' });
-  const ws = wb.Sheets[wb.SheetNames[0]];
-  return XLSX.utils.sheet_to_json(ws, { defval: '' }) as Record<string, any>[];
-}
-
-const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '');
-
-function pickSheet(wb: XLSX.WorkBook, keys: string[]): Record<string, any>[] {
-  const name = wb.SheetNames.find(n => keys.includes(norm(n)));
-  if (!name) return [];
-  return XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' }) as Record<string, any>[];
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' }) as Record<string, any>[];
 }
 
 export async function parseImportFile(file: File): Promise<ParsedSheets> {
   const lower = file.name.toLowerCase();
-  const empty: ParsedSheets = { types: [], settlements: [], items: [] };
+  const out = emptySheets();
 
   if (lower.endsWith('.zip')) {
     const zip = await JSZip.loadAsync(await file.arrayBuffer());
-    const read = async (match: string[]) => {
-      const name = Object.keys(zip.files).find(n => match.includes(norm(n.replace(/\.csv$/i, ''))));
-      if (!name) return [];
-      return csvToRows(await zip.files[name].async('string'));
-    };
-    return {
-      settlements: await read(['mesta', 'settlements', 'sidla']),
-      types: await read(['sidla', 'typysidel', 'types']),
-      items: await read(['item', 'items', 'polozky']),
-    };
+    for (const key of Object.keys(SHEET_ALIASES) as (keyof ParsedSheets)[]) {
+      const name = Object.keys(zip.files).find(n => SHEET_ALIASES[key].includes(norm(n.replace(/\.csv$/i, ''))));
+      if (name) out[key] = csvToRows(await zip.files[name].async('string'));
+    }
+    return out;
   }
 
   if (lower.endsWith('.csv')) {
     const rows = csvToRows(await file.text());
     const h = Object.keys(rows[0] || {}).map(norm);
-    if (h.includes('nazevtypu')) return { ...empty, types: rows };
-    if (h.includes('sidlo')) return { ...empty, settlements: rows };
-    return { ...empty, items: rows };
+    if (h.includes('action')) out.exceptions = rows;
+    else if (h.includes('tag')) out.settlementTags = rows;
+    else if (h.includes('rule')) out.profileRules = rows;
+    else if (h.includes('profilecode')) out.profiles = rows;
+    else if (h.includes('typecode')) out.types = rows;
+    else if (h.includes('settlementcode')) out.settlements = rows;
+    else out.items = rows;
+    return out;
   }
 
   const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
-  return {
-    settlements: pickSheet(wb, ['mesta', 'settlements']),
-    types: pickSheet(wb, ['sidla', 'typysidel', 'types']),
-    items: pickSheet(wb, ['item', 'items', 'polozky']),
-  };
+  for (const key of Object.keys(SHEET_ALIASES) as (keyof ParsedSheets)[]) {
+    const name = wb.SheetNames.find(n => SHEET_ALIASES[key].includes(norm(n)));
+    if (name) out[key] = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: '' }) as Record<string, any>[];
+  }
+  return out;
 }
 
 // ---------------- validation ----------------
 
 export interface ValidatedItem {
-  code: string;
-  name: string;
-  category: string | null;
-  unit: string | null;
-  note: string | null;
-  base_price_copper: number;
-  availability_mode: AvailabilityMode;
+  code: string; name: string; category: string | null; subcategory: string | null;
+  unit: string | null; base_price_copper: number;
+  availability_mode: AvailabilityMode; profile_code: string | null;
 }
 export interface ValidatedSettlement {
-  code: string;
-  name: string;
-  type_code: string;
-  price_modifier_pct: number;
-  uses_type_default: boolean;
-  note: string | null;
+  code: string; name: string; type_code: string; price_modifier_pct: number;
+  uses_type_default: boolean; size: number | null; wealth: number | null; region: string | null;
 }
-export interface ValidatedType {
-  code: string;
-  label: string;
-  default_modifier_pct: number;
-}
+export interface ValidatedProfile { code: string; name: string; note: string | null; rules: ProfileRules }
+
 export interface ValidationResult {
   items: ValidatedItem[];
   settlements: ValidatedSettlement[];
-  types: ValidatedType[];
-  availability: { item_code: string; settlement_code: string; override: number | null }[];
+  types: { code: string; label: string; default_modifier_pct: number }[];
+  tags: { code: string; label: string }[];
+  tagLinks: { settlement_code: string; tag_code: string }[];
+  profiles: ValidatedProfile[];
+  exceptions: { item_code: string; settlement_code: string; action: 'ALLOW' | 'DENY' }[];
   errors: string[];
+  warnings: string[];
 }
 
 const get = (r: Record<string, any>, ...keys: string[]) => {
@@ -265,151 +281,158 @@ const get = (r: Record<string, any>, ...keys: string[]) => {
   }
   return '';
 };
-
 const num = (v: string) => {
   const n = Number(String(v).replace('%', '').replace(',', '.').trim());
   return Number.isFinite(n) ? n : 0;
 };
+const intOrNull = (v: string) => (v === '' ? null : Math.round(num(v)));
+const truthy = (v: string) => ['true', '1', 'ano', 'yes', 'x'].includes(v.toLowerCase());
 
-export function slugify(txt: string): string {
-  return (txt || '')
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'kod';
+export interface KnownData {
+  itemCodes: Set<string>;
+  settlementCodes: Set<string>;
+  typeCodes: Set<string>;
+  tagCodes: Set<string>;
+  profileCodes: Set<string>;
 }
 
-const TRUE_WORDS = ['true', '1', 'ano', 'yes', 'x', 'ok', 'a'];
-const FALSE_WORDS = ['false', '0', 'ne', 'no', ''];
-
-/** Vrátí true/false/číslo (přepis %) nebo null pokud buňka nic neříká. */
-function readCell(v: any): boolean | number | null {
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v;
-  const s = String(v ?? '').trim().toLowerCase();
-  if (TRUE_WORDS.includes(s)) return true;
-  if (FALSE_WORDS.includes(s)) return false;
-  const n = Number(s.replace('%', '').replace(',', '.'));
-  return Number.isFinite(n) ? n : null;
-}
-
-const ITEM_FIXED = ['nazev', 'kod', 'kategorie', 'jednotka', 'zaklad', 'dostupnost', 'poznamka'];
-
-export function validateImport(
-  sheets: ParsedSheets,
-  known: {
-    itemCodes: Set<string>;
-    settlementCodes: Set<string>;
-    typeCodes: Set<string>;
-    /** existující sídla ve světě: název -> kód (pro párování sloupců v listu ITEM) */
-    settlementCodeByName?: Map<string, string>;
-    /** existující typy: label -> kód */
-    typeCodeByLabel?: Map<string, string>;
-  }
-): ValidationResult {
+export function validateImport(sheets: ParsedSheets, known: KnownData): ValidationResult {
   const errors: string[] = [];
-  const types: ValidatedType[] = [];
-  const settlements: ValidatedSettlement[] = [];
-  const items: ValidatedItem[] = [];
-  const availability: ValidationResult['availability'] = [];
+  const warnings: string[] = [];
 
-  // --- SIDLA: typy ---
-  sheets.types.forEach(r => {
-    const label = get(r, 'NÁZEV TYPŮ', 'nazev typu', 'label', 'nazev');
-    const code = get(r, 'KÓD', 'kod', 'code') || slugify(label);
-    if (!label && !code) return;
-    types.push({ code, label: label || code, default_modifier_pct: num(get(r, 'VÝCHOZÍ %', 'vychozi', 'default_modifier_percent', 'pct')) });
-  });
-
-  const typeCodeByLabel = new Map<string, string>(known.typeCodeByLabel || []);
-  types.forEach(t => typeCodeByLabel.set(norm(t.label), t.code));
+  // --- types ---
+  const types = sheets.types.map(r => {
+    const label = get(r, 'label', 'nazev', 'nazev typu');
+    const code = get(r, 'type_code', 'code', 'kod') || slugify(label);
+    return { code, label: label || code, default_modifier_pct: num(get(r, 'default_modifier_pct', 'vychozi', 'pct')) };
+  }).filter(t => t.code);
   const typeCodes = new Set([...known.typeCodes, ...types.map(t => t.code)]);
 
-  // --- MESTA: sídla ---
+  // --- settlements ---
+  const settlements: ValidatedSettlement[] = [];
+  const seenSet = new Set<string>();
   sheets.settlements.forEach((r, i) => {
     const row = i + 2;
-    const name = get(r, 'Sídlo', 'sidlo', 'nazev', 'name');
-    const code = get(r, 'KÓD', 'kod', 'code') || slugify(name);
-    if (!name && !code) { errors.push(`MESTA, řádek ${row}: chybí název i kód — přeskočeno.`); return; }
-    const typeRaw = get(r, 'TYP', 'typ', 'type');
-    const type_code = typeCodes.has(typeRaw) ? typeRaw : (typeCodeByLabel.get(norm(typeRaw)) || slugify(typeRaw) || 'village');
-    if (!typeCodes.has(type_code)) errors.push(`MESTA, řádek ${row}: neznámý typ „${typeRaw}" — vytvoří se nový typ.`);
-    const src = norm(get(r, 'ZDROJ', 'zdroj'));
+    const name = get(r, 'name', 'nazev', 'sidlo');
+    const code = get(r, 'settlement_code', 'code', 'kod') || slugify(name);
+    if (!name && !code) { errors.push(`SETTLEMENTS ř.${row}: chybí název i kód.`); return; }
+    if (seenSet.has(code)) { errors.push(`SETTLEMENTS ř.${row}: duplicitní kód „${code}".`); return; }
+    seenSet.add(code);
+    const typeRaw = get(r, 'type', 'type_code', 'typ');
+    const type_code = typeCodes.has(typeRaw) ? typeRaw : slugify(typeRaw) || 'village';
+    if (typeRaw && !typeCodes.has(type_code)) warnings.push(`SETTLEMENTS ř.${row}: neznámý typ „${typeRaw}" — vytvoří se nový.`);
+    const size = intOrNull(get(r, 'size', 'velikost'));
+    const wealth = intOrNull(get(r, 'wealth', 'bohatstvi'));
+    if (size != null && (size < 1 || size > 5)) warnings.push(`SETTLEMENTS ř.${row}: velikost mimo 1–5.`);
+    if (wealth != null && (wealth < 1 || wealth > 5)) warnings.push(`SETTLEMENTS ř.${row}: bohatství mimo 1–5.`);
     settlements.push({
-      code,
-      name: name || code,
-      type_code,
-      price_modifier_pct: num(get(r, 'Výsledný modifikátor', 'vysledny modifikator', 'modifikator', 'price_modifier_percent')),
-      uses_type_default: src.includes('vychozi') || src.includes('typ'),
-      note: get(r, 'poznamka', 'note') || null,
+      code, name: name || code, type_code,
+      price_modifier_pct: num(get(r, 'modifier_pct', 'price_modifier_pct', 'modifikator')),
+      uses_type_default: truthy(get(r, 'uses_type_default', 'vychozi typu')),
+      size, wealth, region: get(r, 'region') || null,
     });
   });
-
-  // Sídlo: název -> kód (nová i existující)
-  const codeByName = new Map<string, string>(known.settlementCodeByName || []);
-  settlements.forEach(s => codeByName.set(norm(s.name), s.code));
   const settlementCodes = new Set([...known.settlementCodes, ...settlements.map(s => s.code)]);
 
-  // --- ITEM: položky + matice dostupnosti ---
-  const seenItem = new Set<string>();
-  const unknownCols = new Set<string>();
+  // --- tags ---
+  const tagLabels = new Map<string, string>();
+  const tagLinks: ValidationResult['tagLinks'] = [];
+  sheets.settlementTags.forEach((r, i) => {
+    const row = i + 2;
+    const sc = get(r, 'settlement_code', 'code', 'sidlo');
+    const label = get(r, 'tag', 'label');
+    if (!sc || !label) { errors.push(`SETTLEMENT_TAGS ř.${row}: chybí sídlo nebo tag.`); return; }
+    if (!settlementCodes.has(sc)) { errors.push(`SETTLEMENT_TAGS ř.${row}: neexistující sídlo „${sc}".`); return; }
+    const code = slugify(label);
+    if (!known.tagCodes.has(code) && !tagLabels.has(code)) warnings.push(`SETTLEMENT_TAGS: tag „${label}" bude vytvořen.`);
+    tagLabels.set(code, label);
+    tagLinks.push({ settlement_code: sc, tag_code: code });
+  });
+  const tags = Array.from(tagLabels, ([code, label]) => ({ code, label }));
+  const tagCodes = new Set([...known.tagCodes, ...tags.map(t => t.code)]);
 
+  // --- profiles ---
+  const profiles: ValidatedProfile[] = sheets.profiles.map(r => {
+    const name = get(r, 'name', 'nazev');
+    const code = get(r, 'profile_code', 'code', 'kod') || slugify(name);
+    return { code, name: name || code, note: get(r, 'note', 'poznamka') || null, rules: {} as ProfileRules };
+  }).filter(p => p.code);
+  const profByCode = new Map(profiles.map(p => [p.code, p]));
+
+  sheets.profileRules.forEach((r, i) => {
+    const row = i + 2;
+    const pc = get(r, 'profile_code', 'profile', 'kod');
+    const rule = norm(get(r, 'rule', 'pravidlo'));
+    const raw = get(r, 'value', 'hodnota');
+    const p = profByCode.get(pc);
+    if (!p) { errors.push(`PROFILE_RULES ř.${row}: neznámý profil „${pc}".`); return; }
+    const key = (RULE_KEYS as readonly string[]).find(k => norm(k) === rule);
+    if (!key) { errors.push(`PROFILE_RULES ř.${row}: neznámé pravidlo „${rule}".`); return; }
+    if (LIST_RULES.has(key)) {
+      const vals = raw.split(/[;|,]/).map(s => s.trim()).filter(Boolean);
+      if (key.startsWith('tags')) vals.forEach(v => { if (!tagCodes.has(v)) warnings.push(`PROFILE_RULES ř.${row}: neznámý tag „${v}".`); });
+      if (key === 'type_codes') vals.forEach(v => { if (!typeCodes.has(v)) warnings.push(`PROFILE_RULES ř.${row}: neznámý typ sídla „${v}".`); });
+      (p.rules as any)[key] = vals;
+    } else {
+      (p.rules as any)[key] = raw === '' ? null : Math.round(num(raw));
+    }
+  });
+  const profileCodes = new Set([...known.profileCodes, ...profiles.map(p => p.code)]);
+
+  // --- items ---
+  const items: ValidatedItem[] = [];
+  const seenItem = new Set<string>();
   sheets.items.forEach((r, i) => {
     const row = i + 2;
-    const name = get(r, 'Název', 'nazev', 'name');
-    const code = get(r, 'Kód', 'kod', 'code') || slugify(name);
-    if (!name && !code) { errors.push(`ITEM, řádek ${row}: chybí název i kód — přeskočeno.`); return; }
-    if (seenItem.has(code)) { errors.push(`ITEM, řádek ${row}: duplicitní kód „${code}" — přeskočeno.`); return; }
+    const name = get(r, 'name', 'nazev');
+    const code = get(r, 'item_code', 'code', 'kod') || slugify(name);
+    if (!name && !code) { errors.push(`ITEMS ř.${row}: chybí název i kód.`); return; }
+    if (seenItem.has(code)) { errors.push(`ITEMS ř.${row}: duplicitní kód „${code}".`); return; }
     seenItem.add(code);
 
-    // matice sídel
-    const trueCells: { code: string; override: number | null }[] = [];
-    const falseCells: string[] = [];
-    let anyOverride = false;
-    let anyCell = false;
+    const modeRaw = get(r, 'availability_mode', 'dostupnost').toUpperCase();
+    const mode: AvailabilityMode = (AVAILABILITY_MODES as string[]).includes(modeRaw)
+      ? modeRaw as AvailabilityMode : 'INHERIT';
+    if (modeRaw && !(AVAILABILITY_MODES as string[]).includes(modeRaw))
+      warnings.push(`ITEMS ř.${row}: neznámý režim „${modeRaw}" — použije se INHERIT.`);
 
-    for (const key of Object.keys(r)) {
-      const nk = norm(key);
-      if (ITEM_FIXED.includes(nk)) continue;
-      const sc = settlementCodes.has(key.trim()) ? key.trim() : codeByName.get(nk);
-      if (!sc) { if (String(r[key] ?? '').trim() !== '') unknownCols.add(key); continue; }
-      const val = readCell(r[key]);
-      if (val === null) continue;
-      anyCell = true;
-      if (val === false) falseCells.push(sc);
-      else if (val === true) trueCells.push({ code: sc, override: null });
-      else { trueCells.push({ code: sc, override: val }); anyOverride = true; }
+    let profile_code: string | null = get(r, 'availability_profile', 'profile_code') || null;
+    if (profile_code && !profileCodes.has(profile_code)) {
+      const bySlug = slugify(profile_code);
+      if (profileCodes.has(bySlug)) profile_code = bySlug;
+      else { errors.push(`ITEMS ř.${row}: neexistující profil „${profile_code}".`); profile_code = null; }
     }
 
-    let mode: AvailabilityMode;
-    if (!anyCell) {
-      const declared = norm(get(r, 'Dostupnost', 'dostupnost', 'availability_mode'));
-      mode = declared.includes('nikde') ? 'NOWHERE'
-        : declared.includes('krome') ? 'EXCEPT_SELECTED'
-          : declared.includes('pouze') ? 'ONLY_SELECTED'
-            : (AVAILABILITY_MODES.includes(declared.toUpperCase() as AvailabilityMode) ? declared.toUpperCase() as AvailabilityMode : 'EVERYWHERE');
-    } else if (trueCells.length === 0) {
-      mode = 'NOWHERE';
-    } else if (falseCells.length === 0 && !anyOverride) {
-      mode = 'EVERYWHERE';
-    } else if (anyOverride || trueCells.length <= falseCells.length) {
-      mode = 'ONLY_SELECTED';
-      trueCells.forEach(t => availability.push({ item_code: code, settlement_code: t.code, override: t.override }));
-    } else {
-      mode = 'EXCEPT_SELECTED';
-      falseCells.forEach(sc => availability.push({ item_code: code, settlement_code: sc, override: null }));
-    }
-
+    const baseTxt = get(r, 'base_price', 'base_price_copper', 'zaklad', 'cena');
     items.push({
-      code,
-      name: name || code,
-      category: get(r, 'Kategorie', 'kategorie', 'category') || null,
-      unit: get(r, 'Jednotka', 'jednotka', 'unit') || null,
-      note: get(r, 'poznamka', 'note') || null,
-      base_price_copper: textToCopper(get(r, 'Základ', 'zaklad', 'base', 'cena')),
+      code, name: name || code,
+      category: get(r, 'category', 'kategorie') || null,
+      subcategory: get(r, 'subcategory', 'podkategorie') || null,
+      unit: get(r, 'unit', 'jednotka') || null,
+      base_price_copper: textToCopper(baseTxt),
       availability_mode: mode,
+      profile_code,
     });
   });
+  const itemCodes = new Set([...known.itemCodes, ...items.map(i => i.code)]);
 
-  unknownCols.forEach(c => errors.push(`ITEM: sloupec „${c}" neodpovídá žádnému sídlu — ignorováno.`));
+  // --- exceptions ---
+  const exceptions: ValidationResult['exceptions'] = [];
+  const seenEx = new Set<string>();
+  sheets.exceptions.forEach((r, i) => {
+    const row = i + 2;
+    const ic = get(r, 'item_code', 'item', 'kod');
+    const sc = get(r, 'settlement_code', 'settlement', 'sidlo');
+    const action = get(r, 'action', 'akce').toUpperCase();
+    if (!ic || !sc) { errors.push(`ITEM_EXCEPTIONS ř.${row}: chybí item_code nebo settlement_code.`); return; }
+    if (!itemCodes.has(ic)) { errors.push(`ITEM_EXCEPTIONS ř.${row}: neexistující položka „${ic}".`); return; }
+    if (!settlementCodes.has(sc)) { errors.push(`ITEM_EXCEPTIONS ř.${row}: neexistující sídlo „${sc}".`); return; }
+    if (action !== 'ALLOW' && action !== 'DENY') { errors.push(`ITEM_EXCEPTIONS ř.${row}: akce musí být ALLOW nebo DENY.`); return; }
+    const key = `${ic}|${sc}`;
+    if (seenEx.has(key)) { errors.push(`ITEM_EXCEPTIONS ř.${row}: duplicitní výjimka „${key}".`); return; }
+    seenEx.add(key);
+    exceptions.push({ item_code: ic, settlement_code: sc, action });
+  });
 
-  return { items, settlements, types, availability, errors };
+  return { items, settlements, types, tags, tagLinks, profiles, exceptions, errors, warnings };
 }
