@@ -255,6 +255,10 @@ export default function SettlementsManagerDialog({
                 <th className="text-left py-2">Sídlo</th>
                 <th className="text-left">Kód</th>
                 <th className="text-left">Typ</th>
+                <th className="text-left">Vel.</th>
+                <th className="text-left">Boh.</th>
+                <th className="text-left">Region</th>
+                <th className="text-left">Tagy</th>
                 <th className="text-left">Výsledný modifikátor</th>
                 <th className="text-left">Zdroj</th>
                 <th></th>
@@ -263,13 +267,21 @@ export default function SettlementsManagerDialog({
             <tbody>
               {rows.map(l => {
                 const eff = effectiveLocationPct(l, typesByCode);
+                const locTags = Array.from(tagIdx.get(l.id) || []);
                 return (
                   <tr key={l.id} className="border-b hover:bg-muted/30">
                     <td><Checkbox checked={sel.has(l.id)} onCheckedChange={v => toggle(l.id, !!v)} /></td>
                     <td className="py-1.5 font-medium">{l.name}</td>
                     <td className="text-xs text-muted-foreground">{l.code}</td>
                     <td>{typesByCode[l.type_code || l.type]?.label || l.type_code || '—'}</td>
+                    <td className="text-xs">{l.size ?? '—'}</td>
+                    <td className="text-xs">{l.wealth ?? '—'}</td>
+                    <td className="text-xs">{l.region || '—'}</td>
+                    <td className="text-xs text-muted-foreground max-w-[160px] truncate">
+                      {locTags.length ? locTags.map(c => tagLabelByCode[c] || c).join(', ') : '—'}
+                    </td>
                     <td className={eff > 0 ? 'text-destructive' : eff < 0 ? 'text-primary' : ''}>{eff > 0 ? '+' : ''}{eff} %</td>
+
                     <td className="text-xs">
                       {l.uses_type_default
                         ? <span className="text-muted-foreground">Výchozí hodnota typu</span>
