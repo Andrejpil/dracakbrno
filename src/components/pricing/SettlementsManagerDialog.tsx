@@ -161,6 +161,13 @@ export default function SettlementsManagerDialog({
               <SelectItem value="custom">Má vlastní hodnotu</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={tagFilter} onValueChange={v => { setTagFilter(v); setPage(0); }}>
+            <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny tagy</SelectItem>
+              {tags.map(t => <SelectItem key={t.id} value={t.code}>{t.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
           <Input className="h-8 text-xs w-24" type="number" placeholder="% od" value={modMin} onChange={e => { setModMin(e.target.value); setPage(0); }} />
           <Input className="h-8 text-xs w-24" type="number" placeholder="% do" value={modMax} onChange={e => { setModMax(e.target.value); setPage(0); }} />
           <Button size="sm" onClick={onAdd}><Plus size={14} className="mr-1" />Přidat</Button>
