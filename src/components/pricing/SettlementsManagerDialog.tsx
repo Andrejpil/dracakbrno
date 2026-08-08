@@ -110,6 +110,31 @@ export default function SettlementsManagerDialog({
     setBusy(false);
   }
 
+  async function applyTag(add: boolean) {
+    if (!selected.length || !bulkTag) return;
+    const label = tags.find(t => t.id === bulkTag)?.label;
+    if (!confirm(`${add ? 'Přidat' : 'Odebrat'} tag „${label}" u ${selected.length} sídel?`)) return;
+    setBusy(true);
+    try {
+      for (let i = 0; i < selected.length; i += 200) {
+        const { error } = await supabase.rpc('price_bulk_tag_settlements' as any, {
+          _world_id: worldId,
+          _location_ids: selected.slice(i, i + 200),
+          _tag_id: bulkTag,
+          _add: add,
+        });
+        if (error) throw error;
+      }
+      toast.success(`Tag ${add ? 'přidán' : 'odebrán'} u ${selected.length} sídel.`);
+      setSelected([]);
+      await onReload();
+    } catch (e: any) {
+      toast.error(e.message || 'Hromadná změna tagů selhala');
+    }
+    setBusy(false);
+  }
+
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
