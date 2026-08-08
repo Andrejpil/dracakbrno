@@ -219,6 +219,31 @@ export default function SettlementsManagerDialog({
                 Použít výchozí hodnotu typu
               </Button>
             </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Select value={bulkTag} onValueChange={setBulkTag}>
+                <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Tag sídla" /></SelectTrigger>
+                <SelectContent>{tags.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="sm" disabled={!bulkTag || busy} onClick={() => applyTag(true)}>Přidat tag</Button>
+              <Button size="sm" variant="secondary" disabled={!bulkTag || busy} onClick={() => applyTag(false)}>Odebrat tag</Button>
+            </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Input className="h-8 text-xs w-28" type="number" placeholder="velikost" value={bulkSize} onChange={e => setBulkSize(e.target.value)} />
+              <Button size="sm" disabled={bulkSize === '' || busy}
+                onClick={() => apply(() => ({ size: Number(bulkSize) }), `Nastavit velikost ${bulkSize} u ${selected.length} sídel?`)}>
+                Nastavit velikost
+              </Button>
+              <Input className="h-8 text-xs w-28" type="number" placeholder="bohatství" value={bulkWealth} onChange={e => setBulkWealth(e.target.value)} />
+              <Button size="sm" disabled={bulkWealth === '' || busy}
+                onClick={() => apply(() => ({ wealth: Number(bulkWealth) }), `Nastavit bohatství ${bulkWealth} u ${selected.length} sídel?`)}>
+                Nastavit bohatství
+              </Button>
+              <Input className="h-8 text-xs w-36" placeholder="region" value={bulkRegion} onChange={e => setBulkRegion(e.target.value)} />
+              <Button size="sm" disabled={!bulkRegion.trim() || busy}
+                onClick={() => apply(() => ({ region: bulkRegion.trim() }), `Nastavit region „${bulkRegion.trim()}" u ${selected.length} sídel?`)}>
+                Nastavit region
+              </Button>
+            </div>
           </div>
         )}
 
