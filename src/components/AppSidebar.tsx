@@ -16,7 +16,6 @@ const allLinks = [
   { to: '/statistika', label: 'Statistika', icon: BarChart3, page: 'stats' },
   { to: '/npc', label: 'NPC', icon: UserCircle, page: 'npc' },
   { to: '/kronika', label: 'Kronika', icon: ScrollText, page: 'heroes' },
-  { to: '/export', label: 'Export / Import', icon: Download, page: 'export' },
   { to: '/mapa', label: 'Mapa', icon: Map, page: 'map' },
   { to: '/cenik', label: 'Ceník', icon: Coins, page: 'pricing' },
 ];
