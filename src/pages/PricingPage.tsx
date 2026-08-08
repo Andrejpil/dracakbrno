@@ -80,6 +80,9 @@ export default function PricingPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterMode, setFilterMode] = useState('all');
+  const [priceLocId, setPriceLocId] = useState(NONE);
+  const [locSearch, setLocSearch] = useState('');
+
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [allFiltered, setAllFiltered] = useState(false);
@@ -114,7 +117,9 @@ export default function PricingPage() {
     () => states.find(s => s.code === activeStateCode)?.modifier_pct ?? 0,
     [states, activeStateCode]
   );
+  const priceLoc = useMemo(() => locations.find(l => l.id === priceLocId) || null, [locations, priceLocId]);
   const tagIdx = useMemo(() => buildTagIndex(tagLinks, tags), [tagLinks, tags]);
+
   const tagUsage = useMemo(() => {
     const u: Record<string, number> = {};
     tagLinks.forEach(l => { u[l.tag_id] = (u[l.tag_id] || 0) + 1; });
@@ -537,7 +542,22 @@ export default function PricingPage() {
               {AVAILABILITY_MODES.map(m => <SelectItem key={m} value={m}>{AVAILABILITY_LABELS[m]}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={priceLocId} onValueChange={setPriceLocId}>
+            <SelectTrigger className="w-56 h-8 text-xs"><SelectValue placeholder="Cena v sídle" /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              <div className="p-1 sticky top-0 bg-popover z-10">
+                <Input className="h-7 text-xs" placeholder="Hledat sídlo…" value={locSearch}
+                  onChange={e => setLocSearch(e.target.value)} onKeyDown={e => e.stopPropagation()} />
+              </div>
+              <SelectItem value={NONE}>Bez sloupce ceny</SelectItem>
+              {locations
+                .filter(l => l.name.toLowerCase().includes(locSearch.trim().toLowerCase()))
+                .slice(0, 300)
+                .map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
+
 
         <div className="flex gap-2 items-center text-xs flex-wrap">
           <Button size="sm" variant="secondary" onClick={() => { setAllFiltered(false); setSelectedIds(items.map(i => i.id)); }}>Vybrat stránku</Button>
@@ -598,10 +618,10 @@ export default function PricingPage() {
                   <tr className="border-b">
                     <th className="w-8"></th>
                     <th className="text-left py-2">Název</th>
-                    <th className="text-left">Kód</th>
                     <th className="text-left">Kategorie</th>
                     <th className="text-left">Jednotka</th>
-                    <th className="text-left">Základ</th>
+                    <th className="text-left">Základ / ks</th>
+                    {priceLoc && <th className="text-left">Cena v „{priceLoc.name}"</th>}
                     <th className="text-left">Dostupnost</th>
                     <th></th>
                   </tr>
@@ -611,6 +631,16 @@ export default function PricingPage() {
                     const avail = itemSettlements(it, locations, availCtx);
                     const res = resolveItemProfile(it, categories, profiles);
                     const cat = categories.find(c => c.id === it.category_id);
+                    const here = priceLoc
+                      ? {
+                          ok: avail.some(a => a.loc.id === priceLoc.id),
+                          calc: computePrice({
+                            basePriceCopper: it.base_price_copper,
+                            locationModifierPct: effectiveLocationPct(priceLoc, typesByCode),
+                            economyModifierPct: econMod,
+                          }),
+                        }
+                      : null;
                     return (
                       <tr key={it.id} className="border-b hover:bg-muted/30">
                         <td>
@@ -621,16 +651,34 @@ export default function PricingPage() {
                             }} />
                         </td>
                         <td className="py-2 font-medium">{it.name}</td>
-                        <td className="text-xs text-muted-foreground">{it.code}</td>
                         <td>{cat?.name || it.category}</td>
                         <td>{it.unit}</td>
                         <td className="whitespace-nowrap">{formatCopper(it.base_price_copper)}</td>
+                        {here && (
+                          <td className="whitespace-nowrap">
+                            {here.ok ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="font-medium text-primary cursor-help">{formatCopper(here.calc.final)}</span>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-xs">
+                                  <div>Základ: {formatCopper(here.calc.base)}</div>
+                                  <div>Sídlo: {effectiveLocationPct(priceLoc!, typesByCode)} %</div>
+                                  <div>Ekonomika: {econMod} %</div>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">nedostupné</span>
+                            )}
+                          </td>
+                        )}
                         <td className="text-xs">
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setPricesItem(it)}>
                             {avail.length} / {locations.length} sídel
                             {res.profile ? ` · ${res.profile.name}` : ''}
                           </Button>
                         </td>
+
                         <td className="text-right whitespace-nowrap">
                           <Button size="sm" variant="ghost" onClick={() => { setEditItem(it); setItemOpen(true); }}><Pencil size={14} /></Button>
                           <Button size="sm" variant="ghost" onClick={() => deleteItem(it.id)}><Trash2 size={14} className="text-destructive" /></Button>
