@@ -616,10 +616,10 @@ export default function PricingPage() {
                   <tr className="border-b">
                     <th className="w-8"></th>
                     <th className="text-left py-2">Název</th>
-                    <th className="text-left">Kód</th>
                     <th className="text-left">Kategorie</th>
                     <th className="text-left">Jednotka</th>
-                    <th className="text-left">Základ</th>
+                    <th className="text-left">Základ / ks</th>
+                    {priceLoc && <th className="text-left">Cena v „{priceLoc.name}"</th>}
                     <th className="text-left">Dostupnost</th>
                     <th></th>
                   </tr>
@@ -629,6 +629,16 @@ export default function PricingPage() {
                     const avail = itemSettlements(it, locations, availCtx);
                     const res = resolveItemProfile(it, categories, profiles);
                     const cat = categories.find(c => c.id === it.category_id);
+                    const here = priceLoc
+                      ? {
+                          ok: avail.some(a => a.loc.id === priceLoc.id),
+                          calc: computePrice({
+                            basePriceCopper: it.base_price_copper,
+                            locationModifierPct: effectiveLocationPct(priceLoc, typesByCode),
+                            economyModifierPct: econMod,
+                          }),
+                        }
+                      : null;
                     return (
                       <tr key={it.id} className="border-b hover:bg-muted/30">
                         <td>
@@ -639,16 +649,34 @@ export default function PricingPage() {
                             }} />
                         </td>
                         <td className="py-2 font-medium">{it.name}</td>
-                        <td className="text-xs text-muted-foreground">{it.code}</td>
                         <td>{cat?.name || it.category}</td>
                         <td>{it.unit}</td>
                         <td className="whitespace-nowrap">{formatCopper(it.base_price_copper)}</td>
+                        {here && (
+                          <td className="whitespace-nowrap">
+                            {here.ok ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="font-medium text-primary cursor-help">{formatCopper(here.calc.final)}</span>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-xs">
+                                  <div>Základ: {formatCopper(here.calc.base)}</div>
+                                  <div>Sídlo: {effectiveLocationPct(priceLoc!, typesByCode)} %</div>
+                                  <div>Ekonomika: {econMod} %</div>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">nedostupné</span>
+                            )}
+                          </td>
+                        )}
                         <td className="text-xs">
                           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setPricesItem(it)}>
                             {avail.length} / {locations.length} sídel
                             {res.profile ? ` · ${res.profile.name}` : ''}
                           </Button>
                         </td>
+
                         <td className="text-right whitespace-nowrap">
                           <Button size="sm" variant="ghost" onClick={() => { setEditItem(it); setItemOpen(true); }}><Pencil size={14} /></Button>
                           <Button size="sm" variant="ghost" onClick={() => deleteItem(it.id)}><Trash2 size={14} className="text-destructive" /></Button>
