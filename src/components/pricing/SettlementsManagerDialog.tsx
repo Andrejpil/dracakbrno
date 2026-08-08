@@ -62,12 +62,14 @@ export default function SettlementsManagerDialog({
     if (typeFilter !== 'all' && (l.type_code || l.type) !== typeFilter) return false;
     if (sourceFilter === 'default' && !l.uses_type_default) return false;
     if (sourceFilter === 'custom' && l.uses_type_default) return false;
+    if (tagFilter !== 'all' && !(tagIdx.get(l.id)?.has(tagFilter))) return false;
     if (modMin !== '' && eff < Number(modMin)) return false;
     if (modMax !== '' && eff > Number(modMax)) return false;
     const q = search.trim().toLowerCase();
-    if (q && !`${l.name} ${l.code || ''}`.toLowerCase().includes(q)) return false;
+    if (q && !`${l.name} ${l.code || ''} ${l.region || ''}`.toLowerCase().includes(q)) return false;
     return true;
-  }), [locations, typesByCode, typeFilter, sourceFilter, modMin, modMax, search]);
+  }), [locations, typesByCode, typeFilter, sourceFilter, tagFilter, tagIdx, modMin, modMax, search]);
+
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE));
   const p = Math.min(page, pageCount - 1);
