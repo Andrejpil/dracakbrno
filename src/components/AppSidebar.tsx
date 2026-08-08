@@ -1,5 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Sword, BookOpen, Swords, Star, BarChart3, Download, LogOut, Users, Map, UserCircle, Dices, ScrollText, Globe, Settings, Coins } from 'lucide-react';
+import { Sword, BookOpen, Swords, Star, BarChart3, LogOut, Users, Map, UserCircle, Dices, ScrollText, Globe, Settings, Coins } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useWorld } from '@/contexts/WorldContext';
