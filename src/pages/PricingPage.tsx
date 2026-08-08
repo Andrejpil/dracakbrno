@@ -80,6 +80,9 @@ export default function PricingPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterMode, setFilterMode] = useState('all');
+  const [priceLocId, setPriceLocId] = useState(NONE);
+  const [locSearch, setLocSearch] = useState('');
+
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [allFiltered, setAllFiltered] = useState(false);
