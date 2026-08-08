@@ -117,7 +117,9 @@ export default function PricingPage() {
     () => states.find(s => s.code === activeStateCode)?.modifier_pct ?? 0,
     [states, activeStateCode]
   );
+  const priceLoc = useMemo(() => locations.find(l => l.id === priceLocId) || null, [locations, priceLocId]);
   const tagIdx = useMemo(() => buildTagIndex(tagLinks, tags), [tagLinks, tags]);
+
   const tagUsage = useMemo(() => {
     const u: Record<string, number> = {};
     tagLinks.forEach(l => { u[l.tag_id] = (u[l.tag_id] || 0) + 1; });
