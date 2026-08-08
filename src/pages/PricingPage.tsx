@@ -537,7 +537,22 @@ export default function PricingPage() {
               {AVAILABILITY_MODES.map(m => <SelectItem key={m} value={m}>{AVAILABILITY_LABELS[m]}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Select value={priceLocId} onValueChange={setPriceLocId}>
+            <SelectTrigger className="w-56 h-8 text-xs"><SelectValue placeholder="Cena v sídle" /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              <div className="p-1 sticky top-0 bg-popover z-10">
+                <Input className="h-7 text-xs" placeholder="Hledat sídlo…" value={locSearch}
+                  onChange={e => setLocSearch(e.target.value)} onKeyDown={e => e.stopPropagation()} />
+              </div>
+              <SelectItem value={NONE}>Bez sloupce ceny</SelectItem>
+              {locations
+                .filter(l => l.name.toLowerCase().includes(locSearch.trim().toLowerCase()))
+                .slice(0, 300)
+                .map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
+
 
         <div className="flex gap-2 items-center text-xs flex-wrap">
           <Button size="sm" variant="secondary" onClick={() => { setAllFiltered(false); setSelectedIds(items.map(i => i.id)); }}>Vybrat stránku</Button>
