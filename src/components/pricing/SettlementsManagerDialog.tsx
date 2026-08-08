@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Pencil, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { effectiveLocationPct } from '@/lib/pricing';
-import type { PriceLocation, PriceLocationType } from './types';
+import type { TagIndex } from '@/lib/availability';
+import type { PriceLocation, PriceLocationType, SettlementTag } from './types';
 
 const PAGE = 50;
 
@@ -18,6 +19,8 @@ interface Props {
   worldId: string;
   locations: PriceLocation[];
   types: PriceLocationType[];
+  tags: SettlementTag[];
+  tagIdx: TagIndex;
   onEdit: (l: PriceLocation) => void;
   onAdd: () => void;
   onDelete: (id: string) => void;
@@ -25,11 +28,12 @@ interface Props {
 }
 
 export default function SettlementsManagerDialog({
-  open, onOpenChange, worldId, locations, types, onEdit, onAdd, onDelete, onReload,
+  open, onOpenChange, worldId, locations, types, tags, tagIdx, onEdit, onAdd, onDelete, onReload,
 }: Props) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all'); // all | default | custom
+  const [tagFilter, setTagFilter] = useState('all');
   const [modMin, setModMin] = useState('');
   const [modMax, setModMax] = useState('');
   const [page, setPage] = useState(0);
@@ -37,7 +41,16 @@ export default function SettlementsManagerDialog({
   const [bulkType, setBulkType] = useState('');
   const [bulkSet, setBulkSet] = useState('');
   const [bulkDelta, setBulkDelta] = useState('');
+  const [bulkTag, setBulkTag] = useState('');
+  const [bulkSize, setBulkSize] = useState('');
+  const [bulkWealth, setBulkWealth] = useState('');
+  const [bulkRegion, setBulkRegion] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const tagLabelByCode = useMemo(
+    () => Object.fromEntries(tags.map(t => [t.code, t.label])) as Record<string, string>,
+    [tags]
+  );
 
   const typesByCode = useMemo(
     () => Object.fromEntries(types.map(t => [t.code, t])) as Record<string, PriceLocationType>,
