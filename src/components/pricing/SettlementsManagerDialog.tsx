@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Pencil, Trash2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { effectiveLocationPct } from '@/lib/pricing';
-import type { PriceLocation, PriceLocationType } from './types';
+import type { TagIndex } from '@/lib/availability';
+import type { PriceLocation, PriceLocationType, SettlementTag } from './types';
 
 const PAGE = 50;
 
@@ -18,6 +19,8 @@ interface Props {
   worldId: string;
   locations: PriceLocation[];
   types: PriceLocationType[];
+  tags: SettlementTag[];
+  tagIdx: TagIndex;
   onEdit: (l: PriceLocation) => void;
   onAdd: () => void;
   onDelete: (id: string) => void;
@@ -25,11 +28,12 @@ interface Props {
 }
 
 export default function SettlementsManagerDialog({
-  open, onOpenChange, worldId, locations, types, onEdit, onAdd, onDelete, onReload,
+  open, onOpenChange, worldId, locations, types, tags, tagIdx, onEdit, onAdd, onDelete, onReload,
 }: Props) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all'); // all | default | custom
+  const [tagFilter, setTagFilter] = useState('all');
   const [modMin, setModMin] = useState('');
   const [modMax, setModMax] = useState('');
   const [page, setPage] = useState(0);
@@ -37,7 +41,16 @@ export default function SettlementsManagerDialog({
   const [bulkType, setBulkType] = useState('');
   const [bulkSet, setBulkSet] = useState('');
   const [bulkDelta, setBulkDelta] = useState('');
+  const [bulkTag, setBulkTag] = useState('');
+  const [bulkSize, setBulkSize] = useState('');
+  const [bulkWealth, setBulkWealth] = useState('');
+  const [bulkRegion, setBulkRegion] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const tagLabelByCode = useMemo(
+    () => Object.fromEntries(tags.map(t => [t.code, t.label])) as Record<string, string>,
+    [tags]
+  );
 
   const typesByCode = useMemo(
     () => Object.fromEntries(types.map(t => [t.code, t])) as Record<string, PriceLocationType>,
@@ -49,12 +62,14 @@ export default function SettlementsManagerDialog({
     if (typeFilter !== 'all' && (l.type_code || l.type) !== typeFilter) return false;
     if (sourceFilter === 'default' && !l.uses_type_default) return false;
     if (sourceFilter === 'custom' && l.uses_type_default) return false;
+    if (tagFilter !== 'all' && !(tagIdx.get(l.id)?.has(tagFilter))) return false;
     if (modMin !== '' && eff < Number(modMin)) return false;
     if (modMax !== '' && eff > Number(modMax)) return false;
     const q = search.trim().toLowerCase();
-    if (q && !`${l.name} ${l.code || ''}`.toLowerCase().includes(q)) return false;
+    if (q && !`${l.name} ${l.code || ''} ${l.region || ''}`.toLowerCase().includes(q)) return false;
     return true;
-  }), [locations, typesByCode, typeFilter, sourceFilter, modMin, modMax, search]);
+  }), [locations, typesByCode, typeFilter, sourceFilter, tagFilter, tagIdx, modMin, modMax, search]);
+
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE));
   const p = Math.min(page, pageCount - 1);
@@ -95,6 +110,31 @@ export default function SettlementsManagerDialog({
     setBusy(false);
   }
 
+  async function applyTag(add: boolean) {
+    if (!selected.length || !bulkTag) return;
+    const label = tags.find(t => t.id === bulkTag)?.label;
+    if (!confirm(`${add ? 'Přidat' : 'Odebrat'} tag „${label}" u ${selected.length} sídel?`)) return;
+    setBusy(true);
+    try {
+      for (let i = 0; i < selected.length; i += 200) {
+        const { error } = await supabase.rpc('price_bulk_tag_settlements' as any, {
+          _world_id: worldId,
+          _location_ids: selected.slice(i, i + 200),
+          _tag_id: bulkTag,
+          _add: add,
+        });
+        if (error) throw error;
+      }
+      toast.success(`Tag ${add ? 'přidán' : 'odebrán'} u ${selected.length} sídel.`);
+      setSelected([]);
+      await onReload();
+    } catch (e: any) {
+      toast.error(e.message || 'Hromadná změna tagů selhala');
+    }
+    setBusy(false);
+  }
+
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -119,6 +159,13 @@ export default function SettlementsManagerDialog({
               <SelectItem value="all">Výchozí i vlastní</SelectItem>
               <SelectItem value="default">Používá výchozí hodnotu typu</SelectItem>
               <SelectItem value="custom">Má vlastní hodnotu</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={tagFilter} onValueChange={v => { setTagFilter(v); setPage(0); }}>
+            <SelectTrigger className="w-36 h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Všechny tagy</SelectItem>
+              {tags.map(t => <SelectItem key={t.id} value={t.code}>{t.label}</SelectItem>)}
             </SelectContent>
           </Select>
           <Input className="h-8 text-xs w-24" type="number" placeholder="% od" value={modMin} onChange={e => { setModMin(e.target.value); setPage(0); }} />
@@ -172,6 +219,31 @@ export default function SettlementsManagerDialog({
                 Použít výchozí hodnotu typu
               </Button>
             </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Select value={bulkTag} onValueChange={setBulkTag}>
+                <SelectTrigger className="w-40 h-8 text-xs"><SelectValue placeholder="Tag sídla" /></SelectTrigger>
+                <SelectContent>{tags.map(t => <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="sm" disabled={!bulkTag || busy} onClick={() => applyTag(true)}>Přidat tag</Button>
+              <Button size="sm" variant="secondary" disabled={!bulkTag || busy} onClick={() => applyTag(false)}>Odebrat tag</Button>
+            </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Input className="h-8 text-xs w-28" type="number" placeholder="velikost" value={bulkSize} onChange={e => setBulkSize(e.target.value)} />
+              <Button size="sm" disabled={bulkSize === '' || busy}
+                onClick={() => apply(() => ({ size: Number(bulkSize) }), `Nastavit velikost ${bulkSize} u ${selected.length} sídel?`)}>
+                Nastavit velikost
+              </Button>
+              <Input className="h-8 text-xs w-28" type="number" placeholder="bohatství" value={bulkWealth} onChange={e => setBulkWealth(e.target.value)} />
+              <Button size="sm" disabled={bulkWealth === '' || busy}
+                onClick={() => apply(() => ({ wealth: Number(bulkWealth) }), `Nastavit bohatství ${bulkWealth} u ${selected.length} sídel?`)}>
+                Nastavit bohatství
+              </Button>
+              <Input className="h-8 text-xs w-36" placeholder="region" value={bulkRegion} onChange={e => setBulkRegion(e.target.value)} />
+              <Button size="sm" disabled={!bulkRegion.trim() || busy}
+                onClick={() => apply(() => ({ region: bulkRegion.trim() }), `Nastavit region „${bulkRegion.trim()}" u ${selected.length} sídel?`)}>
+                Nastavit region
+              </Button>
+            </div>
           </div>
         )}
 
@@ -183,6 +255,10 @@ export default function SettlementsManagerDialog({
                 <th className="text-left py-2">Sídlo</th>
                 <th className="text-left">Kód</th>
                 <th className="text-left">Typ</th>
+                <th className="text-left">Vel.</th>
+                <th className="text-left">Boh.</th>
+                <th className="text-left">Region</th>
+                <th className="text-left">Tagy</th>
                 <th className="text-left">Výsledný modifikátor</th>
                 <th className="text-left">Zdroj</th>
                 <th></th>
@@ -191,13 +267,21 @@ export default function SettlementsManagerDialog({
             <tbody>
               {rows.map(l => {
                 const eff = effectiveLocationPct(l, typesByCode);
+                const locTags = Array.from(tagIdx.get(l.id) || []);
                 return (
                   <tr key={l.id} className="border-b hover:bg-muted/30">
                     <td><Checkbox checked={sel.has(l.id)} onCheckedChange={v => toggle(l.id, !!v)} /></td>
                     <td className="py-1.5 font-medium">{l.name}</td>
                     <td className="text-xs text-muted-foreground">{l.code}</td>
                     <td>{typesByCode[l.type_code || l.type]?.label || l.type_code || '—'}</td>
+                    <td className="text-xs">{l.size ?? '—'}</td>
+                    <td className="text-xs">{l.wealth ?? '—'}</td>
+                    <td className="text-xs">{l.region || '—'}</td>
+                    <td className="text-xs text-muted-foreground max-w-[160px] truncate">
+                      {locTags.length ? locTags.map(c => tagLabelByCode[c] || c).join(', ') : '—'}
+                    </td>
                     <td className={eff > 0 ? 'text-destructive' : eff < 0 ? 'text-primary' : ''}>{eff > 0 ? '+' : ''}{eff} %</td>
+
                     <td className="text-xs">
                       {l.uses_type_default
                         ? <span className="text-muted-foreground">Výchozí hodnota typu</span>
