@@ -1,58 +1,41 @@
-## Ceník — cenový systém per svět (pouze editor/admin)
+# Redesign bojového panelu
 
-Nový modul „Ceník" v levém panelu, viditelný **jen pro role `editor` a `admin`**. Hráč (viewer) položku ani stránku nevidí. Data jsou vždy vázaná na aktivní svět (`world_id`) — každý svět má vlastní města, předměty a ekonomiku.
+## Co ukázala analýza
 
-### Měna
+Současný Boj má samostatnou iniciativu a karty bestií. Útočník se vybírá zvlášť v každé kartě. Existující útok už počítá skutečné poškození, zkušenosti a zabití; chybí korekce HP, léčení a plošný útok.
 
-Fixní kurz: **1 zl = 10 st = 100 md**. Ceny ukládáme interně v měděných (`price_copper`, integer). UI zobrazuje ve formátu `X zl Y st Z md` a nabízí zadávání v každé jednotce.
+Zápisy statistik nyní probíhají odděleně a z místně načtených hodnot. Prosté opakované volání této funkce pro plošný útok by mohlo přepsat součty nebo započítat útok dvakrát. Některé dotazy boje navíc výslovně nevybírají aktivní svět. Před rozšířením ověřit skutečné nastavení ukládání a návaznost na mapu.
 
-### Datový model (per svět)
+## Nové rozložení podle obrázku
 
-Nové tabulky, všechny s `world_id uuid` + RLS `is_world_member(world_id, auth.uid())` pro čtení a `is_world_editor(world_id, auth.uid())` pro zápis. Viewer roli funkce `is_world_editor` odmítne, viewer tak modul nemá jak číst.
+- **Nahoře:** název boje a předchozí/další tah; pod nimi trvale vybraný útočník v řadě tokenů. Použít skutečné hrdiny, nikoli smyšlené postavy z obrázku. Pro útočníky bez portrétu iniciály nebo ikony.
+- **Vlevo:** kompaktní seznam bestií řazený sestupně podle iniciativy; jméno, iniciativa, HP, barevný pruh, stav a otevření detailu. Hrdinové a NPC zůstávají v pořadí tahů bez HP. Bestie bez iniciativy nezmizí ze seznamu.
+- **Vpravo:** detail vybrané bestie s portrétem 150 × 150 px, statistikami, MP, poškozením, léčením a ruční korekcí HP. Výběr cíle nemění útočníka ani automaticky neposouvá tah.
+- **Dole:** přepínatelný plošný útok s výběrem živých cílů a individuálním poškozením. Součet zadaného i skutečně započitatelného poškození, jedno potvrzení.
+- Na menších obrazovkách seznam a detail pod sebou; tokeny lze vodorovně posouvat. Kompaktní řádky použijí ikony, velký obrázek bude pouze v detailu.
 
-- **`price_locations`** — sídla: `name`, `type` (`city` / `town` / `village` / `hamlet` / `fortress` / `market`), `price_modifier_pct` (int, výchozí 0), `note`.
-- **`price_items`** — předměty / služby: `name`, `category` (např. „Nápoje", „Zbroj", „Služby"), `base_price_copper` (int), `unit` (např. „kus", „džbán", „noc"), `note`.
-- **`price_item_locations`** — kde se položka vyskytuje: `item_id`, `location_id`, `override_modifier_pct` (nullable — když je vyplněné, přebíjí `price_modifier_pct` z lokace pro tuto konkrétní položku).
-- **`world_economy`** — jednořádkové nastavení světové ekonomiky (unikátní `world_id`): `state` (enum: `normal`, `mobilization`, `war`, `famine`, `plague`, `festival`, `trade_boom`, `embargo`, `custom`) + `custom_modifier_pct` (int, použije se když `state = custom`).
+## Ovládání a zachování pravidel
 
-Presety pro `state` (výchozí modifikátory, přepsatelné v UI):
-- `normal` 0 %, `mobilization` +15 %, `war` +40 %, `famine` +60 %, `plague` +80 %, `festival` −10 %, `trade_boom` −20 %, `embargo` +50 %.
+1. Token zvolí útočníka pro jednotlivý i plošný útok. Kouzlo/Jiný umožní zaznamenat zásah bez připsání hrdinovi; při připsání konkrétnímu hráči zůstává vybraný jeho token.
+2. Posuvník po jednom HP a číselné pole ukládají pouze dokončenou korekci, nikdy poškození nebo zkušenosti. Léčení také nepřidává poškození ani zabití. HP omezit na 0 až maximum.
+3. Útok připíše pouze skutečně odebrané HP. Zachovat stávající výpočet zkušeností a bonus za zabití: 5 % obyčejná, 10 % unikátní bestie.
+4. Plošný útok uloží všechny cíle a statistiky společně až po potvrzení. Během ukládání zablokovat opakované potvrzení; stejný potvrzený útok nesmí být zapsán podruhé ani při opakování požadavku.
+5. Mrtvé bestie lze skrýt a znovu zobrazit, bez smazání dat. Zachovat přidávání s počtem a rozmezím úrovní; rychlé kopie jsou samostatné instance, nikoli sdílený stav.
+6. Zachovat oprávnění čtenář/editor/admin. Administrátorský účet ani přiřazené role se nemění.
 
-### Výpočet finální ceny
+## Vzhled
 
-```text
-loc_mod   = item_override ?? location.price_modifier_pct
-econ_mod  = world_economy modifier (dle state / custom)
-final     = round( base_price_copper * (1 + loc_mod/100) * (1 + econ_mod/100) )
-```
+Navázat na současné tmavé grafitové téma a písma Cinzel/Inter; barvy vyjádřit společnými barevnými nastaveními, aby fungoval i světlý režim a uživatelské palety. Stav HP: zelená nad 50 %, žlutá 16–50 %, červená 1–15 %, šedá při 0 HP. Vybraný cíl jasně orámovat, aktivní tah označit samostatně. Pouze krátké přechody, s respektováním omezených animací.
 
-Vypisujeme rozklad ceny do tooltipu (základ → +lokace → +ekonomika → výsledek), ať PJ vidí co se stalo.
+## Technické provedení
 
-### UI — stránka `/cenik`
+- Zachovat React, stávající tabulky, identifikátory bestií a návaznost Mapy na Boj. Rozdělit nové ovládání do menších částí a sdílet stejné herní výpočty pro jednotlivý i plošný zásah.
+- Prověřit živé tabulky, triggery a pravidla přístupu. Pro potvrzené útoky doplnit transakční databázovou funkci se zamykáním cílových záznamů a ochranou před opakovaným zápisem; případný minimální záznam identifikátoru útoku nesmí narušit uložené souboje.
+- V souvisejících dotazech a změnách výslovně použít aktivní svět. Zachovat aktualizace HP a aktivního tahu v reálném čase, včetně stávajícího skrývání bestií hráčům.
+- Nedoplňovat smyšlenou kořist, kolo souboje ani destruktivní reset pouze proto, že jsou na referenčním obrázku.
 
-Levý panel: nová položka **Ceník** (ikona `Coins`), viditelná jen když `canEdit('pricing')` (přidáme do `role_permissions` pro editor/admin) — viewer ji nikdy neuvidí.
+## Bezpečný návrat a ověření
 
-Layout tří karet:
+Před změnami uložit kopii dotčených zdrojů mimo pracovní soubory. K návratu celé aplikace lze použít předchozí verzi v historii projektu; nejde o zálohu databáze. Úpravy databáze musí být doplňující, bez mazání stávajících soubojů; připravit i způsob vrácení nových změn.
 
-1. **Světová ekonomika** — select `state` + input `custom_modifier_pct`, náhled aktuálního globálního modifikátoru.
-2. **Sídla** — tabulka lokací (jméno, typ, modifikátor %, poznámka), tlačítka Přidat/Upravit/Smazat.
-3. **Předměty a služby** — tabulka s filtrem podle kategorie a lokace. Editor otevře modal:
-   - základní údaje (název, kategorie, jednotka, poznámka)
-   - základní cena — tři inputy zl/st/md, ukládá se do `price_copper`
-   - checkboxy „Prodává se v" pro každou lokaci; u zaškrknuté lokace je pole `override %` (prázdné = použij modifikátor lokace)
-   - náhled výsledné ceny pro každou vybranou lokaci s aktuální ekonomikou
-
-### Bezpečnost
-
-- RLS na všech 4 tabulkách: `SELECT` přes `is_world_member`, `INSERT/UPDATE/DELETE` přes `is_world_editor`. Grants pro `authenticated` a `service_role`, žádný `anon`.
-- Do `role_permissions` přidáme řádek `page = 'pricing'`: editor/admin `can_view = can_edit = true`, viewer oba `false`. `AppSidebar` položku filtruje přes `canView('pricing')`; sama stránka navíc znovu ověří `canEdit('pricing')` a jinak zobrazí „Přístup odepřen".
-
-### Soubory
-
-- Migrace: `supabase/migrations/..._pricing.sql` (4 tabulky + grants + RLS + policies + `role_permissions` seed).
-- Nové: `src/pages/PricingPage.tsx`, `src/components/pricing/LocationsCard.tsx`, `src/components/pricing/ItemsCard.tsx`, `src/components/pricing/EconomyCard.tsx`, `src/components/pricing/ItemEditor.tsx`, `src/lib/pricing.ts` (formát měny + výpočet).
-- Upravené: `src/App.tsx` (route `/cenik`), `src/components/AppSidebar.tsx` (položka Ceník, ikona `Coins`, gated `canView('pricing')`).
-
-### Otázka před stavbou
-
-Presety ekonomik uvedené výše (mobilizace +15, válka +40, hlad +60, mor +80, slavnost −10, obchodní boom −20, embargo +50) — sedí, nebo je chceš mít jinak / doplnit další stavy? Můžeme také začít se všemi na 0 % a nechat tě si je nastavit sám.
+Testy pokryjí zásah 23 do 40 HP, plošný útok 8 + 15 + 23 = 46 HP při dostatečných HP, omezení přebytečného poškození, zabití, zkušenosti, dvojí potvrzení, korekci bez statistik a nezávislost kopií. V přihlášené aplikaci ověřit uložení a načtení výsledků, synchronizaci s mapou a zobrazení na desktopu i menší obrazovce.
