@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorld } from '@/contexts/WorldContext';
 
 import {
   Hero, Monster, BattleMonster, XPRecord, Race,
@@ -9,6 +10,7 @@ import {
 
 export function useGameState() {
   const { user } = useAuth();
+  const { activeWorldId } = useWorld();
   const [heroes, setHeroes] = useState<Hero[]>([]);
   const [monsters, setMonsters] = useState<Monster[]>([]);
   const [battleMonsters, setBattleMonsters] = useState<BattleMonster[]>([]);
@@ -20,7 +22,7 @@ export function useGameState() {
 
   // Load all data from Supabase on user change
   useEffect(() => {
-    if (!user) {
+    if (!user || !activeWorldId) {
       setHeroes([]); setMonsters([]); setBattleMonsters([]);
       setMonsterKills({}); setXPArchive({}); setLoading(false);
       return;
@@ -30,7 +32,7 @@ export function useGameState() {
     // Realtime: keep battle_monsters in sync (so beasts added via Map appear in Boj instantly)
     const ch = supabase
       .channel('battle-monsters-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_monsters' }, payload => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_monsters', filter: `world_id=eq.${activeWorldId}` }, payload => {
         if (payload.eventType === 'INSERT') {
           const b: any = payload.new;
           setBattleMonsters(prev => prev.some(x => x.id === b.id) ? prev : [...prev, {
@@ -54,17 +56,17 @@ export function useGameState() {
       })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [user]);
+  }, [user, activeWorldId]);
 
 
-  async function loadAll() {
+  async function loadAll(notify = false) {
     setLoading(true);
     const [hRes, mRes, bmRes, mkRes, xpRes] = await Promise.all([
-      supabase.from('heroes').select('*').order('created_at'),
-      supabase.from('monsters').select('*').order('created_at'),
-      supabase.from('battle_monsters').select('*').order('created_at'),
-      supabase.from('monster_kills').select('*'),
-      supabase.from('xp_archive').select('*').order('created_at'),
+      supabase.from('heroes').select('*').eq('world_id', activeWorldId ?? '').order('created_at'),
+      supabase.from('monsters').select('*').eq('world_id', activeWorldId ?? '').order('created_at'),
+      supabase.from('battle_monsters').select('*').eq('world_id', activeWorldId ?? '').order('created_at'),
+      supabase.from('monster_kills').select('*').eq('world_id', activeWorldId ?? ''),
+      supabase.from('xp_archive').select('*').eq('world_id', activeWorldId ?? '').order('created_at'),
     ]);
 
     const loadedHeroes = (hRes.data || []).map((h: any) => ({
@@ -77,7 +79,8 @@ export function useGameState() {
     // Store initial levels (no notification on load)
     const levels: Record<string, number> = {};
     loadedHeroes.forEach((h: Hero) => { levels[h.id] = getHeroLevel(h.experience); });
-    heroLevelsRef.current = levels;
+    if (notify) checkLevelUps(loadedHeroes);
+    else heroLevelsRef.current = levels;
     setHeroes(loadedHeroes);
 
     setMonsters((mRes.data || []).map((m: any) => ({
@@ -220,7 +223,7 @@ export function useGameState() {
     const hp = calculateHP(rollCon, level, m.is_unique, m.hp_multiplier ?? 1.0);
     const battleId = crypto.randomUUID();
     const { data: row } = await supabase.from('battle_monsters').insert({
-      user_id: user.id, monster_id: monsterId, battle_id: battleId,
+      user_id: user.id, world_id: activeWorldId ?? undefined, monster_id: monsterId, battle_id: battleId,
       name: m.name, str: rollStr, con: rollCon, dex: rollDex, int: rollInt, cha: rollCha,
       hp, mp: m.mp, attack: m.attack, defense: m.defense,
       xp_reward: m.xp_reward, special: m.special,
@@ -235,59 +238,38 @@ export function useGameState() {
         currentHP: row.current_hp, currentMP: row.current_mp,
         is_unique: m.is_unique, level: (row as any).level ?? level, image_url: m.image_url,
       };
-      setBattleMonsters(prev => [...prev, bm]);
+      setBattleMonsters(prev => prev.some(m => m.id === bm.id) ? prev : [...prev, bm]);
       // Initiative entry is created automatically by DB trigger.
 
     }
-  }, [user, monsters]);
+  }, [user, monsters, activeWorldId]);
+
+  const applyBattleAction = useCallback(async (kind: 'attack' | 'heal' | 'correct', targets: { id: string; amount: number }[], heroId: string | null, actionId: string) => {
+    if (!activeWorldId) throw new Error('Vyberte svět');
+    const { data, error } = await supabase.rpc('battle_apply_action', {
+      _world_id: activeWorldId, _action_id: actionId, _hero_id: heroId,
+      _kind: kind, _targets: targets,
+    });
+    if (error) throw error;
+    await loadAll(true);
+    return data;
+  }, [activeWorldId]);
 
   const dealDamage = useCallback(async (battleId: string, heroId: string, dmg: number) => {
-    const bmArr = [...battleMonsters];
-    const idx = bmArr.findIndex(m => m.battleId === battleId);
-    if (idx === -1 || dmg <= 0) return;
-    const m = { ...bmArr[idx] };
-    const oldHP = m.currentHP;
-    m.currentHP = Math.max(0, m.currentHP - dmg);
+    const m = battleMonsters.find(m => m.battleId === battleId);
+    if (!m || dmg <= 0) return;
+    return applyBattleAction('attack', [{ id: m.id, amount: Math.floor(dmg) }], heroId, crypto.randomUUID());
+  }, [battleMonsters, applyBattleAction]);
 
-    const h = [...heroes];
-    const hi = h.findIndex(x => x.id === heroId);
-    if (hi === -1) return;
-    const actualDmg = Math.min(dmg, oldHP);
-    h[hi] = { ...h[hi], totalDamage: h[hi].totalDamage + actualDmg };
-
-    const scaledXP = calculateXP(m.xp_reward, m.level);
-    let xpGain = Math.floor((actualDmg / m.hp) * scaledXP);
-
-    if (oldHP > 0 && m.currentHP === 0) {
-      m.killedBy = heroId;
-      h[hi] = { ...h[hi], kills: h[hi].kills + 1 };
-      const newKills = { ...monsterKills };
-      newKills[m.name] = (newKills[m.name] || 0) + 1;
-      setMonsterKills(newKills);
-      // Kill bonus: +5% of total XP for normal, +10% for unique
-      const bonusPct = m.is_unique ? 0.10 : 0.05;
-      xpGain += Math.floor(scaledXP * bonusPct);
-      if (user) {
-        await supabase.from('monster_kills').upsert(
-          { user_id: user.id, monster_name: m.name, count: newKills[m.name] },
-          { onConflict: 'user_id,monster_name' }
-        );
-      }
-    }
-
-    h[hi] = { ...h[hi], experience: h[hi].experience + xpGain };
-
-    bmArr[idx] = m;
-    setBattleMonsters(bmArr);
-    setHeroes(h);
-    checkLevelUps(h);
-
-    // Update DB
-    await Promise.all([
-      supabase.from('battle_monsters').update({ current_hp: m.currentHP, killed_by: m.killedBy || null }).eq('battle_id', battleId),
-      supabase.from('heroes').update({ kills: h[hi].kills, total_damage: h[hi].totalDamage, experience: h[hi].experience }).eq('id', heroId),
-    ]);
-  }, [battleMonsters, heroes, monsterKills, user]);
+  const copyBattleMonster = useCallback(async (id: string, count: number) => {
+    if (!user || !activeWorldId) return;
+    const { data: original, error } = await supabase.from('battle_monsters').select('*').eq('id', id).eq('world_id', activeWorldId).single();
+    if (error) throw error;
+    const { id: ignoredId, created_at: ignoredDate, ...values } = original;
+    const { error: copyError } = await supabase.from('battle_monsters').insert(Array.from({ length: count }, () => ({ ...values, user_id: user.id, battle_id: crypto.randomUUID(), current_hp: original.hp, current_mp: original.mp, killed_by: null })));
+    if (copyError) throw copyError;
+    await loadAll();
+  }, [user, activeWorldId]);
 
   const removeFromBattle = useCallback(async (battleId: string) => {
     await supabase.from('battle_monsters').delete().eq('battle_id', battleId);
@@ -430,7 +412,7 @@ export function useGameState() {
     levelUpQueue, dismissLevelUp,
     addHero, editHero, deleteHero,
     addMonster, editMonster, deleteMonster,
-    addToBattle, dealDamage, removeFromBattle, updateBattleMP,
+    addToBattle, dealDamage, applyBattleAction, copyBattleMonster, removeFromBattle, updateBattleMP,
     addXP, deleteXP, updateXP,
     updateKills, updateHeroes,
     setAllData,
