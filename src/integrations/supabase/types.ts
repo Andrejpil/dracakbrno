@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      battle_actions: {
+        Row: {
+          created_at: string
+          hero_id: string | null
+          id: string
+          kind: string
+          result: Json
+          targets: Json
+          user_id: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          hero_id?: string | null
+          id: string
+          kind: string
+          result?: Json
+          targets: Json
+          user_id: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          hero_id?: string | null
+          id?: string
+          kind?: string
+          result?: Json
+          targets?: Json
+          user_id?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_actions_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       battle_monsters: {
         Row: {
           attack: number
@@ -1902,6 +1943,16 @@ export type Database = {
       assign_default_role: {
         Args: { p_user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      battle_apply_action: {
+        Args: {
+          _action_id: string
+          _hero_id: string
+          _kind: string
+          _targets: Json
+          _world_id: string
+        }
+        Returns: Json
       }
       can_write_data: { Args: { _user_id: string }; Returns: boolean }
       has_role: {

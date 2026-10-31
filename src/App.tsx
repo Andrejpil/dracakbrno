@@ -61,7 +61,7 @@ function WorldGate() {
     <CalendarProvider>
       <div className="flex min-h-screen">
         <AppSidebar />
-        <main className="flex-1 p-6 overflow-auto">
+        <main className="min-w-0 flex-1 p-3 sm:p-6 overflow-auto">
           <Routes>
             <Route path="/" element={<HeroesPage />} />
             <Route path="/bestiar" element={<BestiaryPage />} />
@@ -93,11 +93,11 @@ function AppContent() {
   if (!user) return <AuthPage />;
 
   return (
-    <GameProvider>
-      <WorldProvider>
+    <WorldProvider>
+      <GameProvider>
         <WorldGate />
-      </WorldProvider>
-    </GameProvider>
+      </GameProvider>
+    </WorldProvider>
   );
 }
 

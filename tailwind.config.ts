@@ -42,6 +42,7 @@ export default {
           healthy: "hsl(var(--hp-healthy))",
           warning: "hsl(var(--hp-warning))",
           dead: "hsl(var(--hp-dead))",
+          critical: "hsl(var(--hp-critical))",
         },
         bonus: {
           positive: "hsl(var(--bonus-positive))",
@@ -67,4 +68,5 @@ export default {
     },
   },
   plugins: [require("tailwindcss-animate")],
+  safelist: ['bg-hp-healthy', 'bg-hp-warning', 'bg-hp-critical', 'bg-hp-dead'],
 } satisfies Config;
