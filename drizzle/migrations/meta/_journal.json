@@ -8,6 +8,13 @@
       "when": 1793428586653,
       "tag": "0000_battle_confirmed_actions",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793509494792,
+      "tag": "0001_battle_kill_counter",
+      "breakpoints": true
     }
   ]
 }
