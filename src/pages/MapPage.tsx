@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorld } from '@/contexts/WorldContext';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -124,6 +125,7 @@ const LIGHT_SOURCES: Record<string, { label: string; radius: number; emoji: stri
 
 export default function MapPage() {
   const { user } = useAuth();
+  const { activeWorldId } = useWorld();
   const { canEdit: canEditPage, isAdmin, isEditor } = useUserRole();
   const editable = canEditPage('map');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -361,17 +363,19 @@ export default function MapPage() {
 
   // Subscribe to shared battle_state (active initiative target for highlighting)
   useEffect(() => {
+    setActiveBattleId(null);
+    if (!activeWorldId) return;
     let cancelled = false;
-    (supabase.from('battle_state' as any).select('active_battle_id').eq('id', true).maybeSingle() as any)
+    (supabase.from('battle_state').select('active_battle_id').eq('world_id', activeWorldId).maybeSingle())
       .then(({ data }: any) => { if (!cancelled) setActiveBattleId(data?.active_battle_id ?? null); });
-    const ch = supabase.channel('battle-state-map-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_state' }, (payload: any) => {
+    const ch = supabase.channel(`battle-state-map-rt-${activeWorldId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_state', filter: `world_id=eq.${activeWorldId}` }, (payload: any) => {
         const r = payload.new || payload.old;
         setActiveBattleId(r?.active_battle_id ?? null);
       })
       .subscribe();
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, []);
+  }, [activeWorldId]);
 
   function beastFromRow(r: any): MapBeast {
     return {
