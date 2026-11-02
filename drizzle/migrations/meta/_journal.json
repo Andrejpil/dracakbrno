@@ -15,6 +15,13 @@
       "when": 1793509494792,
       "tag": "0001_battle_kill_counter",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793643940379,
+      "tag": "0002_battle_world_kill_scope",
+      "breakpoints": true
     }
   ]
 }

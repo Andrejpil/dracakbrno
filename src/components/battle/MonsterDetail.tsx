@@ -10,14 +10,14 @@ import { Heart, Sword, Skull, X } from 'lucide-react';
 
 interface Props {
   monster: BattleMonster; attacker: string; editable: boolean; busy: boolean;
-  act: (kind: 'attack' | 'heal' | 'correct', amount: number) => Promise<void>;
+  act: (kind: 'attack' | 'heal' | 'correct', amount: number) => Promise<boolean>;
   updateMP: (value: number) => void; close: () => void;
 }
 export default function MonsterDetail({ monster: m, attacker, editable, busy, act, updateMP, close }: Props) {
   const [hp, setHP] = useState(m.currentHP);
   const [amount, setAmount] = useState('');
   useEffect(() => { setHP(m.currentHP); setAmount(''); }, [m.id, m.currentHP]);
-  const submit = async (kind: 'attack' | 'heal') => { await act(kind, Number(amount)); setAmount(''); };
+  const submit = async (kind: 'attack' | 'heal') => { if (await act(kind, Number(amount))) setAmount(''); };
   return <section className="border border-border rounded-md bg-card p-4 self-start min-w-0">
     <div className="flex justify-between gap-2 mb-3"><h3 className="text-lg font-display break-words">{m.name}</h3><Button variant="ghost" size="icon" title="Zavřít detail" onClick={close}><X size={18}/></Button></div>
     <div className="flex flex-wrap gap-4 items-center mb-4">
