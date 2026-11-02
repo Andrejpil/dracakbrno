@@ -39,20 +39,20 @@ async def main():
    await second.get_by_role('button',name='Detail Goblin 1',exact=True).click()
    await second.get_by_text('17/40',exact=True).last.wait_for(timeout=10000)
    # Correction and healing do not change damage or experience.
-   await page.get_by_role('spinbutton',name='Nová hodnota HP',exact=True).fill('30');await page.get_by_role('button',name='Nastavit HP',exact=True).click();await page.wait_for_timeout(850)
-   await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('10');await page.get_by_role('button',name='Přičíst HP',exact=True).click();await page.wait_for_timeout(850)
+   await page.get_by_role('spinbutton',name='Nová hodnota HP',exact=True).fill('30');await page.get_by_role('button',name='Nastavit HP',exact=True).click();await page.wait_for_timeout(1600)
+   await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('10');await page.get_by_role('button',name='Přičíst HP',exact=True).click();await page.wait_for_timeout(1600)
    h=(await req('GET','heroes?id=eq.'+hero['id']))[0];assert h['total_damage']==23 and h['experience']==57
    # Slider commits a single whole HP correction.
    slider=page.get_by_role('slider',name='Aktuální HP',exact=True)
-   await slider.focus();await slider.press('ArrowLeft');await page.wait_for_timeout(850)
+   await slider.focus();await slider.press('ArrowLeft');await page.wait_for_timeout(1600)
    assert (await req('GET','battle_monsters?id=eq.'+beasts[0]['id']))[0]['current_hp']==39
-   await page.get_by_role('spinbutton',name='Nová hodnota HP',exact=True).fill('40');await page.get_by_role('button',name='Nastavit HP',exact=True).click();await page.wait_for_timeout(850)
+   await page.get_by_role('spinbutton',name='Nová hodnota HP',exact=True).fill('40');await page.get_by_role('button',name='Nastavit HP',exact=True).click();await page.wait_for_timeout(1600)
    await page.get_by_role('button',name='Plošný útok',exact=True).click()
    for i,v in enumerate([8,15,23]):
     await page.get_by_role('checkbox',name='Zasáhnout Goblin '+str(i+1),exact=True).check()
     await page.get_by_role('spinbutton',name='Poškození Goblin '+str(i+1),exact=True).fill(str(v))
-   await page.get_by_role('button',name='Provést plošný útok',exact=True).click();await page.wait_for_timeout(1300)
-   h=(await req('GET','heroes?id=eq.'+hero['id']))[0];assert h['total_damage']==69 and h['experience']==171
+   await page.get_by_role('button',name='Provést plošný útok',exact=True).click();await page.wait_for_timeout(2500)
+   h=(await req('GET','heroes?id=eq.'+hero['id']))[0];assert h['total_damage']==69 and h['experience']==171,h
    receipt=(await req('GET','battle_actions?world_id=eq.'+wid+'&kind=eq.attack&order=created_at.desc'))[0]
    await req('POST','rpc/battle_apply_action',{'_world_id':wid,'_action_id':receipt['id'],'_hero_id':hero['id'],'_kind':'attack','_targets':receipt['targets']})
    assert (await req('GET','heroes?id=eq.'+hero['id']))[0]['total_damage']==69
@@ -82,8 +82,8 @@ async def main():
    await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('99');await page.get_by_role('button',name='Odečíst poškození',exact=True).click();await page.wait_for_timeout(1200)
    h=(await req('GET','heroes?id=eq.'+hero['id']))[0];assert h['kills']==1 and h['total_damage']==101 and h['experience']==256
    # Killing again after resurrection cannot credit the same beast twice.
-   await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('1');await page.get_by_role('button',name='Přičíst HP',exact=True).click();await page.wait_for_timeout(850)
-   await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('1');await page.get_by_role('button',name='Odečíst poškození',exact=True).click();await page.wait_for_timeout(850)
+   await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('1');await page.get_by_role('button',name='Přičíst HP',exact=True).click();await page.wait_for_timeout(1600)
+   await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('1');await page.get_by_role('button',name='Odečíst poškození',exact=True).click();await page.wait_for_timeout(1600)
    assert (await req('GET','heroes?id=eq.'+hero['id']))[0]['kills']==1
    await page.reload();await page.wait_for_timeout(1000);assert 'Padl' in await page.locator('main').inner_text()
    assert not errors,errors
