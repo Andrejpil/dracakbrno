@@ -358,26 +358,26 @@ export function useGameState() {
 
   // Update kills directly (stats page)
   const updateKills = useCallback(async (k: Record<string, number>) => {
-    if (!user) return;
+    if (!user || !activeWorldId) return;
     setMonsterKills(k);
     // Sync all kills
     for (const [name, count] of Object.entries(k)) {
       await supabase.from('monster_kills').upsert(
-        { user_id: user.id, monster_name: name, count },
-        { onConflict: 'user_id,monster_name' }
+        { user_id: user.id, world_id: activeWorldId, monster_name: name, count },
+        { onConflict: 'world_id,user_id,monster_name' }
       );
     }
     // Delete removed kills
     const currentNames = Object.keys(k);
-    const { data: existing } = await supabase.from('monster_kills').select('monster_name');
+    const { data: existing } = await supabase.from('monster_kills').select('monster_name').eq('world_id', activeWorldId);
     if (existing) {
       for (const row of existing) {
         if (!currentNames.includes((row as any).monster_name)) {
-          await supabase.from('monster_kills').delete().eq('monster_name', (row as any).monster_name).eq('user_id', user.id);
+          await supabase.from('monster_kills').delete().eq('monster_name', (row as any).monster_name).eq('user_id', user.id).eq('world_id', activeWorldId);
         }
       }
     }
-  }, [user]);
+  }, [user, activeWorldId]);
 
   // Update heroes directly (stats page)
   const updateHeroes = useCallback(async (h: Hero[]) => {
