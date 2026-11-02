@@ -62,6 +62,15 @@ async def main():
    copies=await req('GET','battle_monsters?world_id=eq.'+wid+'&name=eq.Goblin%202');assert len(copies)==3
    copied=[b for b in copies if b['id']!=beasts[1]['id']];assert all(b['current_hp']==40 for b in copied)
    assert len({b['battle_id'] for b in copies})==3
+   await req('POST','rpc/battle_apply_action',{'_world_id':wid,'_action_id':str(uuid.uuid4()),'_hero_id':None,'_kind':'correct','_targets':[{'id':copied[0]['id'],'amount':7}]})
+   unchanged=(await req('GET','battle_monsters?id=eq.'+copied[1]['id']))[0];assert unchanged['current_hp']==40
+   # Unique beast uses the existing 10 percent killing bonus.
+   unique=(await req('POST','monsters',{'user_id':uid,'world_id':wid,'name':'Unikátní test','hp':40,'xp_reward':100,'is_unique':True}))[0]
+   ub=(await req('POST','battle_monsters',{'user_id':uid,'world_id':wid,'monster_id':unique['id'],'battle_id':str(uuid.uuid4()),'name':'Unikátní test','hp':40,'current_hp':40,'xp_reward':100,'level':1}))[0]
+   ur=await req('POST','rpc/battle_apply_action',{'_world_id':wid,'_action_id':str(uuid.uuid4()),'_hero_id':hero['id'],'_kind':'attack','_targets':[{'id':ub['id'],'amount':40}]})
+   assert ur['xp']==110 and ur['kills']==1
+   # Restore test hero to isolate the normal-kill expectations below.
+   await req('PATCH','heroes?id=eq.'+hero['id'],{'total_damage':69,'experience':171,'kills':0})
    init=await req('GET','initiative_entries?world_id=eq.'+wid);assert len([e for e in init if e['battle_monster_id'] in [b['id'] for b in copied]])==2
    # Active turn persisted by world and read on map.
    await page.locator('button[title="Zahájit tah: Goblin 1"]').click();await page.wait_for_timeout(750)
