@@ -17,6 +17,8 @@ export function useGameState() {
   const [monsterKills, setMonsterKills] = useState<Record<string, number>>({});
   const [xpArchive, setXPArchive] = useState<Record<string, XPRecord[]>>({});
   const [loading, setLoading] = useState(true);
+  const activeWorldRef = useRef(activeWorldId);
+  activeWorldRef.current = activeWorldId;
   const heroLevelsRef = useRef<Record<string, number>>({});
   const [levelUpQueue, setLevelUpQueue] = useState<{ heroName: string; level: number }[]>([]);
 
@@ -27,7 +29,9 @@ export function useGameState() {
       setMonsterKills({}); setXPArchive({}); setLoading(false);
       return;
     }
-    loadAll();
+    setHeroes([]); setMonsters([]); setBattleMonsters([]);
+    setMonsterKills({}); setXPArchive({}); setLevelUpQueue([]);
+    void loadAll();
 
     // Realtime: keep battle_monsters in sync (so beasts added via Map appear in Boj instantly)
     const ch = supabase
@@ -60,6 +64,8 @@ export function useGameState() {
 
 
   async function loadAll(notify = false) {
+    const worldId = activeWorldId;
+    if (!worldId) return;
     setLoading(true);
     const [hRes, mRes, bmRes, mkRes, xpRes] = await Promise.all([
       supabase.from('heroes').select('*').eq('world_id', activeWorldId ?? '').order('created_at'),
@@ -68,6 +74,9 @@ export function useGameState() {
       supabase.from('monster_kills').select('*').eq('world_id', activeWorldId ?? ''),
       supabase.from('xp_archive').select('*').eq('world_id', activeWorldId ?? '').order('created_at'),
     ]);
+    if (activeWorldRef.current !== worldId) return;
+    const loadError = hRes.error || mRes.error || bmRes.error || mkRes.error || xpRes.error;
+    if (loadError) { setLoading(false); throw loadError; }
 
     const loadedHeroes = (hRes.data || []).map((h: any) => ({
       id: h.id, name: h.name, race: h.race as Race, profession: h.profession,
@@ -211,7 +220,7 @@ export function useGameState() {
 
   // Battle
   const addToBattle = useCallback(async (monsterId: string, level: number = 1) => {
-    if (!user) return;
+    if (!user || !activeWorldId) return;
     const m = monsters.find(x => x.id === monsterId);
     if (!m) return;
     // Roll attributes from min/max ranges (fallback to single value)
@@ -222,13 +231,14 @@ export function useGameState() {
     const rollCha = randInRange(m.cha_min ?? m.cha, m.cha_max ?? m.cha);
     const hp = calculateHP(rollCon, level, m.is_unique, m.hp_multiplier ?? 1.0);
     const battleId = crypto.randomUUID();
-    const { data: row } = await supabase.from('battle_monsters').insert({
+    const { data: row, error } = await supabase.from('battle_monsters').insert({
       user_id: user.id, world_id: activeWorldId ?? undefined, monster_id: monsterId, battle_id: battleId,
       name: m.name, str: rollStr, con: rollCon, dex: rollDex, int: rollInt, cha: rollCha,
       hp, mp: m.mp, attack: m.attack, defense: m.defense,
       xp_reward: m.xp_reward, special: m.special,
       current_hp: hp, current_mp: m.mp, level, image_url: m.image_url,
     } as any).select().single();
+    if (error) throw error;
     if (row) {
       const bm: BattleMonster = {
         id: row.id, battleId: row.battle_id, name: row.name,
@@ -263,6 +273,7 @@ export function useGameState() {
 
   const copyBattleMonster = useCallback(async (id: string, count: number) => {
     if (!user || !activeWorldId) return;
+    if (!Number.isInteger(count) || count < 1 || count > 20) throw new Error('Neplatný počet kopií');
     const { data: original, error } = await supabase.from('battle_monsters').select('*').eq('id', id).eq('world_id', activeWorldId).single();
     if (error) throw error;
     const { id: ignoredId, created_at: ignoredDate, ...values } = original;
@@ -272,9 +283,10 @@ export function useGameState() {
   }, [user, activeWorldId]);
 
   const removeFromBattle = useCallback(async (battleId: string) => {
-    await supabase.from('battle_monsters').delete().eq('battle_id', battleId);
+    const { error } = await supabase.from('battle_monsters').delete().eq('battle_id', battleId).eq('world_id', activeWorldId ?? '');
+    if (error) throw error;
     setBattleMonsters(prev => prev.filter(m => m.battleId !== battleId));
-  }, []);
+  }, [activeWorldId]);
 
   const updateBattleMP = useCallback(async (battleId: string, val: number) => {
     setBattleMonsters(prev => prev.map(m =>
@@ -282,10 +294,11 @@ export function useGameState() {
     ));
     const m = battleMonsters.find(x => x.battleId === battleId);
     if (m) {
-      const clamped = Math.max(0, Math.min(m.mp, val));
-      await supabase.from('battle_monsters').update({ current_mp: clamped }).eq('battle_id', battleId);
+      const clamped = Math.max(0, Math.min(m.mp, Math.floor(val)));
+      const { error } = await supabase.from('battle_monsters').update({ current_mp: clamped }).eq('id', m.id).eq('world_id', activeWorldId ?? '');
+      if (error) { await loadAll(); throw error; }
     }
-  }, [battleMonsters]);
+  }, [battleMonsters, activeWorldId]);
 
   // XP
   const addXP = useCallback(async (heroId: string, amount: number, note: string) => {
