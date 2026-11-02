@@ -1,0 +1,3 @@
+ALTER TABLE public.monster_kills DROP CONSTRAINT monster_kills_user_id_monster_name_key;
+ALTER TABLE public.monster_kills ADD CONSTRAINT monster_kills_world_user_name_key UNIQUE(world_id,user_id,monster_name);
+DO $$ DECLARE definition text; BEGIN SELECT pg_get_functiondef(oid) INTO definition FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='battle_apply_action'; definition:=replace(definition,'ON CONFLICT(user_id,monster_name)','ON CONFLICT(world_id,user_id,monster_name)'); EXECUTE definition; END $$;
