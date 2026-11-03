@@ -23,6 +23,8 @@ async def main():
   await req('POST','worlds',{'id':wid,'name':'Ověření boje','owner_id':uid})
   try:
    hero=(await req('POST','heroes',{'user_id':uid,'world_id':wid,'name':'Ověřovací hrdina','race':'Člověk','profession':'Bojovník','specialization':'','experience':0}))[0]
+   hero_init=await req('GET','initiative_entries?hero_id=eq.'+hero['id'])
+   assert len(hero_init)==1 and hero_init[0]['world_id']==wid, 'Hero initiative must belong to its world, never the default world'
    monster=(await req('POST','monsters',{'user_id':uid,'world_id':wid,'name':'Ověřovací goblin','hp':40,'xp_reward':100}))[0]
    beasts=[]
    for i in range(3): beasts.extend(await req('POST','battle_monsters',{'user_id':uid,'world_id':wid,'monster_id':monster['id'],'battle_id':str(uuid.uuid4()),'name':'Goblin '+str(i+1),'hp':40,'current_hp':40,'xp_reward':100,'level':1}))
