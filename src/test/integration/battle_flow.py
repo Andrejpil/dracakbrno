@@ -39,7 +39,7 @@ async def main():
    h=(await req('GET','heroes?id=eq.'+hero['id']))[0];assert h['total_damage']==23 and h['experience']==57
    assert (await req('GET','map_beasts?id=eq.'+mapbeast['id']))[0]['current_hp']==17
    await second.get_by_role('button',name='Detail Goblin 1',exact=True).click()
-   await second.get_by_text('17/40',exact=True).last.wait_for(timeout=10000)
+   await second.get_by_role('dialog').get_by_text('17/40',exact=True).wait_for(timeout=10000)
    # Correction and healing do not change damage or experience.
    await page.get_by_role('spinbutton',name='Nová hodnota HP',exact=True).fill('30');await page.get_by_role('button',name='Nastavit HP',exact=True).click();await page.wait_for_timeout(1600)
    await page.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('10');await page.get_by_role('button',name='Přičíst HP',exact=True).click();await page.wait_for_timeout(1600)
