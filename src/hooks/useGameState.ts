@@ -35,8 +35,9 @@ export function useGameState() {
 
     // Realtime: keep battle_monsters in sync (so beasts added via Map appear in Boj instantly)
     const ch = supabase
-      .channel('battle-monsters-rt')
+      .channel(`game-data-${activeWorldId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'battle_monsters', filter: `world_id=eq.${activeWorldId}` }, payload => {
+        if (activeWorldRef.current !== activeWorldId) return;
         if (payload.eventType === 'INSERT') {
           const b: any = payload.new;
           setBattleMonsters(prev => prev.some(x => x.id === b.id) ? prev : [...prev, {
@@ -58,6 +59,7 @@ export function useGameState() {
           setBattleMonsters(prev => prev.filter(x => x.id !== b.id));
         }
       })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'heroes', filter: `world_id=eq.${activeWorldId}` }, () => { if (activeWorldRef.current === activeWorldId) void loadAll(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user, activeWorldId]);
@@ -145,21 +147,23 @@ export function useGameState() {
 
   const dismissLevelUp = useCallback(() => {
     setLevelUpQueue(prev => prev.slice(1));
-  }, []);
+  }, [activeWorldId]);
 
   // Hero CRUD
   const addHero = useCallback(async (data: Omit<Hero, 'id' | 'kills' | 'totalDamage'>) => {
-    if (!user) return;
+    if (!user || !activeWorldId) return;
     const { data: row, error } = await supabase.from('heroes').insert({
-      user_id: user.id, name: data.name, race: data.race,
+      user_id: user.id, world_id: activeWorldId, name: data.name, race: data.race,
       profession: data.profession, specialization: data.specialization,
       experience: data.experience,
       good_trait: data.good_trait ?? null,
       bad_trait: data.bad_trait ?? null,
       is_admin: data.is_admin ?? false,
     } as any).select().single();
+    if (error) throw error;
+    if (activeWorldRef.current !== activeWorldId) return;
     if (row) setHeroes(prev => [...prev, { id: row.id, name: row.name, race: row.race as Race, profession: row.profession, specialization: row.specialization, experience: row.experience, kills: row.kills, totalDamage: row.total_damage, good_trait: (row as any).good_trait ?? null, bad_trait: (row as any).bad_trait ?? null, is_admin: !!(row as any).is_admin }]);
-  }, [user]);
+  }, [user, activeWorldId]);
 
   const editHero = useCallback(async (id: string, data: Partial<Hero>) => {
     const update: any = {};
@@ -173,16 +177,16 @@ export function useGameState() {
     if (data.good_trait !== undefined) update.good_trait = data.good_trait;
     if (data.bad_trait !== undefined) update.bad_trait = data.bad_trait;
     if (data.is_admin !== undefined) update.is_admin = data.is_admin;
-    await supabase.from('heroes').update(update).eq('id', id);
+    await supabase.from('heroes').update(update).eq('id', id).eq('world_id', activeWorldId ?? '');
     setHeroes(prev => prev.map(h => h.id === id ? { ...h, ...data } : h));
-  }, []);
+  }, [activeWorldId]);
 
   const deleteHero = useCallback(async (id: string) => {
-    await supabase.from('heroes').delete().eq('id', id);
+    await supabase.from('heroes').delete().eq('id', id).eq('world_id', activeWorldId ?? '');
     setHeroes(prev => prev.filter(h => h.id !== id));
     // xp_archive cascades automatically
     setXPArchive(prev => { const a = { ...prev }; delete a[id]; return a; });
-  }, []);
+  }, [activeWorldId]);
 
   // Monster CRUD
   function monsterToDb(data: Partial<Monster>): any {
@@ -191,10 +195,12 @@ export function useGameState() {
   }
 
   const addMonster = useCallback(async (data: Omit<Monster, 'id'>) => {
-    if (!user) return;
-    const { data: row } = await supabase.from('monsters').insert({
-      user_id: user.id, ...monsterToDb(data),
+    if (!user || !activeWorldId) return;
+    const { data: row, error } = await supabase.from('monsters').insert({
+      user_id: user.id, ...monsterToDb(data), world_id: activeWorldId,
     }).select().single();
+    if (error) throw error;
+    if (activeWorldRef.current !== activeWorldId) return;
     if (row) setMonsters(prev => [...prev, {
       id: row.id, name: row.name, str: row.str, con: row.con, dex: row.dex, int: row.int, cha: row.cha,
       hp: row.hp, mp: row.mp, attack: row.attack, defense: row.defense, xp_reward: row.xp_reward, special: row.special,
@@ -206,17 +212,17 @@ export function useGameState() {
       cha_min: (row as any).cha_min ?? row.cha, cha_max: (row as any).cha_max ?? row.cha,
       hp_multiplier: (row as any).hp_multiplier ?? 1.0,
     }]);
-  }, [user]);
+  }, [user, activeWorldId]);
 
   const editMonster = useCallback(async (id: string, data: Partial<Monster>) => {
-    await supabase.from('monsters').update(monsterToDb(data)).eq('id', id);
+    await supabase.from('monsters').update(monsterToDb(data)).eq('id', id).eq('world_id', activeWorldId ?? '');
     setMonsters(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
-  }, []);
+  }, [activeWorldId]);
 
   const deleteMonster = useCallback(async (id: string) => {
-    await supabase.from('monsters').delete().eq('id', id);
+    await supabase.from('monsters').delete().eq('id', id).eq('world_id', activeWorldId ?? '');
     setMonsters(prev => prev.filter(m => m.id !== id));
-  }, []);
+  }, [activeWorldId]);
 
   // Battle
   const addToBattle = useCallback(async (monsterId: string, level: number = 1) => {
@@ -302,15 +308,16 @@ export function useGameState() {
 
   // XP
   const addXP = useCallback(async (heroId: string, amount: number, note: string) => {
-    if (amount <= 0 || !user) return;
+    const hero = heroes.find(h => h.id === heroId);
+    if (amount <= 0 || !user || !activeWorldId || !hero) return;
     const { data: row } = await supabase.from('xp_archive').insert({
-      user_id: user.id, hero_id: heroId, amount, note,
+      user_id: user.id, world_id: activeWorldId, hero_id: heroId, amount, note,
     }).select().single();
 
     const updatedHeroes = heroes.map(h => h.id === heroId ? { ...h, experience: h.experience + amount } : h);
     setHeroes(updatedHeroes);
     checkLevelUps(updatedHeroes);
-    await supabase.from('heroes').update({ experience: heroes.find(h => h.id === heroId)!.experience + amount }).eq('id', heroId);
+    await supabase.from('heroes').update({ experience: hero.experience + amount }).eq('id', heroId).eq('world_id', activeWorldId ?? '');
 
     if (row) {
       setXPArchive(prev => ({
@@ -318,14 +325,14 @@ export function useGameState() {
         [heroId]: [...(prev[heroId] || []), { amount, note, id: row.id }],
       }));
     }
-  }, [user, heroes]);
+  }, [user, heroes, activeWorldId]);
 
   const deleteXP = useCallback(async (heroId: string, idx: number) => {
     const records = xpArchive[heroId] || [];
     const removed = records[idx] as any;
     if (!removed) return;
 
-    await supabase.from('xp_archive').delete().eq('id', removed.id);
+    await supabase.from('xp_archive').delete().eq('id', removed.id).eq('world_id', activeWorldId ?? '');
     const newRecords = [...records];
     newRecords.splice(idx, 1);
     setXPArchive(prev => ({ ...prev, [heroId]: newRecords }));
@@ -334,16 +341,16 @@ export function useGameState() {
     if (hero) {
       const newXP = Math.max(0, hero.experience - removed.amount);
       setHeroes(prev => prev.map(h => h.id === heroId ? { ...h, experience: newXP } : h));
-      await supabase.from('heroes').update({ experience: newXP }).eq('id', heroId);
+      await supabase.from('heroes').update({ experience: newXP }).eq('id', heroId).eq('world_id', activeWorldId ?? '');
     }
-  }, [heroes, xpArchive]);
+  }, [heroes, xpArchive, activeWorldId]);
 
   const updateXP = useCallback(async (heroId: string, idx: number, amount: number, note: string) => {
     const records = xpArchive[heroId] || [];
     const old = records[idx] as any;
     if (!old) return;
 
-    await supabase.from('xp_archive').update({ amount, note }).eq('id', old.id);
+    await supabase.from('xp_archive').update({ amount, note }).eq('id', old.id).eq('world_id', activeWorldId ?? '');
     const newRecords = [...records];
     newRecords[idx] = { amount, note, id: old.id };
     setXPArchive(prev => ({ ...prev, [heroId]: newRecords }));
@@ -352,9 +359,9 @@ export function useGameState() {
     if (hero) {
       const newXP = hero.experience - old.amount + amount;
       setHeroes(prev => prev.map(h => h.id === heroId ? { ...h, experience: newXP } : h));
-      await supabase.from('heroes').update({ experience: newXP }).eq('id', heroId);
+      await supabase.from('heroes').update({ experience: newXP }).eq('id', heroId).eq('world_id', activeWorldId ?? '');
     }
-  }, [heroes, xpArchive]);
+  }, [heroes, xpArchive, activeWorldId]);
 
   // Update kills directly (stats page)
   const updateKills = useCallback(async (k: Record<string, number>) => {
@@ -385,25 +392,25 @@ export function useGameState() {
     for (const hero of h) {
       await supabase.from('heroes').update({
         kills: hero.kills, total_damage: hero.totalDamage, experience: hero.experience,
-      }).eq('id', hero.id);
+      }).eq('id', hero.id).eq('world_id', activeWorldId ?? '');
     }
-  }, []);
+  }, [activeWorldId]);
 
   const setAllData = useCallback(async (h: Hero[], m: Monster[], bm: BattleMonster[]) => {
     // For import: clear and re-insert
-    if (!user) return;
+    if (!user || !activeWorldId) return;
     // Clear existing
     await Promise.all([
-      supabase.from('battle_monsters').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('xp_archive').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('heroes').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-      supabase.from('monsters').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
+      supabase.from('battle_monsters').delete().eq('world_id', activeWorldId),
+      supabase.from('xp_archive').delete().eq('world_id', activeWorldId),
+      supabase.from('heroes').delete().eq('world_id', activeWorldId),
+      supabase.from('monsters').delete().eq('world_id', activeWorldId),
     ]);
 
     // Insert heroes
     for (const hero of h) {
       await supabase.from('heroes').insert({
-        user_id: user.id, name: hero.name, race: hero.race,
+        user_id: user.id, world_id: activeWorldId, name: hero.name, race: hero.race,
         profession: hero.profession, specialization: hero.specialization,
         experience: hero.experience, kills: hero.kills, total_damage: hero.totalDamage,
       });
@@ -411,14 +418,14 @@ export function useGameState() {
     // Insert monsters
     for (const mon of m) {
       await supabase.from('monsters').insert({
-        user_id: user.id, name: mon.name, str: mon.str, con: mon.con, dex: mon.dex,
+        user_id: user.id, world_id: activeWorldId, name: mon.name, str: mon.str, con: mon.con, dex: mon.dex,
         int: mon.int, cha: mon.cha, hp: mon.hp, mp: mon.mp, attack: mon.attack,
         defense: mon.defense, xp_reward: mon.xp_reward, special: mon.special,
       });
     }
 
     await loadAll();
-  }, [user]);
+  }, [user, activeWorldId]);
 
   return {
     heroes, monsters, battleMonsters, monsterKills, xpArchive, loading,
