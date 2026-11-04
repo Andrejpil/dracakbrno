@@ -61,7 +61,7 @@ async def main():
    assert (await req('GET','heroes?id=eq.'+hero['id']))[0]['total_damage']==69
    # Independent copies via the real UI.
    await page.locator('button[title="Kopírovat Goblin 2"]').click()
-   await page.get_by_role('spinbutton').last.fill('2');await page.get_by_role('button',name='Přidat 2× do boje',exact=True).click();await page.wait_for_timeout(1200)
+   await page.get_by_role('dialog').get_by_role('spinbutton').fill('2');await page.get_by_role('button',name='Přidat 2× do boje',exact=True).click();await page.wait_for_timeout(2400)
    copies=await req('GET','battle_monsters?world_id=eq.'+wid+'&name=eq.Goblin%202');assert len(copies)==3
    copied=[b for b in copies if b['id']!=beasts[1]['id']];assert all(b['current_hp']==40 for b in copied)
    assert len({b['battle_id'] for b in copies})==3
@@ -76,7 +76,9 @@ async def main():
    await req('PATCH','heroes?id=eq.'+hero['id'],{'total_damage':69,'experience':171,'kills':0})
    init=await req('GET','initiative_entries?world_id=eq.'+wid);assert len([e for e in init if e['battle_monster_id'] in [b['id'] for b in copied]])==2
    # Active turn persisted by world and read on map.
-   await page.locator('button[title="Zahájit tah: Goblin 1"]').click();await page.wait_for_timeout(750)
+   await page.reload();await page.wait_for_timeout(1800)
+   first_init=next(e for e in await req('GET','initiative_entries?world_id=eq.'+wid) if e['battle_monster_id']==beasts[0]['id'])
+   await page.locator('button[title="Zahájit tah: '+first_init['name']+'"]').click();await page.wait_for_timeout(750)
    state=(await req('GET','battle_state?world_id=eq.'+wid))[0];assert state['active_battle_id']==beasts[0]['battle_id']
    await page.screenshot(path='/tmp/browser/battle/desktop.png')
    await page.set_viewport_size({'width':770,'height':674});await page.screenshot(path='/tmp/browser/battle/small.png')
