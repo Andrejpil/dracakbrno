@@ -8,6 +8,7 @@ import { Copy, Skull, Sword, Trash2 } from 'lucide-react';
 
 interface Props {
   monster: BattleMonster;
+  label?: string;
   heroes: { id: string; name: string }[];
   selected: boolean;
   active: boolean;
@@ -21,15 +22,16 @@ interface Props {
 
 const initials = (n: string) => n.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase();
 
-export default function MonsterCard({ monster: m, heroes, selected, active, editable, busy, open, copy, remove, hit }: Props) {
+export default function MonsterCard({ monster: m, label, heroes, selected, active, editable, busy, open, copy, remove, hit }: Props) {
   const dead = m.currentHP <= 0;
+  const name = label ?? m.name;
   const [hero, setHero] = useState('');
   const [amount, setAmount] = useState('');
   const valid = !!hero && Number.isInteger(Number(amount)) && Number(amount) > 0;
   const submit = async () => { if (valid && !busy && !dead && await hit(hero, Number(amount))) setAmount(''); };
-  return <article aria-label={`Karta ${m.name}`} className={`min-w-0 rounded-md border bg-card p-2 space-y-2 ${selected ? 'border-primary ring-1 ring-primary' : active ? 'border-hp-healthy ring-1 ring-hp-healthy' : 'border-border'}`}>
+  return <article aria-label={`Karta ${name}`} className={`min-w-0 rounded-md border bg-card p-2 space-y-2 ${selected ? 'border-primary ring-1 ring-primary' : active ? 'border-hp-healthy ring-1 ring-hp-healthy' : 'border-border'}`}>
     <div className="flex items-start justify-between gap-1">
-      <h4 className={`font-display text-sm break-words min-w-0 ${dead ? 'line-through text-muted-foreground' : ''}`}>{m.name}</h4>
+      <h4 className={`font-display text-sm break-words min-w-0 ${dead ? 'line-through text-muted-foreground' : ''}`}>{name}</h4>
       {editable && <div className="flex shrink-0"><Button variant="ghost" size="icon" className="h-7 w-7" title={`Kopírovat ${m.name}`} disabled={busy} onClick={copy}><Copy size={14}/></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" title={`Odebrat ${m.name}`} disabled={busy} onClick={remove}><Trash2 size={14}/></Button></div>}
     </div>
     <div className="flex gap-2 items-start">
