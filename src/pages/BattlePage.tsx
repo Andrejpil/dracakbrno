@@ -80,10 +80,11 @@ export default function BattlePage() {
     if(error) toast.error('Iniciativu se nepodařilo uložit'); else setEntries(prev=>prev.map(e=>e.id===id?{...e,value:v}:e));
   };
   const run = async (operation:()=>Promise<void>) => {if(lock.current) return false; lock.current=true;setBusy(true);try{await operation();return true;}catch{toast.error('Změna se nepodařila uložit. Zkuste ji znovu.');return false;}finally{lock.current=false;setBusy(false);}};
-  const act = async (kind:'attack'|'heal'|'correct', items:{id:string;amount:number}[]) => {
+  const act = async (kind:'attack'|'heal'|'correct', items:{id:string;amount:number}[], heroOverride?:string) => {
     return run(async () => {
       if(items.some(t=>!Number.isInteger(t.amount)||t.amount<0)) throw new Error('Neplatná hodnota');
-      const heroId=heroes.some(h=>h.id===attacker)?attacker:null;
+      const who=heroOverride ?? attacker;
+      const heroId=heroes.some(h=>h.id===who)?who:null;
       const signature=JSON.stringify([activeWorldId,kind,heroId,items]);
       if(pending.current?.signature!==signature) pending.current={signature,id:crypto.randomUUID()};
       const id=pending.current?.id;
@@ -106,27 +107,26 @@ export default function BattlePage() {
   if(!canView('battle')) return <p className="text-muted-foreground">Přístup odepřen.</p>;
   return <div className="space-y-4 animate-fade-in min-w-0">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b pb-3"><div><h2 className="font-display text-2xl text-primary">Souboj</h2><p className="text-sm text-muted-foreground">{activeWorld?.name}</p></div>{editable && <div className="flex gap-2"><Button variant="outline" size="sm" onClick={()=>step(-1)} disabled={!sorted.length || busy}><ChevronLeft size={16}/>Předchozí tah</Button><Button size="sm" onClick={()=>step(1)} disabled={!sorted.length || busy}>Další tah<ChevronRight size={16}/></Button></div>}</header>
-    {editable && <section aria-label="Útočníci" className="flex items-center gap-3 border-b pb-4 min-w-0"><span className="text-xs font-semibold uppercase text-muted-foreground shrink-0">Útočník</span><div className="flex gap-2 overflow-x-auto py-1 min-w-0">{heroes.map(h=><Button key={h.id} variant="outline" aria-pressed={attacker===h.id} onClick={()=>setAttacker(h.id)} className={`h-20 min-w-20 max-w-36 px-3 flex-col gap-1.5 shrink-0 ${attacker===h.id?'border-hp-healthy ring-2 ring-hp-healthy bg-hp-healthy/10':''}`}><span className="h-8 w-8 rounded-full bg-secondary text-primary flex items-center justify-center font-semibold">{h.name.split(' ').map(n=>n[0]).join('').slice(0,2)}</span><span className="truncate max-w-full text-xs">{h.name}</span></Button>)}</div></section>}
     <section aria-label="Iniciativa" className="min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 className="text-lg font-display">Iniciativa <span className="text-muted-foreground text-sm">({entries.length})</span></h3>{editable && <Button variant="outline" size="sm" onClick={()=>setNpcOpen(true)}><UserPlus size={16} className="mr-1"/>NPC</Button>}</div>
-      <div className="border-y divide-y max-h-[360px] overflow-y-auto">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2"><h3 className="text-base font-display">Iniciativa <span className="text-muted-foreground text-sm">({entries.length})</span></h3>{editable && <Button variant="outline" size="sm" className="h-7" onClick={()=>setNpcOpen(true)}><UserPlus size={14} className="mr-1"/>NPC</Button>}</div>
+      <div className="border rounded-md max-h-[140px] overflow-y-auto p-1 grid gap-1 grid-cols-[repeat(auto-fill,minmax(190px,1fr))]">
         {sorted.filter(e => !hideDead || !e.battle_monster_id || battleMonsters.some(m => m.id === e.battle_monster_id && m.currentHP > 0)).map(e => {
           const beast = battleMonsters.find(m => m.id === e.battle_monster_id);
-          return <div key={e.id} className={`flex items-center gap-2 px-2 py-2 ${e.id===active?'bg-hp-healthy/10':''}`}>
-            <Button variant="ghost" size="icon" title={`Zahájit tah: ${e.name}`} disabled={!editable || busy || beast?.currentHP===0} onClick={()=>void turn(e)} className="h-8 w-8 shrink-0"><Play size={14} className={e.id===active?'text-hp-healthy':'text-muted-foreground'}/></Button>
-            <Input aria-label={`Iniciativa ${e.name}`} className="h-8 w-16 shrink-0" type="number" min={-20} max={20} disabled={!editable || busy} value={e.value} onChange={v=>void updateInit(e.id,Number(v.target.value))}/>
-            {beast ? <Skull size={16} className="text-muted-foreground shrink-0"/> : <Shield size={16} className="text-primary shrink-0"/>}
-            <span className={`text-sm flex-1 break-words min-w-0 ${beast && beast.currentHP<=0?'line-through text-muted-foreground':''}`}>{e.name}</span>
-            {editable && e.source==='npc' && <Button variant="ghost" size="icon" title={`Odebrat iniciativu ${e.name}`} onClick={()=>void run(async()=>{const {error}=await supabase.from('initiative_entries').delete().eq('id',e.id).eq('world_id',activeWorldId ?? '');if(error)throw error;await loadInitiative();})}><Trash2 size={14}/></Button>}
+          return <div key={e.id} className={`flex items-center gap-1 px-1 py-0.5 rounded ${e.id===active?'bg-hp-healthy/15 ring-1 ring-hp-healthy':''}`}>
+            <Button variant="ghost" size="icon" title={`Zahájit tah: ${e.name}`} disabled={!editable || busy || beast?.currentHP===0} onClick={()=>void turn(e)} className="h-6 w-6 shrink-0"><Play size={12} className={e.id===active?'text-hp-healthy':'text-muted-foreground'}/></Button>
+            <Input aria-label={`Iniciativa ${e.name}`} className="h-6 w-12 shrink-0 px-1 text-xs" type="number" min={-20} max={20} disabled={!editable || busy} value={e.value} onChange={v=>void updateInit(e.id,Number(v.target.value))}/>
+            {beast ? <Skull size={12} className="text-muted-foreground shrink-0"/> : <Shield size={12} className="text-primary shrink-0"/>}
+            <span className={`text-xs flex-1 truncate min-w-0 ${beast && beast.currentHP<=0?'line-through text-muted-foreground':''}`} title={e.name}>{e.name}</span>
+            {editable && e.source==='npc' && <Button variant="ghost" size="icon" className="h-6 w-6" title={`Odebrat iniciativu ${e.name}`} onClick={()=>void run(async()=>{const {error}=await supabase.from('initiative_entries').delete().eq('id',e.id).eq('world_id',activeWorldId ?? '');if(error)throw error;await loadInitiative();})}><Trash2 size={12}/></Button>}
           </div>;
         })}
-        {!entries.length && <p className="p-6 text-center text-muted-foreground">Iniciativa je prázdná.</p>}
+        {!entries.length && <p className="p-3 text-center text-sm text-muted-foreground col-span-full">Iniciativa je prázdná.</p>}
       </div>
     </section>
     <section aria-label="Bestie v boji" className="min-w-0 border-t pt-4">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 className="text-lg font-display">Bestie v boji <span className="text-sm text-muted-foreground">({visible.length})</span></h3><div className="flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={()=>setHideDead(!hideDead)}>{hideDead?<Eye size={16}/>:<EyeOff size={16}/>}<span className="ml-1">{hideDead?'Zobrazit padlé':'Skrýt padlé'}</span></Button>{editable && <Button size="sm" disabled={!monsters.length || busy} onClick={()=>{setCopyId(null);setQuantity(1);setSelectedMonster('');setAddOpen(true);}}><Plus size={16} className="mr-1"/>Přidat bestii</Button>}</div></div>
-      <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
-        {visible.map(m => <MonsterCard key={m.id} monster={m} selected={selected===m.id} active={entries.some(e=>e.id===active && e.battle_monster_id===m.id)} editable={editable} busy={busy} open={()=>setSelected(m.id)} copy={()=>{setCopyId(m.id);setQuantity(1);setAddOpen(true);}} remove={()=>{if(window.confirm(`Odebrat ${m.name} z boje?`))void run(async()=>{await removeFromBattle(m.battleId);await loadInitiative();});}}/>)}
+      <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(260px,1fr))] xl:grid-cols-4">
+        {visible.map(m => <MonsterCard key={m.id} monster={m} heroes={heroes} hit={(heroId,amount)=>act('attack',[{id:m.id,amount}],heroId)} selected={selected===m.id} active={entries.some(e=>e.id===active && e.battle_monster_id===m.id)} editable={editable} busy={busy} open={()=>setSelected(m.id)} copy={()=>{setCopyId(m.id);setQuantity(1);setAddOpen(true);}} remove={()=>{if(window.confirm(`Odebrat ${m.name} z boje?`))void run(async()=>{await removeFromBattle(m.battleId);await loadInitiative();});}}/>)}
       </div>
       {!battleMonsters.length && <div className="py-8 text-center text-muted-foreground"><Swords className="mx-auto mb-3" size={30}/><p>V boji nejsou žádné bestie.</p></div>}
       {hideDead && battleMonsters.length>0 && !live.length && <p className="p-6 text-center text-muted-foreground">Všechny bestie padly.</p>}
