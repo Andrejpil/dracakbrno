@@ -76,6 +76,7 @@ async def main():
    await req('PATCH','heroes?id=eq.'+hero['id'],{'total_damage':69,'experience':171,'kills':0})
    init=await req('GET','initiative_entries?world_id=eq.'+wid);assert len([e for e in init if e['battle_monster_id'] in [b['id'] for b in copied]])==2
    # Active turn persisted by world and read on map.
+   await page.reload();await page.wait_for_timeout(1800)
    await page.locator('button[title="Zahájit tah: Goblin 1"]').click();await page.wait_for_timeout(750)
    state=(await req('GET','battle_state?world_id=eq.'+wid))[0];assert state['active_battle_id']==beasts[0]['battle_id']
    await page.screenshot(path='/tmp/browser/battle/desktop.png')
