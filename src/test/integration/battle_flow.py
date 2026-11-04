@@ -77,7 +77,10 @@ async def main():
    init=await req('GET','initiative_entries?world_id=eq.'+wid);assert len([e for e in init if e['battle_monster_id'] in [b['id'] for b in copied]])==2
    # Active turn persisted by world and read on map.
    await page.reload();await page.wait_for_timeout(1800)
-   await page.locator('button[title="Zahájit tah: Goblin 1"]').click();await page.wait_for_timeout(750)
+   first_init=next(e for e in await req('GET','initiative_entries?world_id=eq.'+wid) if e['battle_monster_id']==beasts[0]['id'])
+   await page.locator('button').filter(has=page.locator('svg')).count()
+   await page.get_by_role('region',name='Iniciativa',exact=True).locator('button[title]').filter(has_text='').count()
+   await page.locator('button[title="Zahájit tah: '+first_init['name']+'"]').click();await page.wait_for_timeout(750)
    state=(await req('GET','battle_state?world_id=eq.'+wid))[0];assert state['active_battle_id']==beasts[0]['battle_id']
    await page.screenshot(path='/tmp/browser/battle/desktop.png')
    await page.set_viewport_size({'width':770,'height':674});await page.screenshot(path='/tmp/browser/battle/small.png')
