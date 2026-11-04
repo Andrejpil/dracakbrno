@@ -59,7 +59,6 @@ export function useGameState() {
           setBattleMonsters(prev => prev.filter(x => x.id !== b.id));
         }
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'heroes', filter: `world_id=eq.${activeWorldId}` }, () => { if (activeWorldRef.current === activeWorldId) void loadAll(); })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user, activeWorldId]);
