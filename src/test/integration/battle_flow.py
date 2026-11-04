@@ -61,7 +61,7 @@ async def main():
    assert (await req('GET','heroes?id=eq.'+hero['id']))[0]['total_damage']==69
    # Independent copies via the real UI.
    await page.locator('button[title="Kopírovat Goblin 2"]').click()
-   await page.get_by_role('spinbutton').last.fill('2');await page.get_by_role('button',name='Přidat 2× do boje',exact=True).click();await page.wait_for_timeout(1200)
+   await page.get_by_role('dialog').get_by_role('spinbutton').fill('2');await page.get_by_role('button',name='Přidat 2× do boje',exact=True).click();await page.wait_for_timeout(2400)
    copies=await req('GET','battle_monsters?world_id=eq.'+wid+'&name=eq.Goblin%202');assert len(copies)==3
    copied=[b for b in copies if b['id']!=beasts[1]['id']];assert all(b['current_hp']==40 for b in copied)
    assert len({b['battle_id'] for b in copies})==3
