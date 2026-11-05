@@ -11,4 +11,12 @@ describe('Pravidla boje', () => {
   it('kritický stav do 15 procent', () => expect(hpStatus(6, 40)).toBe('critical'));
   it('nízký stav do 50 procent', () => expect(hpStatus(20, 40)).toBe('warning'));
   it('zdravá bestie nad 50 procent', () => expect(hpStatus(21, 40)).toBe('healthy'));
+});import { combatResult, parseAttack } from './battle';
+describe('Bojová kalkulačka', () => {
+  it('hod obrany 6+6+6+2 se ZČO 8 dá obranu 28', () => expect(combatResult(8, [6, 6, 6, 2], 0, 0, 0).defense).toBe(28));
+  it('bez hodu obrany platí jen ZČO', () => expect(combatResult(8, [], 0, 0, 0).defense).toBe(8));
+  it('útok „15 +3“ je 18', () => { const a = parseAttack('15 +3'); expect(a.roll + a.bonus).toBe(18); });
+  it('vzorový příklad dá zranění 5', () => expect(combatResult(8, [6, 2], 15, 3, 3).damage).toBe(5));
+  it('rozdíl 0 nebo méně = žádné zranění i se zbraní', () => expect(combatResult(8, [6, 2], 10, 6, 5).damage).toBe(0));
+  it('záporný modifikátor nesníží zranění pod 0', () => expect(combatResult(8, [], 10, 0, -5).damage).toBe(0));
 });
