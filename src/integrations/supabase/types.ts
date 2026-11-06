@@ -16,32 +16,41 @@ export type Database = {
     Tables: {
       battle_actions: {
         Row: {
+          action_order: number
           created_at: string
           hero_id: string | null
           id: string
           kind: string
           result: Json
           targets: Json
+          undo_snapshot: Json | null
+          undone_at: string | null
           user_id: string
           world_id: string
         }
         Insert: {
+          action_order?: never
           created_at?: string
           hero_id?: string | null
           id: string
           kind: string
           result?: Json
           targets: Json
+          undo_snapshot?: Json | null
+          undone_at?: string | null
           user_id: string
           world_id: string
         }
         Update: {
+          action_order?: never
           created_at?: string
           hero_id?: string | null
           id?: string
           kind?: string
           result?: Json
           targets?: Json
+          undo_snapshot?: Json | null
+          undone_at?: string | null
           user_id?: string
           world_id?: string
         }
@@ -1952,6 +1961,33 @@ export type Database = {
           _targets: Json
           _world_id: string
         }
+        Returns: Json
+      }
+      battle_apply_action_core: {
+        Args: {
+          _action_id: string
+          _hero_id: string
+          _kind: string
+          _targets: Json
+          _world_id: string
+        }
+        Returns: Json
+      }
+      battle_capture_undo: {
+        Args: {
+          _hero_id: string
+          _targets: Json
+          _user_id: string
+          _world_id: string
+        }
+        Returns: Json
+      }
+      battle_last_undoable_attack: {
+        Args: { _world_id: string }
+        Returns: string
+      }
+      battle_undo_attack: {
+        Args: { _action_id: string; _world_id: string }
         Returns: Json
       }
       can_write_data: { Args: { _user_id: string }; Returns: boolean }

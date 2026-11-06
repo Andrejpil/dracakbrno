@@ -7,15 +7,16 @@ import { Slider } from '@/components/ui/slider';
 import HPBar from '@/components/HPBar';
 import BonusBadge from '@/components/BonusBadge';
 import CombatCalculator from './CombatCalculator';
-import { Heart, Sword, Skull, X } from 'lucide-react';
+import { Heart, Sword, Skull, X, Undo2 } from 'lucide-react';
 
 interface Props {
   monster: BattleMonster; attacker: string; editable: boolean; busy: boolean;
   act: (kind: 'attack' | 'heal' | 'correct', amount: number) => Promise<boolean>;
   updateMP: (value: number) => void; close: () => void;
   heroes: { id: string; name: string }[]; attackerId: string; setAttacker: (id: string) => void;
+  canUndo: boolean; undo: () => void;
 }
-export default function MonsterDetail({ monster: m, attacker, editable, busy, act, updateMP, close, heroes, attackerId, setAttacker }: Props) {
+export default function MonsterDetail({ monster: m, attacker, editable, busy, act, updateMP, close, heroes, attackerId, setAttacker, canUndo, undo }: Props) {
   const [hp, setHP] = useState(m.currentHP);
   const [amount, setAmount] = useState('');
   useEffect(() => { setHP(m.currentHP); setAmount(''); }, [m.id, m.currentHP]);
@@ -30,6 +31,7 @@ export default function MonsterDetail({ monster: m, attacker, editable, busy, ac
     {m.special && <p className="text-sm text-muted-foreground mb-3 break-words">{m.special}</p>}
     <label className="flex items-center gap-2 text-sm mb-4">MP<Input aria-label="Aktuální MP" type="number" min={0} max={m.mp} disabled={!editable || busy} className="w-20" value={m.currentMP} onChange={e => updateMP(Number(e.target.value))}/> / {m.mp}</label>
     {editable && <>
+      <Button variant="outline" className="w-full mb-3" disabled={busy || !canUndo} onClick={undo}><Undo2 size={16} className="mr-2"/>Vrátit poslední zranění</Button>
       <CombatCalculator zco={m.defense} dead={m.currentHP<=0} busy={busy} heroes={heroes} attacker={attackerId} setAttacker={setAttacker} apply={d => act('attack', d)}/>
       <div className="border-t mt-4 pt-4 space-y-3"><h4 className="font-semibold">Zaznamenat poškození</h4><p className="text-sm text-primary break-words">Útočník: {attacker}</p>
         <Input aria-label="Poškození HP" type="number" min={1} step={1} value={amount} placeholder="Poškození (HP)" disabled={busy} onChange={e => setAmount(e.target.value)} onKeyDown={e => { if(e.key==='Enter' && Number(amount)>0 && !busy) void submit('attack'); }}/>

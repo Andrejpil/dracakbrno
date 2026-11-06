@@ -276,6 +276,13 @@ export function useGameState() {
     return applyBattleAction('attack', [{ id: m.id, amount: Math.floor(dmg) }], heroId, crypto.randomUUID());
   }, [battleMonsters, applyBattleAction]);
 
+  const undoBattleAttack = useCallback(async (actionId: string) => {
+    if (!activeWorldId) throw new Error('Vyberte svět');
+    const { error } = await supabase.rpc('battle_undo_attack', { _world_id: activeWorldId, _action_id: actionId });
+    if (error) throw error;
+    await loadAll();
+  }, [activeWorldId]);
+
   const copyBattleMonster = useCallback(async (id: string, count: number) => {
     if (!user || !activeWorldId) return;
     if (!Number.isInteger(count) || count < 1 || count > 20) throw new Error('Neplatný počet kopií');
@@ -431,7 +438,7 @@ export function useGameState() {
     levelUpQueue, dismissLevelUp,
     addHero, editHero, deleteHero,
     addMonster, editMonster, deleteMonster,
-    addToBattle, dealDamage, applyBattleAction, copyBattleMonster, removeFromBattle, updateBattleMP,
+    addToBattle, dealDamage, applyBattleAction, undoBattleAttack, copyBattleMonster, removeFromBattle, updateBattleMP,
     addXP, deleteXP, updateXP,
     updateKills, updateHeroes,
     setAllData,
