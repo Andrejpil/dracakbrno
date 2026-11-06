@@ -48,6 +48,8 @@ async def main():
             assert (h['total_damage'],h['experience']) == (23,57)
             receipt = (await req('GET','battle_actions?world_id=eq.'+wid+'&order=action_order.desc'))[0]
             await undo.click()
+            await page.wait_for_timeout(2000)
+            print("Undo feedback:", await page.locator("[data-sonner-toast]").all_text_contents())
             await page.wait_for_function("()=>document.querySelector('input[aria-label=\"Nová hodnota HP\"]')?.value==='40'")
             h = (await req('GET','heroes?id=eq.'+hero['id']))[0]
             assert (h['total_damage'],h['experience'],h['kills']) == (0,0,0)
