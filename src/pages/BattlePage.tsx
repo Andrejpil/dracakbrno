@@ -6,7 +6,7 @@ import { actualDamage } from '@/lib/battle';
 import { supabase } from '@/integrations/supabase/client';
 import MonsterCard from '@/components/battle/MonsterCard';
 import MonsterDetail from '@/components/battle/MonsterDetail';
-import { Plus, Trash2, Skull, ChevronLeft, ChevronRight, UserPlus, Play, Swords, Sparkles, Eye, EyeOff, Shield } from 'lucide-react';
+import { Plus, Trash2, Skull, ChevronLeft, ChevronRight, UserPlus, Play, Swords, Sparkles, Eye, EyeOff, Shield, Undo2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 
 interface InitiativeEntry { id: string; name: string; value: number; source: string; hero_id: string | null; battle_monster_id: string | null; }
 export default function BattlePage() {
-  const { heroes, monsters, battleMonsters, addToBattle, applyBattleAction, copyBattleMonster, removeFromBattle, updateBattleMP } = useGame();
+  const { heroes, monsters, battleMonsters, addToBattle, applyBattleAction, undoBattleAttack, copyBattleMonster, removeFromBattle, updateBattleMP } = useGame();
   const { activeWorldId, activeWorld } = useWorld();
   const { canEdit, canView } = useUserRole();
   const editable = canEdit('battle');
@@ -31,6 +31,18 @@ export default function BattlePage() {
   const [area,setArea] = useState(false);
   const [targets,setTargets] = useState<Record<string,string>>({});
   const [busy,setBusy] = useState(false);
+  const [lastAttack,setLastAttack] = useState<string|null>(null);
+  const loadLastAttack = useCallback(async () => {
+    if (!activeWorldId || !editable) return;
+    const {data,error} = await supabase.rpc('battle_last_undoable_attack', {_world_id:activeWorldId});
+    if (worldRef.current === activeWorldId && !error) setLastAttack(data ?? null);
+  }, [activeWorldId,editable]);
+  useEffect(() => {
+    setLastAttack(null);
+    void loadLastAttack();
+    const timer = window.setInterval(() => void loadLastAttack(), 4000);
+    return () => window.clearInterval(timer);
+  }, [loadLastAttack]);
   const lock = useRef(false);
   const pending = useRef<{signature:string;id:string}|null>(null);
   const [addOpen,setAddOpen] = useState(false);
@@ -94,12 +106,25 @@ export default function BattlePage() {
       const id=pending.current?.id;
       if(!id) return;
       await applyBattleAction(kind,items,heroId,id);
+      await loadLastAttack();
       pending.current=null;
       if(kind==='attack') {setTargets({});toast.success('Útok byl zaznamenán');}else toast.success('Životy byly upraveny');
       await loadInitiative();
     });
   };
   const selectedM=monsters.find(m=>m.id===selectedMonster);
+  const undo = () => void run(async () => {
+    if (!lastAttack) return;
+    try {
+      await undoBattleAttack(lastAttack);
+      pending.current=null;
+      await Promise.all([loadLastAttack(),loadInitiative()]);
+      toast.success('Poslední zranění bylo vráceno včetně statistik');
+    } catch (error) {
+      await loadLastAttack();
+      toast.error(error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Zranění se nepodařilo vrátit');
+    }
+  });
   const handleAdd = () => void run(async () => {
     if(copyId) await copyBattleMonster(copyId,quantity);
     else for(let i=0;i<quantity;i++) await addToBattle(selectedMonster,Math.min(levelMin,levelMax)+Math.floor(Math.random()*(Math.abs(levelMax-levelMin)+1)));
@@ -128,6 +153,7 @@ export default function BattlePage() {
       </div>
     </section>
     <section aria-label="Bestie v boji" className="min-w-0 border-t pt-4">
+      {editable && <Button variant="outline" size="sm" className="mb-3" disabled={busy || !lastAttack} onClick={undo}><Undo2 size={16} className="mr-2"/>Vrátit poslední zranění</Button>}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3"><h3 className="text-lg font-display">Bestie v boji <span className="text-sm text-muted-foreground">({visible.length})</span></h3><div className="flex flex-wrap gap-2"><Button variant="ghost" size="sm" onClick={()=>setHideDead(!hideDead)}>{hideDead?<Eye size={16}/>:<EyeOff size={16}/>}<span className="ml-1">{hideDead?'Zobrazit padlé':'Skrýt padlé'}</span></Button>{editable && <Button size="sm" disabled={!monsters.length || busy} onClick={()=>{setCopyId(null);setQuantity(1);setSelectedMonster('');setAddOpen(true);}}><Plus size={16} className="mr-1"/>Přidat bestii</Button>}</div></div>
       <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(260px,1fr))] xl:grid-cols-4">
         {visible.map(m => <MonsterCard key={m.id} monster={m} label={labels[m.id]} heroes={heroes} hit={(heroId,amount)=>act('attack',[{id:m.id,amount}],heroId)} selected={selected===m.id} active={entries.some(e=>e.id===active && e.battle_monster_id===m.id)} editable={editable} busy={busy} open={()=>setSelected(m.id)} copy={()=>{setCopyId(m.id);setQuantity(1);setAddOpen(true);}} remove={()=>{if(window.confirm(`Odebrat ${m.name} z boje?`))void run(async()=>{await removeFromBattle(m.battleId);await loadInitiative();});}}/>)}
@@ -135,7 +161,7 @@ export default function BattlePage() {
       {!battleMonsters.length && <div className="py-8 text-center text-muted-foreground"><Swords className="mx-auto mb-3" size={30}/><p>V boji nejsou žádné bestie.</p></div>}
       {hideDead && battleMonsters.length>0 && !live.length && <p className="p-6 text-center text-muted-foreground">Všechny bestie padly.</p>}
     </section>
-    <Dialog open={!!current} onOpenChange={open=>{if(!open)setSelected(null);}}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Detail bestie</DialogTitle></DialogHeader>{current && <MonsterDetail monster={current} attacker={attackerName} editable={editable} busy={busy} act={(kind,amount)=>act(kind,[{id:current.id,amount}])} updateMP={v=>void run(async()=>{await updateBattleMP(current.battleId,v);})} close={()=>setSelected(null)} heroes={heroes} attackerId={attacker} setAttacker={setAttacker}/>}</DialogContent></Dialog>
+    <Dialog open={!!current} onOpenChange={open=>{if(!open)setSelected(null);}}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>Detail bestie</DialogTitle></DialogHeader>{current && <MonsterDetail monster={current} attacker={attackerName} editable={editable} busy={busy} act={(kind,amount)=>act(kind,[{id:current.id,amount}])} updateMP={v=>void run(async()=>{await updateBattleMP(current.battleId,v);})} close={()=>setSelected(null)} heroes={heroes} attackerId={attacker} setAttacker={setAttacker} canUndo={!!lastAttack} undo={undo}/>}</DialogContent></Dialog>
     {editable && <section className="border-t pt-4"><Button variant={area?'secondary':'outline'} onClick={()=>setArea(!area)} aria-expanded={area}><Sparkles size={18} className="mr-2"/>Plošný útok</Button>{area && <div className="mt-4 space-y-4"><div className="flex flex-wrap items-center gap-1"><span className="text-sm text-primary mr-1">Útočník:</span>{heroes.map(h=><Button key={h.id} size="sm" variant={attacker===h.id?"default":"outline"} aria-pressed={attacker===h.id} className="h-7 text-xs" onClick={()=>setAttacker(h.id)}>{h.name}</Button>)}</div><div className="grid md:grid-cols-2 gap-x-6">{live.map(m=><div key={m.id} className="flex items-center gap-2 py-2 border-b min-w-0"><Checkbox aria-label={`Zasáhnout ${m.name}`} checked={targets[m.id]!==undefined} disabled={busy} onCheckedChange={v=>setTargets(prev=>{const next={...prev};if(v)next[m.id]='';else delete next[m.id];return next;})}/><span className="text-sm flex-1 break-words">{labels[m.id]}</span><span className="text-xs tabular-nums text-muted-foreground whitespace-nowrap">{m.currentHP}/{m.hp}</span><Input aria-label={`Poškození ${m.name}`} type="number" min={0} step={1} className="w-20 h-8 shrink-0" disabled={busy || targets[m.id]===undefined} value={targets[m.id] ?? ''} onChange={e=>setTargets(prev=>({...prev,[m.id]:e.target.value}))}/></div>)}</div><div className="flex flex-wrap justify-between gap-3 items-center"><p className="text-sm">Celkové poškození: <strong className="text-hp-critical">{sum} HP</strong><span className="text-muted-foreground ml-2">Započítá se {real} HP</span></p><Button disabled={busy || !picked.length || !real || picked.some(m=>!Number.isInteger(Number(targets[m.id])) || Number(targets[m.id])<0)} onClick={()=>void act('attack',picked.map(m=>({id:m.id,amount:Number(targets[m.id])}))) }><Sparkles size={16} className="mr-2"/>{busy?'Ukládání…':'Provést plošný útok'}</Button></div></div>}</section>}
     <Dialog open={addOpen} onOpenChange={v=>{if(!busy)setAddOpen(v);}}><DialogContent><DialogHeader><DialogTitle>{copyId?'Kopie bestie':'Přidat bestii do boje'}</DialogTitle></DialogHeader><div className="space-y-4">{!copyId && <><Select value={selectedMonster} onValueChange={setSelectedMonster}><SelectTrigger><SelectValue placeholder="Vyber bestii"/></SelectTrigger><SelectContent>{monsters.map(m=><SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent></Select><div className="grid grid-cols-2 gap-3"><label className="text-sm">Úroveň od<Input type="number" min={1} value={levelMin} onChange={e=>setLevelMin(Math.max(1,Math.floor(Number(e.target.value)||1)))}/></label><label className="text-sm">Úroveň do<Input type="number" min={1} value={levelMax} onChange={e=>setLevelMax(Math.max(1,Math.floor(Number(e.target.value)||1)))}/></label></div>{selectedM && <p className="text-sm text-muted-foreground">HP {calculateHP(selectedM.con_min ?? selectedM.con,Math.min(levelMin,levelMax),selectedM.is_unique,selectedM.hp_multiplier)}–{calculateHP(selectedM.con_max ?? selectedM.con,Math.max(levelMin,levelMax),selectedM.is_unique,selectedM.hp_multiplier)} · XP {calculateXP(selectedM.xp_reward,levelMin)}–{calculateXP(selectedM.xp_reward,levelMax)}</p>}</>}<label className="block text-sm">Počet<Input type="number" min={1} max={20} value={quantity} onChange={e=>setQuantity(Math.max(1,Math.min(20,Math.floor(Number(e.target.value)||1))))}/></label><Button className="w-full" disabled={busy || (!copyId && !selectedMonster)} onClick={handleAdd}>{busy?'Ukládání…':`Přidat ${quantity}× do boje`}</Button></div></DialogContent></Dialog>
     <Dialog open={npcOpen} onOpenChange={setNpcOpen}><DialogContent><DialogHeader><DialogTitle>Přidat NPC do iniciativy</DialogTitle></DialogHeader><Input aria-label="Jméno NPC" placeholder="Jméno NPC" value={npcName} onChange={e=>setNpcName(e.target.value)}/><Input aria-label="Iniciativa NPC" type="number" min={-20} max={20} value={npcValue} onChange={e=>setNpcValue(Number(e.target.value))}/><Button disabled={!npcName.trim() || busy} onClick={()=>void run(async()=>{const {error}=await supabase.from('initiative_entries').insert({name:npcName.trim(),value:Math.max(-20,Math.min(20,npcValue)),source:'npc',world_id:activeWorldId ?? undefined});if(error)throw error;await loadInitiative();setNpcOpen(false);setNpcName('');})}>Přidat NPC</Button></DialogContent></Dialog>
