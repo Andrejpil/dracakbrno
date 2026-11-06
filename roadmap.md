@@ -1,9 +1,9 @@
 # Redesign boje
 
 ## Vrácení zranění
-- [ ] Bezpečně vrátit poslední útok v aktivním světě včetně HP, XP a zabití.
-- [ ] Přidat ovládání vrácení do boje a detailu bestie.
-- [ ] Ověřit běžný, smrtící a plošný útok i ochranu před opakováním.
+- [x] Bezpečně vrátit poslední útok v aktivním světě včetně HP, XP a zabití.
+- [x] Přidat ovládání vrácení do boje a detailu bestie.
+- [x] Ověřit běžný, smrtící a plošný útok i ochranu před opakováním.
 
 ## Aktuální opravy
 - [x] Rozdělit postavy mezi Hlavní svět a Domovinu II a zabránit chybnému ukládání do výchozího světa.
