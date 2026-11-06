@@ -36,6 +36,13 @@
       "when": 1793958476934,
       "tag": "0004_battle_attack_undo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793958715611,
+      "tag": "0005_battle_undo_snapshot_variable",
+      "breakpoints": true
     }
   ]
 }

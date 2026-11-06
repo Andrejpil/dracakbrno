@@ -37,7 +37,7 @@ async def main():
             mb = (await req('POST','map_beasts',{'world_id':wid,'map_id':maprow['id'],'created_by':uid,'monster_id':monster['id'],'battle_id':beasts[0]['battle_id'],'name':'Bestie 1','hp':40,'current_hp':40,'x':120,'y':100,'revealed':True}))[0]
             await page.evaluate('(id)=>localStorage.setItem("active_world_id",id)',wid)
             await page.goto('http://localhost:8080/boj')
-            await page.get_by_role('button',name='Detail Bestie 1',exact=True).click()
+            await page.get_by_label('Detail Bestie 1',exact=True).click()
             dialog = page.get_by_role('dialog')
             await dialog.get_by_role('spinbutton',name='Poškození HP',exact=True).fill('23')
             await dialog.get_by_role('button',name='Odečíst poškození',exact=True).click()
@@ -48,6 +48,8 @@ async def main():
             assert (h['total_damage'],h['experience']) == (23,57)
             receipt = (await req('GET','battle_actions?world_id=eq.'+wid+'&order=action_order.desc'))[0]
             await undo.click()
+            await page.wait_for_timeout(2000)
+            print("Undo feedback:", await page.locator("[data-sonner-toast]").all_text_contents())
             await page.wait_for_function("()=>document.querySelector('input[aria-label=\"Nová hodnota HP\"]')?.value==='40'")
             h = (await req('GET','heroes?id=eq.'+hero['id']))[0]
             assert (h['total_damage'],h['experience'],h['kills']) == (0,0,0)
@@ -87,7 +89,7 @@ async def main():
             await req('POST','rpc/battle_undo_attack',{'_world_id':wid,'_action_id':aid},ok=False)
             await req('POST','rpc/battle_undo_attack',{'_world_id':str(uuid.uuid4()),'_action_id':aid},ok=False)
             await page.reload()
-            await page.get_by_role('button',name='Detail Bestie 1',exact=True).wait_for()
+            await page.get_by_label('Detail Bestie 1',exact=True).wait_for()
             await page.set_viewport_size({'width':770,'height':674})
             await page.screenshot(path='/tmp/browser/battle-undo/small.png')
             assert await page.evaluate('document.documentElement.scrollWidth<=innerWidth')

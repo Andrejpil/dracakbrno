@@ -1,0 +1,1 @@
+DO $$ DECLARE d text; BEGIN SELECT pg_get_functiondef(oid) INTO d FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname='battle_undo_attack'; d:=regexp_replace(d,'\mx\M','snapshot_row','g'); EXECUTE d; END $$;
