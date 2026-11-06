@@ -29,6 +29,13 @@
       "when": 1793709566213,
       "tag": "0003_hero_initiative_world_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793958476934,
+      "tag": "0004_battle_attack_undo",
+      "breakpoints": true
     }
   ]
 }
