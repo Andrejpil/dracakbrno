@@ -1,5 +1,9 @@
 # Redesign boje
 
+## Český export ceníku
+- [ ] Upřesnit výběr dostupnosti podle typů sídel.
+- [ ] Zjednodušit export na ID, název produktu, cenu v md a dostupnost; ověřit výstup.
+
 ## Vrácení zranění
 - [x] Bezpečně vrátit poslední útok v aktivním světě včetně HP, XP a zabití.
 - [x] Přidat ovládání vrácení do boje a detailu bestie.
